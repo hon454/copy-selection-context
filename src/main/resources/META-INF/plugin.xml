@@ -5,7 +5,76 @@
     
     <description><![CDATA[
     Copy file path and line numbers to clipboard for easy AI context sharing.
+    <br/>
+    <br/>
+    <strong>Features:</strong>
+    <ul>
+        <li>Copy relative or absolute file paths with line numbers</li>
+        <li>Include code content in markdown format</li>
+        <li>Toast notifications for copy confirmation</li>
+        <li>Status bar widget showing last copied path</li>
+        <li>Context menu integration</li>
+        <li>Customizable keyboard shortcuts</li>
+    </ul>
     ]]></description>
     
+    <change-notes><![CDATA[
+    <strong>1.0.0</strong>
+    <ul>
+        <li>Initial release</li>
+        <li>Copy relative path with line numbers</li>
+        <li>Copy absolute path with line numbers</li>
+        <li>Copy with code content in markdown format</li>
+        <li>Toast notifications and status bar widget</li>
+        <li>Settings UI for default path type preference</li>
+    </ul>
+    ]]></change-notes>
+    
     <depends>com.intellij.modules.platform</depends>
+    
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Notification Group -->
+        <notificationGroup id="Copy Selection Context" displayType="BALLOON"/>
+        
+        <!-- Status Bar Widget Factory -->
+        <statusBarWidgetFactory implementation="com.github.hon45.copyselectioncontext.CopySelectionStatusBarWidget$Factory" id="CopySelectionContext.StatusBarWidget"/>
+        
+        <!-- Settings Configurable -->
+        <applicationConfigurable parentId="tools" instance="com.github.hon45.copyselectioncontext.CopySelectionConfigurable" id="CopySelectionContext.Settings" displayName="Copy Selection Context"/>
+    </extensions>
+    
+    <actions>
+        <!-- Copy Relative Path Action -->
+        <action id="CopySelectionContext.CopyRelativePath"
+                class="com.github.hon45.copyselectioncontext.CopyRelativePathAction"
+                text="Copy Relative Path with Line Numbers"
+                description="Copy file path (relative to project root) and line numbers to clipboard">
+            <keyboard-shortcut keymap="$default" first-keystroke="control shift alt C"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="cmd shift alt C"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="cmd shift alt C"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="EditorCopy"/>
+        </action>
+        
+        <!-- Copy Absolute Path Action -->
+        <action id="CopySelectionContext.CopyAbsolutePath"
+                class="com.github.hon45.copyselectioncontext.CopyAbsolutePathAction"
+                text="Copy Absolute Path with Line Numbers"
+                description="Copy absolute file path and line numbers to clipboard">
+            <keyboard-shortcut keymap="$default" first-keystroke="control shift alt A"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="cmd shift alt A"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="cmd shift alt A"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="CopySelectionContext.CopyRelativePath"/>
+        </action>
+        
+        <!-- Copy with Code Content Action -->
+        <action id="CopySelectionContext.CopyWithCodeContent"
+                class="com.github.hon45.copyselectioncontext.CopyWithCodeContentAction"
+                text="Copy with Code Content"
+                description="Copy file path, line numbers, and code content in markdown format">
+            <keyboard-shortcut keymap="$default" first-keystroke="control shift alt V"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="cmd shift alt V"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="cmd shift alt V"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="CopySelectionContext.CopyAbsolutePath"/>
+        </action>
+    </actions>
 </idea-plugin>
