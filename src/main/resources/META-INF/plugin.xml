@@ -44,36 +44,36 @@
     </extensions>
     
     <actions>
-        <!-- Copy Relative Path Action -->
+        <!-- Main Action: Copy Selection Context (settings-driven) -->
+        <action id="CopySelectionContext.Copy"
+                class="com.github.hon45.copyselectioncontext.CopySelectionContextAction"
+                text="Copy Selection Context"
+                description="Copy file path and line numbers to clipboard (behavior configured in Settings)">
+            <keyboard-shortcut keymap="$default" first-keystroke="control alt C"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt C" replace-all="true"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt C" replace-all="true"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="EditorCopy"/>
+        </action>
+        
+        <!-- Explicit Actions (context menu only, no shortcuts) -->
         <action id="CopySelectionContext.CopyRelativePath"
                 class="com.github.hon45.copyselectioncontext.CopyRelativePathAction"
                 text="Copy Relative Path with Line Numbers"
                 description="Copy file path (relative to project root) and line numbers to clipboard">
-            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift alt C"/>
-            <keyboard-shortcut keymap="Mac OS X" first-keystroke="cmd shift alt C"/>
-            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="cmd shift alt C"/>
-            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="EditorCopy"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="CopySelectionContext.Copy"/>
         </action>
         
-        <!-- Copy Absolute Path Action -->
         <action id="CopySelectionContext.CopyAbsolutePath"
                 class="com.github.hon45.copyselectioncontext.CopyAbsolutePathAction"
                 text="Copy Absolute Path with Line Numbers"
                 description="Copy absolute file path and line numbers to clipboard">
-            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift alt A"/>
-            <keyboard-shortcut keymap="Mac OS X" first-keystroke="cmd shift alt A"/>
-            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="cmd shift alt A"/>
             <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="CopySelectionContext.CopyRelativePath"/>
         </action>
         
-        <!-- Copy with Code Content Action -->
         <action id="CopySelectionContext.CopyWithCodeContent"
                 class="com.github.hon45.copyselectioncontext.CopyWithCodeContentAction"
                 text="Copy with Code Content"
                 description="Copy file path, line numbers, and code content in markdown format">
-            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift alt V"/>
-            <keyboard-shortcut keymap="Mac OS X" first-keystroke="cmd shift alt V"/>
-            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="cmd shift alt V"/>
             <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="CopySelectionContext.CopyAbsolutePath"/>
         </action>
     </actions>

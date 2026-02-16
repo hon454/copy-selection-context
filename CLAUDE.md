@@ -27,10 +27,11 @@ Quick reference for Claude when working on this project.
 copy-selection-context/
 ├── src/main/
 │   ├── kotlin/com/github/hon45/copyselectioncontext/
+│   │   ├── CopySelectionContextAction.kt    # Main unified action (has shortcut)
 │   │   ├── CopySelectionBaseAction.kt       # Abstract base
-│   │   ├── CopyRelativePathAction.kt        # Relative path action
-│   │   ├── CopyAbsolutePathAction.kt        # Absolute path action
-│   │   ├── CopyWithCodeContentAction.kt     # With code action
+│   │   ├── CopyRelativePathAction.kt        # Relative path (context menu)
+│   │   ├── CopyAbsolutePathAction.kt        # Absolute path (context menu)
+│   │   ├── CopyWithCodeContentAction.kt     # With code (context menu)
 │   │   ├── CopySelectionNotifier.kt         # Toast notifications
 │   │   ├── CopySelectionStatusBarWidget.kt  # Status bar (stub)
 │   │   ├── CopySelectionSettings.kt         # Settings persistence
@@ -60,18 +61,19 @@ Note: All Kotlin source files are in a single flat package (no subdirectories).
 
 ## Core Components
 
-### Actions (Keyboard Shortcuts)
-- **CopyRelativePathAction** (`Ctrl+Shift+Alt+C` / `Cmd+Shift+Alt+C`) — Copy relative path + line numbers
-- **CopyAbsolutePathAction** (`Ctrl+Shift+Alt+A` / `Cmd+Shift+Alt+A`) — Copy absolute path + line numbers
-- **CopyWithCodeContentAction** (`Ctrl+Shift+Alt+V` / `Cmd+Shift+Alt+V`) — Copy path + line + markdown code block
+### Actions
+- **CopySelectionContextAction** (`Ctrl+Alt+C` / `Meta+Alt+C`) — Main action, behavior driven by settings (path type + code content)
+- **CopyRelativePathAction** (context menu only) — Copy relative path + line numbers
+- **CopyAbsolutePathAction** (context menu only) — Copy absolute path + line numbers
+- **CopyWithCodeContentAction** (context menu only) — Copy path + line + markdown code block
 
 ### UI Components
 - **CopySelectionNotifier** — Toast notifications (BALLOON type) with checkmark prefix
 - **CopySelectionStatusBarWidget** — Status bar widget (stub implementation, prints to console)
 
 ### Settings
-- **CopySelectionSettings** — Persists default path type preference to `CopySelectionPlugin.xml`
-- **CopySelectionConfigurable** — Settings UI under Tools → Copy Selection Context
+- **CopySelectionSettings** — Persists path type (default: ABSOLUTE) and code content toggle (default: false) to `CopySelectionPlugin.xml`
+- **CopySelectionConfigurable** — Settings UI under Tools → Copy Selection Context (radio buttons for path type + checkbox for code content)
 
 ## Key IntelliJ Platform APIs
 
@@ -115,29 +117,24 @@ val normalizedPath = path.replace("\\", "/")
 - **No automated tests** — Manual QA only
 - **Manual testing**: Run `./gradlew runIde` to launch IDE with plugin installed
 - **Test scenarios**:
-  1. Select code in editor, press `Ctrl+Shift+Alt+C` → verify relative path copied
-  2. Select code, press `Ctrl+Shift+Alt+A` → verify absolute path copied
-  3. Select code, press `Ctrl+Shift+Alt+V` → verify markdown code block copied
-  4. No selection, press any shortcut → verify current line number copied
-  5. Check status bar widget updates with last copied path
+  1. Select code in editor, press `Ctrl+Alt+C` → verify path copied (absolute by default)
+  2. Enable "Include code content" in Settings → press `Ctrl+Alt+C` → verify markdown code block
+  3. Switch to Relative path in Settings → press `Ctrl+Alt+C` → verify relative path
+  4. No selection, press `Ctrl+Alt+C` → verify current line number copied
+  5. Right-click → context menu → verify all 4 actions visible
   6. Check toast notification appears on copy
-  7. Open Settings → Tools → Copy Selection Context → verify UI works
+  7. Open Settings → Tools → Copy Selection Context → verify radio buttons + checkbox
 
 ## Output Format Examples
 
-### Relative Path (Ctrl+Shift+Alt+C)
-```
-src/main/kotlin/MyFile.kt:15-23
-```
-
-### Absolute Path (Ctrl+Shift+Alt+A)
+### Default (Ctrl+Alt+C — absolute path, no code)
 ```
 C:/Users/username/project/src/main/kotlin/MyFile.kt:15-23
 ```
 
-### With Code Content (Ctrl+Shift+Alt+V)
+### With "Include code content" enabled (Ctrl+Alt+C)
 ````
-src/main/kotlin/MyFile.kt:15-23
+C:/Users/username/project/src/main/kotlin/MyFile.kt:15-23
 ```kotlin
 fun example() {
     println("Hello")
@@ -145,12 +142,17 @@ fun example() {
 ```
 ````
 
+### Context menu → Copy Relative Path
+```
+src/main/kotlin/MyFile.kt:15-23
+```
+
 ## Must NOT Do
 
 ### Scope Constraints
 - **No AI service integration** — This plugin only copies to clipboard, no API calls
 - **No multi-selection accumulation** — One selection at a time
-- **No complex Settings UI** — Keep settings minimal (just path type preference)
+- **No complex Settings UI** — Keep settings minimal (path type + code content toggle)
 - **No file tree integration** — Editor context only
 
 ### API Constraints
@@ -171,7 +173,7 @@ fun example() {
 3. **No selection handling**: Copy current line number when no selection exists
 4. **Notification group registration**: Must register in plugin.xml before use (ID: `"CopySelectionContext"` without spaces)
 5. **Project base path**: Can be null in default project, handle gracefully
-6. **Keyboard shortcut syntax**: Use `"ctrl"` (not `"control"`) in plugin.xml
+6. **Keyboard shortcut syntax**: Use `"control"` (not `"ctrl"`) in plugin.xml
 7. **StatusBarWidget.TextPresentation**: Must implement `getAlignment()` method returning Float
 8. **Windows build environment**: Use PowerShell wrapper or Java directly to run Gradle
 9. **Java version**: Build requires Java 21 (jvmToolchain 21)

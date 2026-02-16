@@ -32,15 +32,17 @@
 
 ## Usage
 
-### Keyboard Shortcuts
+### Keyboard Shortcut
 
 | Action | Windows/Linux | macOS |
 |--------|---------------|-------|
-| Copy relative path | `Ctrl+Shift+Alt+C` | `Cmd+Shift+Alt+C` |
-| Copy absolute path | `Ctrl+Shift+Alt+A` | `Cmd+Shift+Alt+A` |
-| Copy with code content | `Ctrl+Shift+Alt+V` | `Cmd+Shift+Alt+V` |
+| Copy Selection Context | `Ctrl+Alt+C` | `Cmd+Alt+C` |
 
-> You can customize these shortcuts in `Settings` → `Keymap`
+One unified shortcut. Behavior is controlled via settings (path type + code content toggle).
+
+> You can customize this shortcut in `Settings` → `Keymap`
+>
+> Additional explicit actions (Copy Relative Path, Copy Absolute Path, Copy with Code Content) are available in the editor context menu.
 
 ### Context Menu
 
@@ -48,21 +50,30 @@
 2. Right-click to open the context menu
 3. Choose one of the Copy Selection Context actions
 
-### Output Formats
+### Output Format (Claude Code Style)
 
-**Relative/Absolute path (plain text)**:
-- Single line: `src/main/kotlin/App.kt:42`
-- Multiple lines: `src/main/kotlin/App.kt:250-253`
+Output uses the ` @path#Lline ` format for seamless AI assistant integration.
 
-**With code content (markdown)**:
+**Plain path (default)**:
+- Single line: ` @src/main/kotlin/App.kt#L42 `
+- Multiple lines: ` @src/main/kotlin/App.kt#L250-253 `
+
+**With code content (enable in settings)**:
 ````
-src/main/kotlin/App.kt:42-53
+ @src/main/kotlin/App.kt#L42-53 
 ```kotlin
 fun calculateTotal(items: List<Item>): Double {
     return items.sumOf { it.price }
 }
 ```
 ````
+
+### Settings
+
+Go to `Settings` → `Tools` → `Copy Selection Context` to configure:
+
+- **Path type** — Absolute (default) or Relative to project root
+- **Include code content** — Append a markdown code block with the selected code
 
 ## Development
 

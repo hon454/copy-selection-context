@@ -1,5 +1,6 @@
 package com.github.hon45.copyselectioncontext
 
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.editor.Editor
@@ -9,11 +10,40 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import java.awt.datatransfer.StringSelection
 
-class CopyWithCodeContentAction : CopySelectionBaseAction() {
-    
-    override fun getPath(project: Project, file: VirtualFile): String {
-        val settings = CopySelectionSettings.getInstance()
-        return when (settings.state.defaultPathType) {
+class CopySelectionContextAction : AnAction() {
+
+    override fun actionPerformed(e: AnActionEvent) {
+        val project = e.getData(CommonDataKeys.PROJECT) ?: return
+        val editor = e.getData(CommonDataKeys.EDITOR) ?: return
+        val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
+
+        val settings = CopySelectionSettings.getInstance().state
+        val path = resolvePath(project, file, settings.defaultPathType)
+        val lineRange = resolveLineRange(editor)
+        val normalizedPath = path.replace("\\", "/")
+
+        val result = if (settings.includeCodeContent) {
+            val code = getCodeContent(editor)
+            val language = detectLanguage(file)
+            " @$normalizedPath#L$lineRange \n```$language\n$code\n```"
+        } else {
+            " @$normalizedPath#L$lineRange "
+        }
+
+        CopyPasteManager.getInstance().setContents(StringSelection(result))
+        CopySelectionNotifier.notify(project, result)
+        CopySelectionStatusBarWidget.update(result)
+    }
+
+    override fun update(e: AnActionEvent) {
+        val editor = e.getData(CommonDataKeys.EDITOR)
+        val file = e.getData(CommonDataKeys.VIRTUAL_FILE)
+        e.presentation.isEnabledAndVisible = editor != null && file != null
+    }
+
+    private fun resolvePath(project: Project, file: VirtualFile, pathType: PathType): String {
+        return when (pathType) {
+            PathType.ABSOLUTE -> file.path
             PathType.RELATIVE -> {
                 val projectBasePath = project.basePath ?: return file.path
                 val filePath = file.path
@@ -24,28 +54,13 @@ class CopyWithCodeContentAction : CopySelectionBaseAction() {
                     else relativePath
                 } else filePath
             }
-            PathType.ABSOLUTE -> file.path
         }
     }
-    
-    override fun actionPerformed(e: AnActionEvent) {
-        val project = e.getData(CommonDataKeys.PROJECT) ?: return
-        val editor = e.getData(CommonDataKeys.EDITOR) ?: return
-        val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
-        
-        val result = buildMarkdownCodeBlock(project, file, editor)
-        copyToClipboard(result)
-        
-        CopySelectionNotifier.notify(project, result)
-        CopySelectionStatusBarWidget.update(result)
-    }
-    
-    private fun buildMarkdownCodeBlock(project: Project, file: VirtualFile, editor: Editor): String {
+
+    private fun resolveLineRange(editor: Editor): String {
         val selectionModel = editor.selectionModel
         val document = editor.document
-        val path = getPath(project, file)
-        
-        val lineRange = if (selectionModel.hasSelection()) {
+        return if (selectionModel.hasSelection()) {
             val startLine = document.getLineNumber(selectionModel.selectionStart) + 1
             val endLine = document.getLineNumber(selectionModel.selectionEnd) + 1
             if (startLine == endLine) "$startLine" else "$startLine-$endLine"
@@ -53,17 +68,10 @@ class CopyWithCodeContentAction : CopySelectionBaseAction() {
             val currentLine = editor.caretModel.logicalPosition.line + 1
             "$currentLine"
         }
-        
-        val code = getCodeContent(editor)
-        val language = detectLanguage(file)
-        val normalizedPath = path.replace("\\", "/")
-        
-        return " @$normalizedPath#L$lineRange \n```$language\n$code\n```"
     }
-    
+
     private fun getCodeContent(editor: Editor): String {
         val selectionModel = editor.selectionModel
-        
         return if (selectionModel.hasSelection()) {
             selectionModel.selectedText ?: ""
         } else {
@@ -74,7 +82,7 @@ class CopyWithCodeContentAction : CopySelectionBaseAction() {
             document.getText(TextRange(lineStart, lineEnd))
         }
     }
-    
+
     private fun detectLanguage(file: VirtualFile): String {
         val fileTypeName = file.fileType.name
         return when (fileTypeName.lowercase()) {
@@ -95,9 +103,5 @@ class CopyWithCodeContentAction : CopySelectionBaseAction() {
             "text" -> "text"
             else -> ""
         }
-    }
-    
-    private fun copyToClipboard(content: String) {
-        CopyPasteManager.getInstance().setContents(StringSelection(content))
     }
 }

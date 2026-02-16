@@ -45,7 +45,7 @@ abstract class CopySelectionBaseAction : AnAction() {
         }
         
         val normalizedPath = path.replace("\\", "/")
-        return "$normalizedPath:$lineRange"
+        return " @$normalizedPath#L$lineRange "
     }
     
     private fun copyToClipboard(content: String) {

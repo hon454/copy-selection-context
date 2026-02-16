@@ -15,10 +15,11 @@ Copy Selection Context is a JetBrains IDE plugin that streamlines sharing code c
 ### Package Structure
 ```
 com.github.hon45.copyselectioncontext/
+├── CopySelectionContextAction.kt    # Main unified action (settings-driven, has shortcut)
 ├── CopySelectionBaseAction.kt       # Abstract base with clipboard logic
-├── CopyRelativePathAction.kt        # Relative path from project root
-├── CopyAbsolutePathAction.kt        # Absolute filesystem path
-├── CopyWithCodeContentAction.kt     # Path + line + markdown code block
+├── CopyRelativePathAction.kt        # Relative path from project root (context menu only)
+├── CopyAbsolutePathAction.kt        # Absolute filesystem path (context menu only)
+├── CopyWithCodeContentAction.kt     # Path + line + markdown code block (context menu only)
 ├── CopySelectionNotifier.kt         # Toast notification utility
 ├── CopySelectionStatusBarWidget.kt  # Status bar widget (stub)
 ├── CopySelectionSettings.kt         # Settings persistence (@Service + @State)
@@ -28,12 +29,13 @@ com.github.hon45.copyselectioncontext/
 All source files are in a single flat package structure with no subdirectories.
 
 ### Component Interaction
-1. **User triggers action** (keyboard shortcut or context menu)
-2. **Action class** (extends CopySelectionBaseAction) extracts editor context
-3. **CopyPasteManager** writes formatted text to clipboard
-4. **CopySelectionNotifier** shows toast notification (BALLOON type)
-5. **CopySelectionStatusBarWidget** updates with last copied path (currently stub implementation)
-6. **CopySelectionSettings** provides default path type preference (used by CopyWithCodeContentAction)
+1. **User triggers action** (`Ctrl+Alt+C` shortcut or context menu)
+2. **CopySelectionContextAction** reads settings (path type + code content toggle)
+3. **Action** extracts editor context (file path, line range, optionally code)
+4. **CopyPasteManager** writes formatted text to clipboard
+5. **CopySelectionNotifier** shows toast notification (BALLOON type)
+6. **CopySelectionStatusBarWidget** updates with last copied path (currently stub implementation)
+7. **CopySelectionSettings** provides path type and code content preferences
 
 ### Output Formats
 - **Plain text**: `src/main/kotlin/MyFile.kt:15-23`
@@ -177,25 +179,27 @@ private fun detectLanguage(file: VirtualFile): String {
 
 - **CopySelectionBaseAction.kt** (55 lines): Abstract base class containing shared clipboard logic, editor context extraction, and line number calculation. Provides `buildPathString()` for line range formatting, `copyToClipboard()` for CopyPasteManager integration, and `update()` for action enablement. All copy actions inherit from this and implement abstract `getPath()` method.
 
-- **CopyRelativePathAction.kt** (21 lines): Copies path relative to project root + line numbers. Implements `getPath()` by calculating relative path from `project.basePath`. Handles edge cases where file is outside project. Keyboard shortcut: `Ctrl+Shift+Alt+C` (Windows/Linux), `Cmd+Shift+Alt+C` (macOS).
+- **CopySelectionContextAction.kt** (105 lines): Main unified action that reads settings to determine behavior. Resolves path type (absolute/relative) and code content inclusion from `CopySelectionSettings`. Contains `resolvePath()`, `resolveLineRange()`, `getCodeContent()`, and `detectLanguage()` (15 file type mappings). This is the only action with a keyboard shortcut: `Ctrl+Alt+C` (Windows/Linux), `Meta+Alt+C` (macOS).
 
-- **CopyAbsolutePathAction.kt** (11 lines): Copies absolute filesystem path + line numbers. Simplest implementation, returns `file.path` directly. Keyboard shortcut: `Ctrl+Shift+Alt+A` (Windows/Linux), `Cmd+Shift+Alt+A` (macOS).
+- **CopyRelativePathAction.kt** (21 lines): Copies path relative to project root + line numbers. Implements `getPath()` by calculating relative path from `project.basePath`. Handles edge cases where file is outside project. Context menu only (no keyboard shortcut).
 
-- **CopyWithCodeContentAction.kt** (104 lines): Copies path + line numbers + markdown code block with actual code content. Overrides `actionPerformed()` to build custom markdown format. Uses `CopySelectionSettings` to respect user's path type preference. Includes `detectLanguage()` for 15 file type mappings and `getCodeContent()` for text extraction. Keyboard shortcut: `Ctrl+Shift+Alt+V` (Windows/Linux), `Cmd+Shift+Alt+V` (macOS).
+- **CopyAbsolutePathAction.kt** (11 lines): Copies absolute filesystem path + line numbers. Simplest implementation, returns `file.path` directly. Context menu only (no keyboard shortcut).
+
+- **CopyWithCodeContentAction.kt** (104 lines): Copies path + line numbers + markdown code block with actual code content. Overrides `actionPerformed()` to build custom markdown format. Uses `CopySelectionSettings` to respect user's path type preference. Includes `detectLanguage()` for 15 file type mappings and `getCodeContent()` for text extraction. Context menu only (no keyboard shortcut).
 
 - **CopySelectionNotifier.kt** (17 lines): Singleton object for showing toast notifications when copy succeeds. Uses `NotificationGroupManager` to display BALLOON-type notifications with checkmark prefix. Notification group ID is `"CopySelectionContext"` (must match plugin.xml registration).
 
 - **CopySelectionStatusBarWidget.kt** (9 lines): Stub implementation that prints to console. Full implementation would require `StatusBarWidget` interface with `TextPresentation`, `getAlignment()` method, and Factory class for registration.
 
-- **CopySelectionSettings.kt** (39 lines): Application-level settings service using `@Service` and `@State` annotations. Persists user preference for default path type (relative vs absolute) to `CopySelectionPlugin.xml` in IDE config directory. Implements `PersistentStateComponent<State>` for automatic load/save. Includes `PathType` enum with RELATIVE and ABSOLUTE values.
+- **CopySelectionSettings.kt** (39 lines): Application-level settings service using `@Service` and `@State` annotations. Persists user preferences to `CopySelectionPlugin.xml` in IDE config directory. Implements `PersistentStateComponent<State>` for automatic load/save. Settings: `defaultPathType` (ABSOLUTE by default), `includeCodeContent` (false by default). Includes `PathType` enum with RELATIVE and ABSOLUTE values.
 
-- **CopySelectionConfigurable.kt** (70 lines): Settings UI page implementing `Configurable` interface. Creates minimal Swing UI with radio buttons for path type preference. Appears under Settings → Tools → Copy Selection Context. Implements `isModified()`, `apply()`, `reset()`, and `disposeUIResources()` for proper settings lifecycle management.
+- **CopySelectionConfigurable.kt** (70 lines): Settings UI page implementing `Configurable` interface. Creates minimal Swing UI with radio buttons for path type preference and checkbox for code content inclusion. Appears under Settings → Tools → Copy Selection Context. Implements `isModified()`, `apply()`, `reset()`, and `disposeUIResources()` for proper settings lifecycle management.
 
 ### Configuration Files
 
 - **plugin.xml** (src/main/resources/META-INF/, 81 lines): Plugin descriptor defining:
   - **Extensions**: `notificationGroup` (id="Copy Selection Context", displayType="BALLOON"), `statusBarWidgetFactory` (stub registration), `applicationConfigurable` (Settings UI under Tools menu)
-  - **Actions**: 3 actions with keyboard shortcuts for both Windows/Linux (`$default` keymap with `ctrl`) and macOS (`Mac OS X` keymaps with `cmd`)
+  - **Actions**: 1 main action (`CopySelectionContextAction`) with keyboard shortcut `Ctrl+Alt+C` / `Meta+Alt+C`, plus 3 explicit actions (context menu only, no shortcuts)
   - **Context Menu**: All actions added to `EditorPopupMenu` with chained anchoring
   - **Metadata**: Description and change notes in CDATA blocks with HTML formatting
   - **Dependencies**: `com.intellij.modules.platform` only
@@ -263,7 +267,7 @@ private fun detectLanguage(file: VirtualFile): String {
 
 10. **StatusBarWidget.TextPresentation**: When implementing status bar widgets, the `TextPresentation` interface requires `getAlignment()` method returning Float (e.g., 0.0f for left-aligned text). Missing this method causes compilation errors.
 
-11. **Keyboard Shortcut Syntax**: Use `"ctrl"` (not `"control"`) in plugin.xml keyboard-shortcut elements. Invalid syntax causes plugin verification failures.
+11. **Keyboard Shortcut Syntax**: Use `"control"` (not `"ctrl"`) in plugin.xml keyboard-shortcut elements. Invalid syntax causes plugin verification failures.
 
 ### Build and Deployment
 

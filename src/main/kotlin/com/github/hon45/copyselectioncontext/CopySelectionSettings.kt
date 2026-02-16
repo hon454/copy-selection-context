@@ -14,7 +14,8 @@ import com.intellij.openapi.components.Storage
 class CopySelectionSettings : PersistentStateComponent<CopySelectionSettings.State> {
 
     data class State(
-        var defaultPathType: PathType = PathType.RELATIVE
+        var defaultPathType: PathType = PathType.ABSOLUTE,
+        var includeCodeContent: Boolean = false
     )
 
     private var myState = State()
