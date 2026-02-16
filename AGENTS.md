@@ -15,26 +15,25 @@ Copy Selection Context is a JetBrains IDE plugin that streamlines sharing code c
 ### Package Structure
 ```
 com.github.hon45.copyselectioncontext/
-├── actions/
-│   ├── CopySelectionBaseAction.kt       # Abstract base with clipboard logic
-│   ├── CopyRelativePathAction.kt        # Relative path from project root
-│   ├── CopyAbsolutePathAction.kt        # Absolute filesystem path
-│   └── CopyWithCodeContentAction.kt     # Path + line + markdown code block
-├── ui/
-│   ├── CopySelectionNotifier.kt         # Toast notification utility
-│   └── CopySelectionStatusBarWidget.kt  # Status bar widget
-└── settings/
-    ├── CopySelectionSettings.kt         # Settings persistence (@Service + @State)
-    └── CopySelectionConfigurable.kt     # Settings UI (Configurable interface)
+├── CopySelectionBaseAction.kt       # Abstract base with clipboard logic
+├── CopyRelativePathAction.kt        # Relative path from project root
+├── CopyAbsolutePathAction.kt        # Absolute filesystem path
+├── CopyWithCodeContentAction.kt     # Path + line + markdown code block
+├── CopySelectionNotifier.kt         # Toast notification utility
+├── CopySelectionStatusBarWidget.kt  # Status bar widget (stub)
+├── CopySelectionSettings.kt         # Settings persistence (@Service + @State)
+└── CopySelectionConfigurable.kt     # Settings UI (Configurable interface)
 ```
+
+All source files are in a single flat package structure with no subdirectories.
 
 ### Component Interaction
 1. **User triggers action** (keyboard shortcut or context menu)
 2. **Action class** (extends CopySelectionBaseAction) extracts editor context
 3. **CopyPasteManager** writes formatted text to clipboard
-4. **CopySelectionNotifier** shows toast notification
-5. **CopySelectionStatusBarWidget** updates with last copied path
-6. **CopySelectionSettings** provides default path type preference
+4. **CopySelectionNotifier** shows toast notification (BALLOON type)
+5. **CopySelectionStatusBarWidget** updates with last copied path (currently stub implementation)
+6. **CopySelectionSettings** provides default path type preference (used by CopyWithCodeContentAction)
 
 ### Output Formats
 - **Plain text**: `src/main/kotlin/MyFile.kt:15-23`
@@ -80,10 +79,16 @@ All copy actions extend `CopySelectionBaseAction`, which extends `com.intellij.o
 
 ```kotlin
 // Pattern: Extract editor context from AnActionEvent
-val editor = e.getData(CommonDataKeys.EDITOR) ?: return
 val project = e.getData(CommonDataKeys.PROJECT) ?: return
-val virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
+val editor = e.getData(CommonDataKeys.EDITOR) ?: return
+val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
 ```
+
+The base class provides:
+- `buildPathString()`: Calculates line range and formats path with line numbers
+- `copyToClipboard()`: Uses CopyPasteManager to write to system clipboard
+- `update()`: Enables/disables action based on editor and file availability
+- Abstract `getPath()`: Subclasses implement to return relative or absolute path
 
 ### CopyPasteManager Usage
 ```kotlin
@@ -94,15 +99,30 @@ CopyPasteManager.getInstance().setContents(content)
 
 ### Notification Pattern
 ```kotlin
-// Pattern: Show toast notification
+// Pattern: Show toast notification (CopySelectionNotifier.kt)
 NotificationGroupManager.getInstance()
-    .getNotificationGroup("Copy Selection Context")
-    .createNotification(message, NotificationType.INFORMATION)
+    .getNotificationGroup("CopySelectionContext")
+    .createNotification("✓ Copied: $message", NotificationType.INFORMATION)
     .notify(project)
 ```
 
+Note: Notification group ID is `"CopySelectionContext"` (no spaces) and must be registered in plugin.xml before use.
+
 ### Status Bar Widget
-Implements `StatusBarWidget` interface, registered as `statusBarWidgetFactory` extension in plugin.xml.
+Currently a stub implementation (prints to console only). Full implementation would:
+- Implement `StatusBarWidget` interface with `TextPresentation`
+- Require `getAlignment()` method returning Float (e.g., 0.0f for left-aligned)
+- Use `AtomicReference<String>` for thread-safe message storage
+- Register via `statusBarWidgetFactory` extension in plugin.xml
+
+Stub code:
+```kotlin
+object CopySelectionStatusBarWidget {
+    fun update(message: String) {
+        println("Status: $message")
+    }
+}
+```
 
 ### Settings Persistence
 ```kotlin
@@ -113,41 +133,85 @@ class CopySelectionSettings : PersistentStateComponent<CopySelectionSettings.Sta
 ```
 
 ### No Selection Handling
-When no text is selected, actions copy the current line number instead of failing.
+When no text is selected, actions copy the current line number instead of failing:
+
+```kotlin
+val lineRange = if (selectionModel.hasSelection()) {
+    val startLine = document.getLineNumber(selectionModel.selectionStart) + 1
+    val endLine = document.getLineNumber(selectionModel.selectionEnd) + 1
+    if (startLine == endLine) "$startLine" else "$startLine-$endLine"
+} else {
+    val currentLine = editor.caretModel.logicalPosition.line + 1
+    "$currentLine"
+}
+```
+
+### Path Normalization
+All paths are normalized to use forward slashes for cross-platform compatibility:
+
+```kotlin
+val normalizedPath = path.replace("\\", "/")
+```
+
+### Language Detection
+CopyWithCodeContentAction detects file type for markdown code blocks:
+
+```kotlin
+private fun detectLanguage(file: VirtualFile): String {
+    val fileTypeName = file.fileType.name
+    return when (fileTypeName.lowercase()) {
+        "kotlin" -> "kotlin"
+        "java" -> "java"
+        "c#" -> "csharp"
+        "javascript" -> "javascript"
+        "typescript" -> "typescript"
+        // ... 15 total mappings
+        else -> "" // Empty string for unknown types
+    }
+}
+```
 
 ## File Organization
 
 ### Source Files (src/main/kotlin/com/github/hon45/copyselectioncontext/)
 
-- **CopySelectionBaseAction.kt**: Abstract base class containing shared clipboard logic, editor context extraction, and line number calculation. All copy actions inherit from this.
+- **CopySelectionBaseAction.kt** (55 lines): Abstract base class containing shared clipboard logic, editor context extraction, and line number calculation. Provides `buildPathString()` for line range formatting, `copyToClipboard()` for CopyPasteManager integration, and `update()` for action enablement. All copy actions inherit from this and implement abstract `getPath()` method.
 
-- **CopyRelativePathAction.kt**: Copies path relative to project root + line numbers. Keyboard shortcut: `Ctrl+Shift+Alt+C`.
+- **CopyRelativePathAction.kt** (21 lines): Copies path relative to project root + line numbers. Implements `getPath()` by calculating relative path from `project.basePath`. Handles edge cases where file is outside project. Keyboard shortcut: `Ctrl+Shift+Alt+C` (Windows/Linux), `Cmd+Shift+Alt+C` (macOS).
 
-- **CopyAbsolutePathAction.kt**: Copies absolute filesystem path + line numbers. Keyboard shortcut: `Ctrl+Shift+Alt+A`.
+- **CopyAbsolutePathAction.kt** (11 lines): Copies absolute filesystem path + line numbers. Simplest implementation, returns `file.path` directly. Keyboard shortcut: `Ctrl+Shift+Alt+A` (Windows/Linux), `Cmd+Shift+Alt+A` (macOS).
 
-- **CopyWithCodeContentAction.kt**: Copies path + line numbers + markdown code block with actual code content. Keyboard shortcut: `Ctrl+Shift+Alt+V`.
+- **CopyWithCodeContentAction.kt** (104 lines): Copies path + line numbers + markdown code block with actual code content. Overrides `actionPerformed()` to build custom markdown format. Uses `CopySelectionSettings` to respect user's path type preference. Includes `detectLanguage()` for 15 file type mappings and `getCodeContent()` for text extraction. Keyboard shortcut: `Ctrl+Shift+Alt+V` (Windows/Linux), `Cmd+Shift+Alt+V` (macOS).
 
-- **CopySelectionNotifier.kt**: Utility class for showing toast notifications when copy succeeds.
+- **CopySelectionNotifier.kt** (17 lines): Singleton object for showing toast notifications when copy succeeds. Uses `NotificationGroupManager` to display BALLOON-type notifications with checkmark prefix. Notification group ID is `"CopySelectionContext"` (must match plugin.xml registration).
 
-- **CopySelectionStatusBarWidget.kt**: Status bar widget displaying the last copied path (updates on each copy action).
+- **CopySelectionStatusBarWidget.kt** (9 lines): Stub implementation that prints to console. Full implementation would require `StatusBarWidget` interface with `TextPresentation`, `getAlignment()` method, and Factory class for registration.
 
-- **CopySelectionSettings.kt**: Settings service using `@Service` and `@State` annotations. Persists user preference for default path type (relative vs absolute).
+- **CopySelectionSettings.kt** (39 lines): Application-level settings service using `@Service` and `@State` annotations. Persists user preference for default path type (relative vs absolute) to `CopySelectionPlugin.xml` in IDE config directory. Implements `PersistentStateComponent<State>` for automatic load/save. Includes `PathType` enum with RELATIVE and ABSOLUTE values.
 
-- **CopySelectionConfigurable.kt**: Settings UI page implementing `Configurable` interface. Minimal UI with radio buttons for path type preference.
+- **CopySelectionConfigurable.kt** (70 lines): Settings UI page implementing `Configurable` interface. Creates minimal Swing UI with radio buttons for path type preference. Appears under Settings → Tools → Copy Selection Context. Implements `isModified()`, `apply()`, `reset()`, and `disposeUIResources()` for proper settings lifecycle management.
 
 ### Configuration Files
 
-- **plugin.xml** (src/main/resources/META-INF/): Plugin descriptor defining actions, keyboard shortcuts, notification groups, status bar widget factory, and settings page.
+- **plugin.xml** (src/main/resources/META-INF/, 81 lines): Plugin descriptor defining:
+  - **Extensions**: `notificationGroup` (id="Copy Selection Context", displayType="BALLOON"), `statusBarWidgetFactory` (stub registration), `applicationConfigurable` (Settings UI under Tools menu)
+  - **Actions**: 3 actions with keyboard shortcuts for both Windows/Linux (`$default` keymap with `ctrl`) and macOS (`Mac OS X` keymaps with `cmd`)
+  - **Context Menu**: All actions added to `EditorPopupMenu` with chained anchoring
+  - **Metadata**: Description and change notes in CDATA blocks with HTML formatting
+  - **Dependencies**: `com.intellij.modules.platform` only
+  - **NO untilBuild**: Forward compatibility requirement
 
-- **build.gradle.kts**: Gradle build configuration with IntelliJ Platform plugin setup, Kotlin configuration, and publishing settings.
+- **build.gradle.kts**: Gradle build configuration with IntelliJ Platform plugin setup (version 2.11.0), Kotlin configuration (2.1.0 with JVM toolchain 21), and publishing settings. Includes `pluginVerification` block for compatibility checking.
 
-- **gradle.properties**: Gradle properties including `kotlin.stdlib.default.dependency=false` (critical for IDE compatibility).
+- **gradle.properties**: Gradle properties including `kotlin.stdlib.default.dependency=false` (critical for IDE compatibility - prevents classloader conflicts with IDE's bundled Kotlin stdlib).
 
 ### Naming Conventions
-- Actions: `Copy*Action.kt`
-- UI components: `CopySelection*Widget.kt`
-- Settings: `CopySelection*Settings.kt` / `*Configurable.kt`
-- Package prefix: `com.github.hon45.copyselectioncontext`
+- Actions: `Copy*Action.kt` (e.g., CopyRelativePathAction, CopyAbsolutePathAction)
+- UI components: `CopySelection*Widget.kt` or `CopySelection*Notifier.kt`
+- Settings: `CopySelection*Settings.kt` / `CopySelection*Configurable.kt`
+- Package: Single flat package `com.github.hon45.copyselectioncontext` (no subdirectories)
+- Plugin ID: `com.github.hon45.copy-selection-context` (kebab-case with hyphens)
+- Notification Group ID: `"CopySelectionContext"` (no spaces, PascalCase)
 
 ## Conventions
 
@@ -180,9 +244,10 @@ When no text is selected, actions copy the current line number instead of failin
 4. **Notification Group Registration**: Notification groups must be registered in plugin.xml before use:
    ```xml
    <extensions defaultExtensionNs="com.intellij">
-       <notificationGroup id="Copy Selection Context" displayType="BALLOON"/>
+       <notificationGroup id="CopySelectionContext" displayType="BALLOON"/>
    </extensions>
    ```
+   Note: The ID in plugin.xml is `"CopySelectionContext"` (no spaces), but the display name can have spaces.
 
 5. **Plugin Naming**: Plugin name cannot contain "Plugin" or "IntelliJ" (JetBrains Marketplace requirement).
 
@@ -196,12 +261,18 @@ When no text is selected, actions copy the current line number instead of failin
 
 9. **Line Numbers Are 0-Indexed**: Editor line numbers are 0-indexed internally but displayed as 1-indexed to users. Always add 1 when formatting for clipboard.
 
-10. **StatusBarWidget Lifecycle**: Status bar widgets must implement `dispose()` properly to avoid memory leaks. Use `project.messageBus.connect()` for event subscriptions.
+10. **StatusBarWidget.TextPresentation**: When implementing status bar widgets, the `TextPresentation` interface requires `getAlignment()` method returning Float (e.g., 0.0f for left-aligned text). Missing this method causes compilation errors.
+
+11. **Keyboard Shortcut Syntax**: Use `"ctrl"` (not `"control"`) in plugin.xml keyboard-shortcut elements. Invalid syntax causes plugin verification failures.
 
 ### Build and Deployment
 
-11. **Gradle Daemon**: IntelliJ Platform Gradle Plugin can be memory-intensive. Increase Gradle daemon heap if builds fail: `org.gradle.jvmargs=-Xmx2048m` in gradle.properties.
+12. **Gradle Daemon**: IntelliJ Platform Gradle Plugin can be memory-intensive. Increase Gradle daemon heap if builds fail: `org.gradle.jvmargs=-Xmx2048m` in gradle.properties.
 
-12. **Plugin Verification**: Always run `./gradlew verifyPlugin` before publishing. It catches compatibility issues with target IDE versions.
+13. **Plugin Verification**: Always run `./gradlew verifyPlugin` before publishing. It catches compatibility issues with target IDE versions. Configure with `pluginVerification { ides { recommended() } }` in build.gradle.kts.
 
-13. **Marketplace Token**: Publishing requires a JetBrains Marketplace token set as `PUBLISH_TOKEN` environment variable or in `~/.gradle/gradle.properties`.
+14. **Marketplace Token**: Publishing requires a JetBrains Marketplace token set as `PUBLISH_TOKEN` environment variable or in `~/.gradle/gradle.properties`.
+
+15. **Windows Build Environment**: On Windows with Git Bash, use PowerShell wrapper for Gradle commands: `powershell.exe -Command ".\gradlew.bat buildPlugin"`. Alternatively, run Gradle wrapper directly via Java: `java -cp gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain buildPlugin`.
+
+16. **Java Version Requirement**: Build requires Java 21 (jvmToolchain 21). Set `JAVA_HOME` to JDK 21 installation before building if system has multiple Java versions.

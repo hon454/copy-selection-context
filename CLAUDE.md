@@ -27,9 +27,14 @@ Quick reference for Claude when working on this project.
 copy-selection-context/
 ├── src/main/
 │   ├── kotlin/com/github/hon45/copyselectioncontext/
-│   │   ├── actions/           # Action implementations
-│   │   ├── ui/                # UI components (notifications, status bar)
-│   │   └── settings/          # Settings persistence and UI
+│   │   ├── CopySelectionBaseAction.kt       # Abstract base
+│   │   ├── CopyRelativePathAction.kt        # Relative path action
+│   │   ├── CopyAbsolutePathAction.kt        # Absolute path action
+│   │   ├── CopyWithCodeContentAction.kt     # With code action
+│   │   ├── CopySelectionNotifier.kt         # Toast notifications
+│   │   ├── CopySelectionStatusBarWidget.kt  # Status bar (stub)
+│   │   ├── CopySelectionSettings.kt         # Settings persistence
+│   │   └── CopySelectionConfigurable.kt     # Settings UI
 │   └── resources/
 │       └── META-INF/
 │           └── plugin.xml     # Plugin descriptor
@@ -38,11 +43,17 @@ copy-selection-context/
 └── settings.gradle.kts        # Gradle settings
 ```
 
+Note: All Kotlin source files are in a single flat package (no subdirectories).
+
 ## Frequently Modified Files
 
-- `src/main/kotlin/com/github/hon45/copyselectioncontext/actions/*.kt` — Action implementations
-- `src/main/kotlin/com/github/hon45/copyselectioncontext/ui/*.kt` — UI components
-- `src/main/kotlin/com/github/hon45/copyselectioncontext/settings/*.kt` — Settings
+- `src/main/kotlin/com/github/hon45/copyselectioncontext/*.kt` — All source files (flat package structure)
+  - `CopySelectionBaseAction.kt` — Base class for all actions
+  - `Copy*PathAction.kt` — Action implementations
+  - `CopySelectionNotifier.kt` — Toast notifications
+  - `CopySelectionStatusBarWidget.kt` — Status bar widget (stub)
+  - `CopySelectionSettings.kt` — Settings persistence
+  - `CopySelectionConfigurable.kt` — Settings UI
 - `src/main/resources/META-INF/plugin.xml` — Action registration, extensions, notification groups
 - `build.gradle.kts` — Build configuration, dependencies, plugin metadata
 - `gradle.properties` — Gradle properties (kotlin.stdlib.default.dependency=false is critical)
@@ -50,40 +61,53 @@ copy-selection-context/
 ## Core Components
 
 ### Actions (Keyboard Shortcuts)
-- **CopyRelativePathAction** (`Ctrl+Shift+Alt+C`) — Copy relative path + line numbers
-- **CopyAbsolutePathAction** (`Ctrl+Shift+Alt+A`) — Copy absolute path + line numbers
-- **CopyWithCodeContentAction** (`Ctrl+Shift+Alt+V`) — Copy path + line + markdown code block
+- **CopyRelativePathAction** (`Ctrl+Shift+Alt+C` / `Cmd+Shift+Alt+C`) — Copy relative path + line numbers
+- **CopyAbsolutePathAction** (`Ctrl+Shift+Alt+A` / `Cmd+Shift+Alt+A`) — Copy absolute path + line numbers
+- **CopyWithCodeContentAction** (`Ctrl+Shift+Alt+V` / `Cmd+Shift+Alt+V`) — Copy path + line + markdown code block
 
 ### UI Components
-- **CopySelectionNotifier** — Toast notifications on successful copy
-- **CopySelectionStatusBarWidget** — Status bar widget showing last copied path
+- **CopySelectionNotifier** — Toast notifications (BALLOON type) with checkmark prefix
+- **CopySelectionStatusBarWidget** — Status bar widget (stub implementation, prints to console)
 
 ### Settings
-- **CopySelectionSettings** — Persists default path type preference (relative vs absolute)
-- **CopySelectionConfigurable** — Minimal settings UI with radio buttons
+- **CopySelectionSettings** — Persists default path type preference to `CopySelectionPlugin.xml`
+- **CopySelectionConfigurable** — Settings UI under Tools → Copy Selection Context
 
 ## Key IntelliJ Platform APIs
 
 ```kotlin
 // Extract editor context
-val editor = e.getData(CommonDataKeys.EDITOR) ?: return
 val project = e.getData(CommonDataKeys.PROJECT) ?: return
-val virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
+val editor = e.getData(CommonDataKeys.EDITOR) ?: return
+val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
 
 // Copy to clipboard
 val content = StringSelection(formattedText)
 CopyPasteManager.getInstance().setContents(content)
 
-// Show notification
+// Show notification (note: ID is "CopySelectionContext" without spaces)
 NotificationGroupManager.getInstance()
-    .getNotificationGroup("Copy Selection Context")
-    .createNotification(message, NotificationType.INFORMATION)
+    .getNotificationGroup("CopySelectionContext")
+    .createNotification("✓ Copied: $message", NotificationType.INFORMATION)
     .notify(project)
 
 // Settings persistence
 @Service
 @State(name = "CopySelectionSettings", storages = [Storage("CopySelectionPlugin.xml")])
 class CopySelectionSettings : PersistentStateComponent<CopySelectionSettings.State>
+
+// No selection handling
+val lineRange = if (selectionModel.hasSelection()) {
+    val startLine = document.getLineNumber(selectionModel.selectionStart) + 1
+    val endLine = document.getLineNumber(selectionModel.selectionEnd) + 1
+    if (startLine == endLine) "$startLine" else "$startLine-$endLine"
+} else {
+    val currentLine = editor.caretModel.logicalPosition.line + 1
+    "$currentLine"
+}
+
+// Path normalization (cross-platform)
+val normalizedPath = path.replace("\\", "/")
 ```
 
 ## Testing
@@ -145,8 +169,12 @@ fun example() {
 1. **Forgetting null checks**: Always null-check `CommonDataKeys` results
 2. **Line number indexing**: Editor uses 0-indexed lines, display as 1-indexed
 3. **No selection handling**: Copy current line number when no selection exists
-4. **Notification group registration**: Must register in plugin.xml before use
+4. **Notification group registration**: Must register in plugin.xml before use (ID: `"CopySelectionContext"` without spaces)
 5. **Project base path**: Can be null in default project, handle gracefully
+6. **Keyboard shortcut syntax**: Use `"ctrl"` (not `"control"`) in plugin.xml
+7. **StatusBarWidget.TextPresentation**: Must implement `getAlignment()` method returning Float
+8. **Windows build environment**: Use PowerShell wrapper or Java directly to run Gradle
+9. **Java version**: Build requires Java 21 (jvmToolchain 21)
 
 ## Version Compatibility
 
