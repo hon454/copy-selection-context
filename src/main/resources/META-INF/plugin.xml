@@ -1,0 +1,11 @@
+<idea-plugin>
+    <id>com.github.hon45.copy-selection-context</id>
+    <name>Copy Selection Context</name>
+    <vendor email="your@email.com" url="https://github.com/hon45">hon45</vendor>
+    
+    <description><![CDATA[
+    Copy file path and line numbers to clipboard for easy AI context sharing.
+    ]]></description>
+    
+    <depends>com.intellij.modules.platform</depends>
+</idea-plugin>
