@@ -49,7 +49,7 @@
                 class="com.github.hon45.copyselectioncontext.CopyRelativePathAction"
                 text="Copy Relative Path with Line Numbers"
                 description="Copy file path (relative to project root) and line numbers to clipboard">
-            <keyboard-shortcut keymap="$default" first-keystroke="control shift alt C"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift alt C"/>
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="cmd shift alt C"/>
             <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="cmd shift alt C"/>
             <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="EditorCopy"/>
@@ -60,7 +60,7 @@
                 class="com.github.hon45.copyselectioncontext.CopyAbsolutePathAction"
                 text="Copy Absolute Path with Line Numbers"
                 description="Copy absolute file path and line numbers to clipboard">
-            <keyboard-shortcut keymap="$default" first-keystroke="control shift alt A"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift alt A"/>
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="cmd shift alt A"/>
             <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="cmd shift alt A"/>
             <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="CopySelectionContext.CopyRelativePath"/>
@@ -71,7 +71,7 @@
                 class="com.github.hon45.copyselectioncontext.CopyWithCodeContentAction"
                 text="Copy with Code Content"
                 description="Copy file path, line numbers, and code content in markdown format">
-            <keyboard-shortcut keymap="$default" first-keystroke="control shift alt V"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift alt V"/>
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="cmd shift alt V"/>
             <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="cmd shift alt V"/>
             <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="CopySelectionContext.CopyAbsolutePath"/>

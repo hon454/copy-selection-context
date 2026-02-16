@@ -30,6 +30,12 @@ intellijPlatform {
             sinceBuild.set("243")
         }
     }
+    
+    pluginVerification {
+        ides {
+            recommended()
+        }
+    }
 }
 
 tasks {
