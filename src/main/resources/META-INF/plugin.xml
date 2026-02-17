@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.github.hon45.copy-selection-context</id>
     <name>Copy Selection Context</name>
-    <vendor email="your@email.com" url="https://github.com/hon45">hon45</vendor>
+    <vendor email="hon454@gmail.com" url="https://github.com/hon45">hon45</vendor>
     
     <description><![CDATA[
     Copy file path and line numbers to clipboard for easy AI context sharing.
@@ -34,10 +34,7 @@
     
     <extensions defaultExtensionNs="com.intellij">
         <!-- Notification Group -->
-        <notificationGroup id="Copy Selection Context" displayType="BALLOON"/>
-        
-        <!-- Status Bar Widget Factory -->
-        <statusBarWidgetFactory implementation="com.github.hon45.copyselectioncontext.CopySelectionStatusBarWidget$Factory" id="CopySelectionContext.StatusBarWidget"/>
+        <notificationGroup id="CopySelectionContext" displayType="BALLOON"/>
         
         <!-- Settings Configurable -->
         <applicationConfigurable parentId="tools" instance="com.github.hon45.copyselectioncontext.CopySelectionConfigurable" id="CopySelectionContext.Settings" displayName="Copy Selection Context"/>
