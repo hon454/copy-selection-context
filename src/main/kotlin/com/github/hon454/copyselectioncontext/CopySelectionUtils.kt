@@ -6,6 +6,48 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 
 object CopySelectionUtils {
+    private val LANGUAGE_MAP = mapOf(
+        "kotlin" to "kotlin",
+        "java" to "java",
+        "c#" to "csharp",
+        "javascript" to "javascript",
+        "typescript" to "typescript",
+        "python" to "python",
+        "xml" to "xml",
+        "yaml" to "yaml",
+        "json" to "json",
+        "markdown" to "markdown",
+        "html" to "html",
+        "css" to "css",
+        "sql" to "sql",
+        "shell script" to "bash",
+        "text" to "text",
+        "go" to "go",
+        "rust" to "rust",
+        "c" to "c",
+        "c++" to "cpp",
+        "swift" to "swift",
+        "dart" to "dart",
+        "ruby" to "ruby",
+        "php" to "php",
+        "groovy" to "groovy",
+        "scala" to "scala",
+        "perl" to "perl",
+        "lua" to "lua",
+        "r" to "r",
+        "jsx harmony" to "jsx",
+        "typescript jsx" to "tsx",
+        "vue.js" to "vue",
+        "svelte" to "svelte",
+        "scss" to "scss",
+        "less" to "less",
+        "toml" to "toml",
+        "dockerfile" to "dockerfile",
+        "hcl" to "hcl",
+        "graphql" to "graphql",
+        "protocol buffer" to "protobuf"
+    )
+
     fun resolvePath(project: Project, file: VirtualFile, pathType: PathType): String {
         return when (pathType) {
             PathType.ABSOLUTE -> file.path
@@ -53,33 +95,20 @@ object CopySelectionUtils {
     }
 
     fun detectLanguage(file: VirtualFile): String {
-        val fileTypeName = file.fileType.name
-        return when (fileTypeName.lowercase()) {
-            "kotlin" -> "kotlin"
-            "java" -> "java"
-            "c#" -> "csharp"
-            "javascript" -> "javascript"
-            "typescript" -> "typescript"
-            "python" -> "python"
-            "xml" -> "xml"
-            "yaml" -> "yaml"
-            "json" -> "json"
-            "markdown" -> "markdown"
-            "html" -> "html"
-            "css" -> "css"
-            "sql" -> "sql"
-            "shell script" -> "bash"
-            "text" -> "text"
-            else -> file.extension?.lowercase().orEmpty()
-        }
+        val fileTypeName = file.fileType.name.lowercase()
+        return LANGUAGE_MAP[fileTypeName] ?: file.extension?.lowercase().orEmpty()
     }
 
     fun formatOutput(path: String, lineRange: String, code: String? = null, language: String? = null): String {
-        val normalizedPath = path.replace("\\", "/")
-        return if (code == null) {
-            " @$normalizedPath#L$lineRange "
-        } else {
-            " @$normalizedPath#L$lineRange \n```$language\n$code\n```"
-        }
+        val startLine = lineRange.substringBefore("-").toIntOrNull() ?: 0
+        val endLine = lineRange.substringAfter("-", lineRange).toIntOrNull() ?: startLine
+        val context = FormatContext(
+            path = path,
+            startLine = startLine,
+            endLine = endLine,
+            code = code,
+            language = language ?: "null"
+        )
+        return ClaudeCodeFormatter().format(context)
     }
 }

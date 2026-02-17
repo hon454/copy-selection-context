@@ -157,6 +157,150 @@ class CopySelectionUtilsTest {
         assertEquals(" @src/App.kt#L7 \n```kotlin\nprintln(1)\n```", result)
     }
 
+    @Test
+    fun `detectLanguage maps Go`() {
+        val file = mockVirtualFile(fileTypeName = "Go", extension = "go")
+        assertEquals("go", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps Rust`() {
+        val file = mockVirtualFile(fileTypeName = "Rust", extension = "rs")
+        assertEquals("rust", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps C`() {
+        val file = mockVirtualFile(fileTypeName = "C", extension = "c")
+        assertEquals("c", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps C++`() {
+        val file = mockVirtualFile(fileTypeName = "C++", extension = "cpp")
+        assertEquals("cpp", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps Swift`() {
+        val file = mockVirtualFile(fileTypeName = "Swift", extension = "swift")
+        assertEquals("swift", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps Dart`() {
+        val file = mockVirtualFile(fileTypeName = "Dart", extension = "dart")
+        assertEquals("dart", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps Ruby`() {
+        val file = mockVirtualFile(fileTypeName = "Ruby", extension = "rb")
+        assertEquals("ruby", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps PHP`() {
+        val file = mockVirtualFile(fileTypeName = "PHP", extension = "php")
+        assertEquals("php", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps Groovy`() {
+        val file = mockVirtualFile(fileTypeName = "Groovy", extension = "groovy")
+        assertEquals("groovy", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps Scala`() {
+        val file = mockVirtualFile(fileTypeName = "Scala", extension = "scala")
+        assertEquals("scala", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps Perl`() {
+        val file = mockVirtualFile(fileTypeName = "Perl", extension = "pl")
+        assertEquals("perl", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps Lua`() {
+        val file = mockVirtualFile(fileTypeName = "Lua", extension = "lua")
+        assertEquals("lua", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps R`() {
+        val file = mockVirtualFile(fileTypeName = "R", extension = "r")
+        assertEquals("r", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps JSX Harmony`() {
+        val file = mockVirtualFile(fileTypeName = "JSX Harmony", extension = "jsx")
+        assertEquals("jsx", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps TypeScript JSX`() {
+        val file = mockVirtualFile(fileTypeName = "TypeScript JSX", extension = "tsx")
+        assertEquals("tsx", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps Vue`() {
+        val file = mockVirtualFile(fileTypeName = "Vue.js", extension = "vue")
+        assertEquals("vue", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps Svelte`() {
+        val file = mockVirtualFile(fileTypeName = "Svelte", extension = "svelte")
+        assertEquals("svelte", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps SCSS`() {
+        val file = mockVirtualFile(fileTypeName = "SCSS", extension = "scss")
+        assertEquals("scss", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps LESS`() {
+        val file = mockVirtualFile(fileTypeName = "LESS", extension = "less")
+        assertEquals("less", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps TOML`() {
+        val file = mockVirtualFile(fileTypeName = "TOML", extension = "toml")
+        assertEquals("toml", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps Dockerfile`() {
+        val file = mockVirtualFile(fileTypeName = "Dockerfile", extension = "dockerfile")
+        assertEquals("dockerfile", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps HCL`() {
+        val file = mockVirtualFile(fileTypeName = "HCL", extension = "hcl")
+        assertEquals("hcl", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps GraphQL`() {
+        val file = mockVirtualFile(fileTypeName = "GraphQL", extension = "graphql")
+        assertEquals("graphql", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `detectLanguage maps Protocol Buffer`() {
+        val file = mockVirtualFile(fileTypeName = "Protocol Buffer", extension = "proto")
+        assertEquals("protobuf", CopySelectionUtils.detectLanguage(file))
+    }
+
     private fun mockVirtualFile(fileTypeName: String, extension: String?): VirtualFile {
         val file = mockk<VirtualFile>()
         val fileType = mockk<FileType>()
