@@ -15,7 +15,9 @@ abstract class CopySelectionBaseAction : AnAction() {
         val editor = e.getData(CommonDataKeys.EDITOR) ?: return
         val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
         
-        val result = buildPathString(project, file, editor)
+        val path = getPath(project, file)
+        val lineRange = CopySelectionUtils.resolveLineRange(editor)
+        val result = buildContent(path, lineRange, file, editor)
         copyToClipboard(result)
         
         CopySelectionNotifier.notify(project, result)
@@ -27,25 +29,19 @@ abstract class CopySelectionBaseAction : AnAction() {
         val file = e.getData(CommonDataKeys.VIRTUAL_FILE)
         e.presentation.isEnabledAndVisible = editor != null && file != null
     }
-    
+
     protected abstract fun getPath(project: Project, file: VirtualFile): String
-    
-    private fun buildPathString(project: Project, file: VirtualFile, editor: Editor): String {
-        val selectionModel = editor.selectionModel
-        val document = editor.document
-        val path = getPath(project, file)
-        
-        val lineRange = if (selectionModel.hasSelection()) {
-            val startLine = document.getLineNumber(selectionModel.selectionStart) + 1
-            val endLine = document.getLineNumber(selectionModel.selectionEnd) + 1
-            if (startLine == endLine) "$startLine" else "$startLine-$endLine"
-        } else {
-            val currentLine = editor.caretModel.logicalPosition.line + 1
-            "$currentLine"
-        }
-        
-        val normalizedPath = path.replace("\\", "/")
-        return " @$normalizedPath#L$lineRange "
+
+    protected open fun buildContent(path: String, lineRange: String, file: VirtualFile, editor: Editor): String {
+        return CopySelectionUtils.formatOutput(path, lineRange)
+    }
+
+    protected fun getCodeContent(editor: Editor): String {
+        return CopySelectionUtils.getCodeContent(editor)
+    }
+
+    protected fun detectLanguage(file: VirtualFile): String {
+        return CopySelectionUtils.detectLanguage(file)
     }
     
     private fun copyToClipboard(content: String) {

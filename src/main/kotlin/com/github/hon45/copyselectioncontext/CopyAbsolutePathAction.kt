@@ -5,6 +5,6 @@ import com.intellij.openapi.vfs.VirtualFile
 
 class CopyAbsolutePathAction : CopySelectionBaseAction() {
     override fun getPath(project: Project, file: VirtualFile): String {
-        return file.path
+        return CopySelectionUtils.resolvePath(project, file, PathType.ABSOLUTE)
     }
 }
