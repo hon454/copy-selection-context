@@ -1,4 +1,4 @@
-package com.github.hon45.copyselectioncontext
+package com.github.hon454.copyselectioncontext
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent

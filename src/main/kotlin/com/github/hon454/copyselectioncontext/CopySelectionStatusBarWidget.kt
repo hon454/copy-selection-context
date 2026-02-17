@@ -1,4 +1,4 @@
-package com.github.hon45.copyselectioncontext
+package com.github.hon454.copyselectioncontext
 
 object CopySelectionStatusBarWidget {
     fun update(message: String) {

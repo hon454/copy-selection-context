@@ -79,7 +79,7 @@ Go to `Settings` → `Tools` → `Copy Selection Context` to configure:
 
 ```bash
 # Clone the repository
-git clone https://github.com/hon45/copy-selection-context.git
+git clone https://github.com/hon454/copy-selection-context.git
 cd copy-selection-context
 
 # Build the plugin
@@ -136,4 +136,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Author
 
-Made by [hon45](https://github.com/hon45)
+Made by [hon454](https://github.com/hon454)

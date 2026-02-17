@@ -32,7 +32,7 @@ JetBrains IDE plugin for copying code context (file path, line numbers, optional
 
 ## Architecture Overview
 
-Single flat package: `com.github.hon45.copyselectioncontext/`
+Single flat package: `com.github.hon454.copyselectioncontext/`
 
 | File | Role |
 |------|------|
@@ -52,8 +52,8 @@ Single flat package: `com.github.hon45.copyselectioncontext/`
 
 - **Code Style**: Kotlin idiomatic, expression bodies, `?.`/`?:` null handling, avoid `!!`
 - **Naming**: Actions=`Copy*Action.kt`, UI=`CopySelection*Widget/Notifier.kt`, Settings=`CopySelection*Settings/Configurable.kt`
-- **Package**: Flat `com.github.hon45.copyselectioncontext` (no subdirectories)
-- **Plugin ID**: `com.github.hon45.copy-selection-context` (kebab-case)
+- **Package**: Flat `com.github.hon454.copyselectioncontext` (no subdirectories)
+- **Plugin ID**: `com.github.hon454.copy-selection-context` (kebab-case)
 - **Notification Group ID**: `"CopySelectionContext"` (PascalCase, no spaces)
 - **Commits**: `type: description` (feat, fix, docs, refactor, test, chore)
 - **PRs**: One feature per PR, include manual testing steps, update AGENTS.md if architecture changes
