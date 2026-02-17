@@ -15,7 +15,12 @@ class CopySelectionSettings : PersistentStateComponent<CopySelectionSettings.Sta
 
     data class State(
         var defaultPathType: PathType = PathType.ABSOLUTE,
-        var includeCodeContent: Boolean = false
+        var includeCodeContent: Boolean = false,
+        var enableNotification: Boolean = true,
+        var outputFormat: String = "claude",
+        var codeTrimming: Boolean = false,
+        var copyHistorySize: Int = 10,
+        var customFormatTemplate: String = ""
     )
 
     private var myState = State()
