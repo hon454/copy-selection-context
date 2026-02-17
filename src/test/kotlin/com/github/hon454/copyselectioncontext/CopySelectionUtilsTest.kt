@@ -158,6 +158,130 @@ class CopySelectionUtilsTest {
     }
 
     @Test
+    fun `resolvePath returns absolute path when basePath is null`() {
+        val project = mockk<Project>()
+        val file = mockk<VirtualFile>()
+        every { project.basePath } returns null
+        every { file.path } returns "C:/repo/src/App.kt"
+
+        val result = CopySelectionUtils.resolvePath(project, file, PathType.RELATIVE)
+
+        assertEquals("C:/repo/src/App.kt", result)
+    }
+
+    @Test
+    fun `resolvePath handles Korean characters in path`() {
+        val project = mockk<Project>()
+        val file = mockk<VirtualFile>()
+        every { project.basePath } returns "C:/repo"
+        every { file.path } returns "C:/repo/한글/App.kt"
+
+        val result = CopySelectionUtils.resolvePath(project, file, PathType.RELATIVE)
+
+        assertEquals("한글/App.kt", result)
+    }
+
+    @Test
+    fun `resolvePath handles special characters in path`() {
+        val project = mockk<Project>()
+        val file = mockk<VirtualFile>()
+        every { project.basePath } returns "C:/repo"
+        every { file.path } returns "C:/repo/src-v2.0/App@test.kt"
+
+        val result = CopySelectionUtils.resolvePath(project, file, PathType.RELATIVE)
+
+        assertEquals("src-v2.0/App@test.kt", result)
+    }
+
+    @Test
+    fun `resolveLineRange returns single line number when startLine equals endLine`() {
+        val editor = mockk<Editor>()
+        val selectionModel = mockk<SelectionModel>()
+        val document = mockk<Document>()
+
+        every { editor.selectionModel } returns selectionModel
+        every { editor.document } returns document
+        every { selectionModel.hasSelection() } returns true
+        every { selectionModel.selectionStart } returns 10
+        every { selectionModel.selectionEnd } returns 15
+        every { document.getLineNumber(10) } returns 5
+        every { document.getLineNumber(15) } returns 5
+
+        val result = CopySelectionUtils.resolveLineRange(editor)
+
+        assertEquals("6", result)
+    }
+
+    @Test
+    fun `getCodeContent returns empty string when selectedText is null`() {
+        val editor = mockk<Editor>()
+        val selectionModel = mockk<SelectionModel>()
+
+        every { editor.selectionModel } returns selectionModel
+        every { selectionModel.hasSelection() } returns true
+        every { selectionModel.selectedText } returns null
+
+        val result = CopySelectionUtils.getCodeContent(editor)
+
+        assertEquals("", result)
+    }
+
+    @Test
+    fun `detectLanguage returns empty string when extension is null`() {
+        val file = mockVirtualFile(fileTypeName = "SomeUnknownType", extension = null)
+
+        val result = CopySelectionUtils.detectLanguage(file)
+
+        assertEquals("", result)
+    }
+
+    @Test
+    fun `formatOutput handles code with triple backticks`() {
+        val code = "val markdown = \"\"\"\n```\ncode block\n```\n\"\"\""
+        val result = CopySelectionUtils.formatOutput("src/App.kt", "10-15", code, "kotlin")
+
+        assertEquals(" @src/App.kt#L10-15 \n```kotlin\n$code\n```", result)
+    }
+
+    @Test
+    fun `formatOutput handles path with hash character`() {
+        val result = CopySelectionUtils.formatOutput("src/App#v2.kt", "5", null, null)
+
+        assertEquals(" @src/App#v2.kt#L5 ", result)
+    }
+
+    @Test
+    fun `formatOutput renders code block even with empty code string`() {
+        val result = CopySelectionUtils.formatOutput("src/App.kt", "3", "", "kotlin")
+
+        assertEquals(" @src/App.kt#L3 \n```kotlin\n\n```", result)
+    }
+
+    @Test
+    fun `detectLanguage handles case-insensitive file type names`() {
+        val file = mockVirtualFile(fileTypeName = "KOTLIN", extension = "kt")
+
+        val result = CopySelectionUtils.detectLanguage(file)
+
+        assertEquals("kotlin", result)
+    }
+
+    @Test
+    fun `getCodeContent handles multiline selected text with special characters`() {
+        val editor = mockk<Editor>()
+        val selectionModel = mockk<SelectionModel>()
+        val multilineText = "fun test() {\n    println(\"한글\")\n}"
+
+        every { editor.selectionModel } returns selectionModel
+        every { selectionModel.hasSelection() } returns true
+        every { selectionModel.selectedText } returns multilineText
+
+        val result = CopySelectionUtils.getCodeContent(editor)
+
+        assertEquals(multilineText, result)
+    }
+
+    @Test
     fun `detectLanguage maps Go`() {
         val file = mockVirtualFile(fileTypeName = "Go", extension = "go")
         assertEquals("go", CopySelectionUtils.detectLanguage(file))
