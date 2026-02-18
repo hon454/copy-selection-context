@@ -89,7 +89,7 @@ class TemplateFormatterTest {
     fun `TemplateFormatter exposes preset templates`() {
         assertEquals("{path}:{range}", TemplateFormatter.PRESET_PATH_AND_RANGE)
         assertEquals(" @{path}#L{range} ", TemplateFormatter.PRESET_CLAUDE_REFERENCE)
-        assertEquals("{path}:{range}\\n```{lang}\\n{code}\\n```", TemplateFormatter.PRESET_WITH_CODE_BLOCK)
+        assertEquals("{path}:{range}\n```{lang}\n{code}\n```", TemplateFormatter.PRESET_WITH_CODE_BLOCK)
     }
 
     @Test
