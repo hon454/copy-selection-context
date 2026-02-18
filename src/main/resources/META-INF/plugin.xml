@@ -36,29 +36,6 @@ With code: path + fenced code block in markdown
 Source and issue tracker: <a href="https://github.com/hon454/copy-selection-context">github.com/hon454/copy-selection-context</a>
     ]]></description>
     
-    <change-notes><![CDATA[
-    <h2>1.0.2</h2>
-    <h3>New Features</h3>
-    <ul>
-        <li>Copy History browser — browse and re-copy recent entries (<code>Ctrl+Alt+H</code>)</li>
-        <li>GitHub/GitLab permalink generation for selected lines</li>
-        <li>Template-based output formatting with presets (Claude Code, Path:Line, GitHub Permalink, Custom)</li>
-        <li>Live template preview and variable validation in settings</li>
-        <li>Status bar widget — shows last copied text, click to re-copy</li>
-    </ul>
-    <h3>Improvements</h3>
-    <ul>
-        <li>Removed project-level settings (simplified to application-level only)</li>
-        <li>Configurable notification toggle and history size</li>
-        <li>Cross-platform build command documentation</li>
-    </ul>
-    <h3>Bug Fixes</h3>
-    <ul>
-        <li>Corrected help anchor link</li>
-        <li>Aligned notification group metadata</li>
-    </ul>
-    ]]></change-notes>
-    
     <depends>com.intellij.modules.platform</depends>
     
     <extensions defaultExtensionNs="com.intellij">

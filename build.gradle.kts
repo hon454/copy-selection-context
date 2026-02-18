@@ -1,10 +1,12 @@
+import org.jetbrains.changelog.Changelog
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "2.1.0"
     id("org.jetbrains.intellij.platform") version "2.11.0"
+    id("org.jetbrains.changelog") version "2.5.0"
 }
-
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 group = "com.github.hon454"
 version = "1.0.2"
@@ -39,6 +41,18 @@ intellijPlatform {
         name = "Copy Selection Context"
         version = project.version.toString()
 
+        val changelog = project.changelog // local variable for configuration cache compatibility
+        changeNotes = provider {
+            with(changelog) {
+                renderItem(
+                    (getOrNull(project.version.toString()) ?: getUnreleased())
+                        .withHeader(false)
+                        .withEmptySections(false),
+                    Changelog.OutputType.HTML,
+                )
+            }
+        }
+
         ideaVersion {
             sinceBuild.set("243")
         }
@@ -59,6 +73,11 @@ intellijPlatform {
     publishing {
         token = providers.environmentVariable("PUBLISH_TOKEN")
     }
+}
+
+// Configure Gradle Changelog Plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin
+changelog {
+    repositoryUrl = "https://github.com/hon454/copy-selection-context"
 }
 
 tasks {
