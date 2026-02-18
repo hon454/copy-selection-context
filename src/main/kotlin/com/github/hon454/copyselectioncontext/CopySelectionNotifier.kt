@@ -7,6 +7,7 @@ import com.intellij.openapi.project.Project
 object CopySelectionNotifier {
     fun notify(project: Project?, message: String) {
         if (project == null) return
+        if (!CopySelectionSettings.getInstance().state.enableNotification) return
         
         NotificationGroupManager.getInstance()
             .getNotificationGroup("CopySelectionContext")
