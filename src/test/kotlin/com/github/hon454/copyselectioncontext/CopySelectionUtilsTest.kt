@@ -69,7 +69,14 @@ class CopySelectionUtilsTest {
         val result = CopySelectionUtils.resolveLineRanges(editor)
 
         assertEquals(listOf("1-2", "4"), result)
-        assertEquals("1-2\n\n4", result.joinToString("\n\n"))
+        assertEquals("1-2\n\n4", CopySelectionUtils.joinCaretBlocks(result))
+    }
+
+    @Test
+    fun `joinCaretBlocks joins blocks with double newlines`() {
+        val result = CopySelectionUtils.joinCaretBlocks(listOf(" @src/App.kt#L1 ", " @src/App.kt#L3-5 "))
+
+        assertEquals(" @src/App.kt#L1 \n\n @src/App.kt#L3-5 ", result)
     }
 
     @Test

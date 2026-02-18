@@ -112,6 +112,10 @@ object CopySelectionUtils {
         return ranges
     }
 
+    fun joinCaretBlocks(blocks: List<String>): String {
+        return blocks.joinToString("\n\n")
+    }
+
     fun toLineRange(startLine: Int, endLine: Int): String {
         return if (startLine == endLine) "$startLine" else "$startLine-$endLine"
     }

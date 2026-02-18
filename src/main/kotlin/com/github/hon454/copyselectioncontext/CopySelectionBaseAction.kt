@@ -28,7 +28,7 @@ abstract class CopySelectionBaseAction : AnAction() {
                 val block = buildContentForCaret(path, lineRange, startLine, endLine, file, editor, caret)
                 blocks.add(block)
             }
-            blocks.joinToString("\n\n")
+            CopySelectionUtils.joinCaretBlocks(blocks)
         } else {
             val lineRange = CopySelectionUtils.resolveLineRange(editor)
             buildContent(path, lineRange, file, editor)
