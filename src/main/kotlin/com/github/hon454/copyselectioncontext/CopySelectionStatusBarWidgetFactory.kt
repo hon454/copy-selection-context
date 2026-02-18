@@ -7,7 +7,7 @@ import com.intellij.openapi.wm.StatusBarWidgetFactory
 
 class CopySelectionStatusBarWidgetFactory : StatusBarWidgetFactory {
     override fun getId() = CopySelectionStatusBarWidget.ID
-    override fun getDisplayName() = "Copy Selection Context"
+    override fun getDisplayName() = CopySelectionBundle.message("settings.title")
     override fun isAvailable(project: Project) = true
     override fun createWidget(project: Project): StatusBarWidget = CopySelectionStatusBarWidget(project)
     override fun disposeWidget(widget: StatusBarWidget) = widget.dispose()
