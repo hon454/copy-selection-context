@@ -55,8 +55,36 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 - **Package**: Flat `com.github.hon454.copyselectioncontext` (no subdirectories)
 - **Plugin ID**: `com.github.hon454.copy-selection-context` (kebab-case)
 - **Notification Group ID**: `"CopySelectionContext"` (PascalCase, no spaces)
-- **Commits**: `type: description` (feat, fix, docs, refactor, test, chore)
 - **PRs**: One feature per PR, include manual testing steps, update AGENTS.md if architecture changes
+
+### Commit Convention
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/) with **mandatory body** for all non-trivial commits.
+
+**Format:**
+```
+type[(scope)]: concise subject (imperative mood, lowercase, no period)
+
+Body paragraph explaining WHY this change was made and WHAT it accomplishes.
+Include context that isn't obvious from the diff alone.
+```
+
+**Allowed types:** `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `perf`, `style`, `build`, `asset`
+
+**Title rules:**
+- Imperative mood ("add" not "added"), lowercase after colon, no trailing period
+- Max 72 characters
+- Scope is optional; use module name when targeting a specific component (e.g., `feat(settings):`)
+
+**Body rules:**
+- Mandatory for all commits except trivial one-liners (typo fix, single-line config change)
+- Separated from subject by a blank line
+- Explain the motivation and summarize the approach — not a line-by-line diff narration
+- Reference class/file names when helpful for future searchability
+
+**Forbidden:**
+- AI agent attribution in any form: `Co-authored-by` trailers, `Ultraworked with` footers, or any other AI tool credit lines
+- Commit messages must read as if written by a human engineer — no boilerplate signatures
 
 ## Detail Files
 
