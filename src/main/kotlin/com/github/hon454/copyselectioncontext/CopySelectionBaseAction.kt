@@ -36,6 +36,10 @@ abstract class CopySelectionBaseAction : AnAction() {
 
         copyToClipboard(result)
 
+        val historyService = project.getService(CopyHistoryService::class.java)
+        val maxSize = CopySelectionSettings.getInstance().state.copyHistorySize
+        historyService?.addEntry(result, maxSize)
+
         CopySelectionNotifier.notify(project, result)
         val statusBar = WindowManager.getInstance().getStatusBar(project)
         (statusBar?.getWidget(CopySelectionStatusBarWidget.ID) as? CopySelectionStatusBarWidget)?.update(result)

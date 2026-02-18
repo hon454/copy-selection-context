@@ -39,6 +39,8 @@
         <!-- Settings Configurable -->
         <applicationConfigurable parentId="tools" instance="com.github.hon454.copyselectioncontext.CopySelectionConfigurable" id="CopySelectionContext.Settings" displayName="Copy Selection Context"/>
 
+        <projectService serviceImplementation="com.github.hon454.copyselectioncontext.CopyHistoryService"/>
+
         <statusBarWidgetFactory implementation="com.github.hon454.copyselectioncontext.CopySelectionStatusBarWidgetFactory"
                                 id="CopySelectionStatusBarWidget"
                                 order="last"/>
@@ -64,6 +66,13 @@
             </action>
 
             <separator/>
+
+            <action id="CopySelectionContext.ShowHistory"
+                    class="com.github.hon454.copyselectioncontext.ShowCopyHistoryAction"
+                    text="Show Copy History"
+                    description="Show copy history popup">
+                <keyboard-shortcut keymap="$default" first-keystroke="control alt H"/>
+            </action>
 
             <!-- Explicit Actions (context menu only, no shortcuts) -->
             <action id="CopySelectionContext.CopyRelativePath"
