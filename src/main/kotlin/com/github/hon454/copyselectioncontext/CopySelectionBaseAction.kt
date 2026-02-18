@@ -21,7 +21,6 @@ abstract class CopySelectionBaseAction : AnAction() {
         copyToClipboard(result)
         
         CopySelectionNotifier.notify(project, result)
-        CopySelectionStatusBarWidget.update(result)
     }
     
     override fun update(e: AnActionEvent) {
@@ -42,6 +41,11 @@ abstract class CopySelectionBaseAction : AnAction() {
 
     protected fun detectLanguage(file: VirtualFile): String {
         return CopySelectionUtils.detectLanguage(file)
+    }
+
+    protected fun applyCodeTrimming(code: String): String {
+        val settings = CopySelectionSettings.getInstance().state
+        return if (settings.codeTrimming) code.trim() else code
     }
     
     private fun copyToClipboard(content: String) {

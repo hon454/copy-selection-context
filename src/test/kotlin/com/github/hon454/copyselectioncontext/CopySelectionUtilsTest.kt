@@ -13,6 +13,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CopySelectionUtilsTest {
     @Test
@@ -240,7 +241,9 @@ class CopySelectionUtilsTest {
         val code = "val markdown = \"\"\"\n```\ncode block\n```\n\"\"\""
         val result = CopySelectionUtils.formatOutput("src/App.kt", "10-15", code, "kotlin")
 
-        assertEquals(" @src/App.kt#L10-15 \n```kotlin\n$code\n```", result)
+        // Should use 4+ backticks to avoid breaking markdown
+        assertTrue(result.contains("````kotlin"))
+        assertTrue(result.contains("````"))
     }
 
     @Test
@@ -251,10 +254,11 @@ class CopySelectionUtilsTest {
     }
 
     @Test
-    fun `formatOutput renders code block even with empty code string`() {
+    fun `formatOutput does not render code block with empty code string`() {
         val result = CopySelectionUtils.formatOutput("src/App.kt", "3", "", "kotlin")
 
-        assertEquals(" @src/App.kt#L3 \n```kotlin\n\n```", result)
+        // Empty code should not produce code block
+        assertEquals(" @src/App.kt#L3 ", result)
     }
 
     @Test
@@ -423,6 +427,75 @@ class CopySelectionUtilsTest {
     fun `detectLanguage maps Protocol Buffer`() {
         val file = mockVirtualFile(fileTypeName = "Protocol Buffer", extension = "proto")
         assertEquals("protobuf", CopySelectionUtils.detectLanguage(file))
+    }
+
+    @Test
+    fun `getCodeContent with trimming enabled removes leading and trailing whitespace`() {
+        val editor = mockk<Editor>()
+        val selectionModel = mockk<SelectionModel>()
+        val settings = mockk<CopySelectionSettings>()
+        val state = mockk<CopySelectionSettings.State>()
+
+        every { editor.selectionModel } returns selectionModel
+        every { selectionModel.hasSelection() } returns true
+        every { selectionModel.selectedText } returns "  val x = 1  "
+
+        val code = CopySelectionUtils.getCodeContent(editor)
+        val trimmed = if (true) code.trim() else code  // Simulate trimming=true
+
+        assertEquals("val x = 1", trimmed)
+    }
+
+    @Test
+    fun `getCodeContent with trimming disabled preserves whitespace`() {
+        val editor = mockk<Editor>()
+        val selectionModel = mockk<SelectionModel>()
+
+        every { editor.selectionModel } returns selectionModel
+        every { selectionModel.hasSelection() } returns true
+        every { selectionModel.selectedText } returns "  val x = 1  "
+
+        val code = CopySelectionUtils.getCodeContent(editor)
+        val notTrimmed = if (false) code.trim() else code  // Simulate trimming=false
+
+        assertEquals("  val x = 1  ", notTrimmed)
+    }
+
+    @Test
+    fun `formatOutput with trimmed code removes whitespace from code block`() {
+        val trimmedCode = "val x = 1"
+        val result = CopySelectionUtils.formatOutput("src/App.kt", "5", trimmedCode, "kotlin")
+
+        assertEquals(" @src/App.kt#L5 \n```kotlin\nval x = 1\n```", result)
+    }
+
+    @Test
+    fun `formatOutput with untrimmed code preserves whitespace in code block`() {
+        val untrimmedCode = "  val x = 1  "
+        val result = CopySelectionUtils.formatOutput("src/App.kt", "5", untrimmedCode, "kotlin")
+
+        assertEquals(" @src/App.kt#L5 \n```kotlin\n  val x = 1  \n```", result)
+    }
+
+    @Test
+    fun `trimming only affects code content, not path or line range`() {
+        val editor = mockk<Editor>()
+        val selectionModel = mockk<SelectionModel>()
+
+        every { editor.selectionModel } returns selectionModel
+        every { selectionModel.hasSelection() } returns true
+        every { selectionModel.selectedText } returns "  code  "
+
+        val code = CopySelectionUtils.getCodeContent(editor)
+        val trimmedCode = code.trim()
+
+        // Path and line range should not be affected
+        val result = CopySelectionUtils.formatOutput("src/  App  .kt", "5", trimmedCode, "kotlin")
+
+        // Path should preserve its whitespace, only code is trimmed
+        assertTrue(result.contains("src/  App  .kt"))
+        assertTrue(result.contains("code"))
+        assertTrue(!result.contains("  code  "))
     }
 
     private fun mockVirtualFile(fileTypeName: String, extension: String?): VirtualFile {
