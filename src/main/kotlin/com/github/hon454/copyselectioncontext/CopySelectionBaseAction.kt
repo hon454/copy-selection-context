@@ -6,6 +6,7 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.wm.WindowManager
 import com.intellij.openapi.vfs.VirtualFile
 import java.awt.datatransfer.StringSelection
 
@@ -21,6 +22,8 @@ abstract class CopySelectionBaseAction : AnAction() {
         copyToClipboard(result)
         
         CopySelectionNotifier.notify(project, result)
+        val statusBar = WindowManager.getInstance().getStatusBar(project)
+        (statusBar?.getWidget(CopySelectionStatusBarWidget.ID) as? CopySelectionStatusBarWidget)?.update(result)
     }
     
     override fun update(e: AnActionEvent) {
