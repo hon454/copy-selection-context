@@ -1,5 +1,6 @@
 package com.github.hon454.copyselectioncontext
 
+import com.github.hon454.copyselectioncontext.CopySelectionBundle
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
 import com.intellij.ui.dsl.builder.bindItem
@@ -12,19 +13,19 @@ class CopySelectionProjectConfigurable(private val project: Project) : Configura
     private var outputFormat = "claude"
     private var pathType = "relative"
 
-    override fun getDisplayName(): String = "Copy Selection Context (Project)"
+    override fun getDisplayName(): String = CopySelectionBundle.message("settings.project.title")
 
     override fun createComponent(): JComponent = panel {
-        group("Project Settings") {
+        group(CopySelectionBundle.message("settings.project.group")) {
             row {
-                checkBox("Use project-specific settings (overrides application settings)")
+                checkBox(CopySelectionBundle.message("settings.project.use.project"))
                     .bindSelected({ useProjectSettings }, { useProjectSettings = it })
             }
-            row("Output format:") {
+            row(CopySelectionBundle.message("settings.format.output.label")) {
                 comboBox(listOf("claude", "pathline", "template"))
                     .bindItem({ outputFormat }, { outputFormat = it ?: "claude" })
             }
-            row("Path type:") {
+            row(CopySelectionBundle.message("settings.project.path.label")) {
                 comboBox(listOf("relative", "absolute"))
                     .bindItem({ pathType }, { pathType = it ?: "relative" })
             }

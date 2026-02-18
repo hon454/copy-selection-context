@@ -21,7 +21,7 @@ class CopySelectionConfigurable : Configurable {
                 }.bind(state::defaultPathType)
             }
             group(CopySelectionBundle.message("settings.group.output")) {
-                row("Output format:") {
+                row(CopySelectionBundle.message("settings.format.output.label")) {
                     comboBox(listOf("claude", "pathline"))
                         .bindItem(
                             { state.outputFormat },
@@ -45,7 +45,7 @@ class CopySelectionConfigurable : Configurable {
                 }
             }
             group(CopySelectionBundle.message("settings.history.size")) {
-                row("History size:") {
+                row(CopySelectionBundle.message("settings.history.size.label")) {
                     spinner(1..100)
                         .bindIntValue(state::copyHistorySize)
                 }

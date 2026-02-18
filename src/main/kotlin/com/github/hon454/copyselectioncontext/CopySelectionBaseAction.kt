@@ -119,7 +119,8 @@ abstract class CopySelectionBaseAction : AnAction() {
         } else {
             appSettings.outputFormat
         }
-        val formatter = OutputFormatterFactory.getFormatter(outputFormat)
+        val effectiveSettings = appSettings.copy(outputFormat = outputFormat)
+        val formatter = OutputFormatterFactory.getFormatterForSettings(effectiveSettings)
         val context = FormatContext(path = path, startLine = startLine, endLine = endLine, code = code, language = language)
         return formatter.format(context)
     }
