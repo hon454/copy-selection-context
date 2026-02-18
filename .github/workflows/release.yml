@@ -74,17 +74,34 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build plugin
-        run: xvfb-run ./gradlew --no-daemon buildPlugin
+        run: xvfb-run ./gradlew --no-daemon --stacktrace buildPlugin
 
-      - name: Verify build output
+      - name: Diagnose build output
+        if: always()
         run: |
-          echo "Build output:"
-          ls -la build/distributions/
-          ZIP_COUNT=$(find build/distributions/ -name "*.zip" | wc -l)
-          if [ "$ZIP_COUNT" -eq 0 ]; then
-            echo "::error::No ZIP files found in build/distributions/"
+          echo "=== Gradle task summary ==="
+          xvfb-run ./gradlew --no-daemon buildPlugin --dry-run 2>/dev/null | head -50 || true
+          echo ""
+          echo "=== build/ directory structure ==="
+          find build/ -type f \( -name "*.zip" -o -name "*.jar" \) 2>/dev/null || echo "No ZIP/JAR files found in build/"
+          echo ""
+          echo "=== build/distributions/ ==="
+          ls -la build/distributions/ 2>/dev/null || echo "build/distributions/ does NOT exist"
+          echo ""
+          echo "=== build/libs/ ==="
+          ls -la build/libs/ 2>/dev/null || echo "build/libs/ does NOT exist"
+          echo ""
+          echo "=== build/classes/ ==="
+          find build/classes/ -name "*.class" 2>/dev/null | head -5 || echo "No compiled classes found"
+
+      - name: Verify plugin ZIP exists
+        run: |
+          if [ ! -d "build/distributions" ] || [ -z "$(find build/distributions/ -name '*.zip' 2>/dev/null)" ]; then
+            echo "::error::No plugin ZIP found in build/distributions/"
             exit 1
           fi
+          echo "Plugin ZIP found:"
+          ls -la build/distributions/*.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
