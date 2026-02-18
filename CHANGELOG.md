@@ -1,38 +1,40 @@
-# Changelog
+<h2>1.0.2</h2>
+<h3>New Features</h3>
+<ul>
+  <li>Copy History browser — browse and re-copy recent clipboard entries (<code>Ctrl+Alt+H</code>)</li>
+  <li>GitHub/GitLab permalink generation for selected lines</li>
+  <li>Template-based output formatting with built-in presets (Claude Code, Path:Line, GitHub Permalink, Custom)</li>
+  <li>Live template preview and variable validation in settings UI</li>
+  <li>Status bar widget — displays last copied text, click to re-copy</li>
+  <li>Web Help integration — F1 help links to plugin documentation</li>
+</ul>
+<h3>Improvements</h3>
+<ul>
+  <li>Refactored core copy actions to shared utility functions</li>
+  <li>Template variable validation warns on unknown placeholders</li>
+  <li>Code trimming option for cleaner code block output</li>
+  <li>Configurable notification toggle</li>
+  <li>Configurable history size</li>
+  <li>Removed project-level settings override (simplified to application-level only)</li>
+  <li>Cross-platform build command documentation (Windows <code>gradlew.bat</code> + Unix <code>./gradlew</code>)</li>
+</ul>
+<h3>Bug Fixes</h3>
+<ul>
+  <li>Aligned plugin notification group metadata with runtime notifier usage</li>
+  <li>Replaced vendor email placeholder with project email</li>
+  <li>Corrected help anchor to match README heading</li>
+</ul>
 
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
-
-## [1.0.1] - Unreleased
-
-### Added
-- Unit tests for `CopySelectionUtils` covering path resolution, line range resolution, code extraction, language detection, and output formatting (`3ff2c1f`)
-- Release checklist document with `runIde`-based manual smoke test procedure (`516751c`)
-
-### Changed
-- Refactored core copy actions to use shared utility functions via `CopySelectionUtils` and base template method flow (`e77f3ff`)
-- Updated roadmap structure to keep versioning in the `v1.x` line (`516751c`)
-
-### Fixed
-- Aligned plugin notification group metadata with runtime notifier usage (`02e2bbd`)
-- Replaced vendor email placeholder in plugin metadata with the project email (`02e2bbd`)
-- Improved repository hygiene by ignoring common log and JVM crash dump artifacts (`516751c`)
-
-## [1.0.0] - Initial
-
-### Added
-- Copy relative file path with line numbers to clipboard
-- Copy absolute file path with line numbers to clipboard
-- Copy file path, line numbers, and code content in markdown format
-- Toast notification on copy success
-- Status bar widget update hook (stub; full widget implementation planned)
-- No selection handling: copies current line number when no text is selected
-- Minimal Settings UI for default path type selection
-- Keyboard shortcuts for all three copy actions
-- Context menu integration in editor
-- Support for IntelliJ Platform 2024.3+
-- Compatible with all JetBrains IDEs (Rider, IntelliJ IDEA, PyCharm, etc.)
+<h2>1.0.0</h2>
+<h3>New Features</h3>
+<ul>
+  <li>Copy relative file path with line numbers to clipboard</li>
+  <li>Copy absolute file path with line numbers to clipboard</li>
+  <li>Copy file path, line numbers, and code content in markdown format</li>
+  <li>Toast notification on copy success</li>
+  <li>Smart line handling — copies current line number when no text is selected</li>
+  <li>Settings UI for default path type selection</li>
+  <li>Keyboard shortcuts for all copy actions (<code>Ctrl+Alt+C</code> / <code>Cmd+Alt+C</code>)</li>
+  <li>Context menu integration in editor right-click menu</li>
+  <li>Support for IntelliJ Platform 2024.3+ and all JetBrains IDEs</li>
+</ul>
