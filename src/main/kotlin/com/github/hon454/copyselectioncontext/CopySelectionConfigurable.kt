@@ -27,12 +27,12 @@ class CopySelectionConfigurable : Configurable {
                             { state.outputFormat },
                             { state.outputFormat = it ?: "claude" }
                         )
-                        .comment("claude = @path#L format, pathline = path:line format, template = custom")
+                        .comment(CopySelectionBundle.message("settings.format.output.comment"))
                 }
                 row(CopySelectionBundle.message("settings.template.label")) {
                     textField()
                         .bindText(state::customFormatTemplate)
-                        .comment("{path} {line} {range} {code} {lang} {filename}")
+                        .comment(CopySelectionBundle.message("settings.template.variables.comment"))
                 }
                 row {
                     checkBox(CopySelectionBundle.message("settings.include.code"))
