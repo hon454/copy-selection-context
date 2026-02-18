@@ -104,6 +104,11 @@
                     description="Copy file path, line numbers, and code content in markdown format"
                     icon="/icons/copyWithCode.svg"/>
 
+            <action id="CopySelectionContext.CopyGitPermalink"
+                    class="com.github.hon454.copyselectioncontext.CopyGitPermalinkAction"
+                    text="Copy GitHub/GitLab Permalink"
+                    description="Copy GitHub or GitLab permalink for the selected lines"/>
+
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </group>
     </actions>

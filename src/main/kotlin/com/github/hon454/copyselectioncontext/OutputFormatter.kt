@@ -59,10 +59,26 @@ class PathLineFormatter : OutputFormatter {
     }
 }
 
+class GitHubPermalinkTemplateFormatter : OutputFormatter {
+    override val key = "github"
+    override val displayName = "GitHub Permalink"
+
+    override fun format(context: FormatContext): String {
+        val normalizedPath = context.path.replace("\\", "/")
+        val lineFragment = if (context.startLine == context.endLine) {
+            "L${context.startLine}"
+        } else {
+            "L${context.startLine}-L${context.endLine}"
+        }
+        return "https://github.com/{owner}/{repo}/blob/{sha}/$normalizedPath#$lineFragment"
+    }
+}
+
 object OutputFormatterFactory {
     private val formatters: Map<String, OutputFormatter> = listOf(
         ClaudeCodeFormatter(),
         PathLineFormatter(),
+        GitHubPermalinkTemplateFormatter(),
         TemplateFormatter(TemplateFormatter.PRESET_PATH_AND_RANGE)
     ).associateBy { it.key }
 
