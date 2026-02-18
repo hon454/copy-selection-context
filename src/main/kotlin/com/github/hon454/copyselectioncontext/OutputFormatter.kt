@@ -62,9 +62,19 @@ class PathLineFormatter : OutputFormatter {
 object OutputFormatterFactory {
     private val formatters: Map<String, OutputFormatter> = listOf(
         ClaudeCodeFormatter(),
-        PathLineFormatter()
+        PathLineFormatter(),
+        TemplateFormatter(TemplateFormatter.PRESET_PATH_AND_RANGE)
     ).associateBy { it.key }
 
     fun getFormatter(key: String): OutputFormatter = formatters[key] ?: ClaudeCodeFormatter()
+
+    fun getFormatterForSettings(settings: CopySelectionSettings.State): OutputFormatter {
+        return if (settings.outputFormat == "template" && settings.customFormatTemplate.isNotBlank()) {
+            TemplateFormatter(settings.customFormatTemplate)
+        } else {
+            getFormatter(settings.outputFormat)
+        }
+    }
+
     fun getAvailableFormatters(): List<OutputFormatter> = formatters.values.toList()
 }
