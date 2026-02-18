@@ -47,26 +47,6 @@ jobs:
           fi
           echo "Version verified: $TAG_VERSION"
 
-      - name: Generate release notes from commits
-        run: |
-          CURRENT_TAG="${{ steps.version.outputs.tag }}"
-          REPO_URL="https://github.com/${{ github.repository }}"
-
-          # Find previous tag; if none exists, use initial commit
-          PREVIOUS_TAG=$(git tag --sort=-v:refname | grep -v "^${CURRENT_TAG}$" | head -n 1)
-          if [ -z "$PREVIOUS_TAG" ]; then
-            RANGE="$CURRENT_TAG"
-          else
-            RANGE="${PREVIOUS_TAG}..${CURRENT_TAG}"
-          fi
-
-          # Generate commit list with linked short hashes
-          git log "$RANGE" --pretty=format:"- [%h](${REPO_URL}/commit/%H) %s" --no-merges > release-notes.md
-
-          if [ ! -s release-notes.md ]; then
-            echo "Release $CURRENT_TAG" > release-notes.md
-          fi
-
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -78,6 +58,19 @@ jobs:
 
       - name: Ensure gradlew is executable
         run: chmod +x ./gradlew
+
+      - name: Generate release notes from changelog
+        run: |
+          ./gradlew getChangelog \
+            --console=plain \
+            -q \
+            --no-header \
+            --no-links \
+            --no-summary > release-notes.md
+
+          if [ ! -s release-notes.md ]; then
+            echo "Release ${{ steps.version.outputs.tag }}" > release-notes.md
+          fi
 
       - name: Build plugin
         run: ./gradlew buildPlugin --stacktrace
