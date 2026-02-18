@@ -5,6 +5,9 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.markup.HighlighterLayer
+import com.intellij.openapi.editor.markup.HighlighterTargetArea
+import com.intellij.openapi.editor.markup.RangeHighlighter
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.WindowManager
@@ -12,6 +15,10 @@ import com.intellij.openapi.vfs.VirtualFile
 import java.awt.datatransfer.StringSelection
 
 abstract class CopySelectionBaseAction : AnAction() {
+    companion object {
+        private var lastHighlighter: RangeHighlighter? = null
+    }
+
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.getData(CommonDataKeys.PROJECT) ?: return
         val editor = e.getData(CommonDataKeys.EDITOR) ?: return
@@ -25,16 +32,36 @@ abstract class CopySelectionBaseAction : AnAction() {
             editor.caretModel.runForEachCaret { caret ->
                 val (startLine, endLine) = CopySelectionUtils.resolveLineNumbers(editor, caret)
                 val lineRange = CopySelectionUtils.toLineRange(startLine, endLine)
-                val block = buildContentForCaret(path, lineRange, startLine, endLine, file, editor, caret)
+                val block = buildContentForCaret(path, lineRange, startLine, endLine, file, editor, caret, project)
                 blocks.add(block)
             }
             CopySelectionUtils.joinCaretBlocks(blocks)
         } else {
             val lineRange = CopySelectionUtils.resolveLineRange(editor)
-            buildContent(path, lineRange, file, editor)
+            buildContent(path, lineRange, file, editor, project)
         }
 
         copyToClipboard(result)
+
+        val settings = CopySelectionSettings.getInstance().state
+        if (settings.analyticsEnabled) {
+            CopySelectionAnalytics.getInstance()?.recordCopy(settings.outputFormat)
+        }
+
+        lastHighlighter?.let { highlighter ->
+            editor.markupModel.removeHighlighter(highlighter)
+        }
+        lastHighlighter = null
+
+        val (gutterStartLine, gutterEndLine) = resolveLineNumbers(editor)
+        val startOffset = editor.document.getLineStartOffset(gutterStartLine - 1)
+        val endOffset = editor.document.getLineEndOffset(gutterEndLine - 1)
+        lastHighlighter = editor.markupModel.addRangeHighlighter(
+            startOffset, endOffset,
+            HighlighterLayer.ADDITIONAL_SYNTAX,
+            null,
+            HighlighterTargetArea.LINES_IN_RANGE
+        ).also { it.gutterIconRenderer = CopySelectionGutterIconRenderer() }
 
         val historyService = project.getService(CopyHistoryService::class.java)
         val maxSize = CopySelectionSettings.getInstance().state.copyHistorySize
@@ -53,9 +80,9 @@ abstract class CopySelectionBaseAction : AnAction() {
 
     protected abstract fun getPath(project: Project, file: VirtualFile): String
 
-    protected open fun buildContent(path: String, lineRange: String, file: VirtualFile, editor: Editor): String {
+    protected open fun buildContent(path: String, lineRange: String, file: VirtualFile, editor: Editor, project: Project? = null): String {
         val (startLine, endLine) = resolveLineNumbers(editor)
-        return formatWithSettings(path, startLine, endLine)
+        return formatWithSettings(path, startLine, endLine, project = project)
     }
 
     protected open fun buildContentForCaret(
@@ -65,9 +92,10 @@ abstract class CopySelectionBaseAction : AnAction() {
         endLine: Int,
         file: VirtualFile,
         editor: Editor,
-        caret: Caret
+        caret: Caret,
+        project: Project? = null
     ): String {
-        return buildContent(path, lineRange, file, editor)
+        return buildContent(path, lineRange, file, editor, project)
     }
 
     protected fun resolveLineNumbers(editor: Editor): Pair<Int, Int> {
@@ -83,9 +111,15 @@ abstract class CopySelectionBaseAction : AnAction() {
         }
     }
 
-    protected fun formatWithSettings(path: String, startLine: Int, endLine: Int, code: String? = null, language: String = ""): String {
-        val settings = CopySelectionSettings.getInstance().state
-        val formatter = OutputFormatterFactory.getFormatter(settings.outputFormat)
+    protected fun formatWithSettings(path: String, startLine: Int, endLine: Int, code: String? = null, language: String = "", project: Project? = null): String {
+        val appSettings = CopySelectionSettings.getInstance().state
+        val outputFormat = if (project != null) {
+            val projSettings = CopySelectionProjectSettings.getInstance(project).state
+            if (projSettings.useProjectSettings) projSettings.outputFormat else appSettings.outputFormat
+        } else {
+            appSettings.outputFormat
+        }
+        val formatter = OutputFormatterFactory.getFormatter(outputFormat)
         val context = FormatContext(path = path, startLine = startLine, endLine = endLine, code = code, language = language)
         return formatter.format(context)
     }

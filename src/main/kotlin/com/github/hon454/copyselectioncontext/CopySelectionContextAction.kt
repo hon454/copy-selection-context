@@ -10,16 +10,16 @@ class CopySelectionContextAction : CopySelectionBaseAction() {
         return CopySelectionUtils.resolvePath(project, file, settings.defaultPathType)
     }
 
-    override fun buildContent(path: String, lineRange: String, file: VirtualFile, editor: Editor): String {
+    override fun buildContent(path: String, lineRange: String, file: VirtualFile, editor: Editor, project: Project?): String {
         val settings = CopySelectionSettings.getInstance().state
         val (startLine, endLine) = resolveLineNumbers(editor)
         return if (settings.includeCodeContent) {
             var code = getCodeContent(editor)
             code = applyCodeTrimming(code)
             val language = detectLanguage(file)
-            formatWithSettings(path, startLine, endLine, code, language)
+            formatWithSettings(path, startLine, endLine, code, language, project)
         } else {
-            formatWithSettings(path, startLine, endLine)
+            formatWithSettings(path, startLine, endLine, project = project)
         }
     }
 }

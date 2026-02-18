@@ -22,7 +22,7 @@ class CopySelectionStatusBarWidget(project: Project) :
     override fun ID() = ID
     override fun getPresentation() = this
     override fun getText() = lastCopied.get().let { if (it.isBlank()) "" else "📋 ${it.take(40)}" }
-    override fun getTooltipText() = lastCopied.get().ifBlank { "Copy Selection Context" }
+    override fun getTooltipText() = lastCopied.get().ifBlank { CopySelectionBundle.message("widget.tooltip") }
     override fun getAlignment() = 0f
 
     override fun getClickConsumer() = Consumer<MouseEvent> {

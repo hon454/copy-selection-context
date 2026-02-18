@@ -26,7 +26,7 @@ object CopyHistoryPopup {
         }
 
         val popup = JBPopupFactory.getInstance().createPopupChooserBuilder(items)
-            .setTitle("Copy History")
+            .setTitle(CopySelectionBundle.message("history.popup.title"))
             .setItemChosenCallback { selected ->
                 CopyPasteManager.getInstance().setContents(StringSelection(selected.content))
             }

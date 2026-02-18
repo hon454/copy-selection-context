@@ -9,18 +9,18 @@ class CopySelectionConfigurable : Configurable {
     private val settings = CopySelectionSettings.getInstance()
     private var dialogPanel: DialogPanel? = null
 
-    override fun getDisplayName() = "Copy Selection Context"
+    override fun getDisplayName() = CopySelectionBundle.message("settings.title")
 
     override fun createComponent(): JComponent {
         val state = settings.state
         return panel {
-            group("Path Settings") {
+            group(CopySelectionBundle.message("settings.path.type")) {
                 buttonsGroup {
-                    row { radioButton("Absolute path", PathType.ABSOLUTE) }
-                    row { radioButton("Relative path", PathType.RELATIVE) }
+                    row { radioButton(CopySelectionBundle.message("settings.path.absolute"), PathType.ABSOLUTE) }
+                    row { radioButton(CopySelectionBundle.message("settings.path.relative"), PathType.RELATIVE) }
                 }.bind(state::defaultPathType)
             }
-            group("Output Settings") {
+            group(CopySelectionBundle.message("settings.group.output")) {
                 row("Output format:") {
                     comboBox(listOf("claude", "pathline"))
                         .bindItem(
@@ -30,27 +30,30 @@ class CopySelectionConfigurable : Configurable {
                         .comment("claude = @path#L format, pathline = path:line format")
                 }
                 row {
-                    checkBox("Include code content")
+                    checkBox(CopySelectionBundle.message("settings.include.code"))
                         .bindSelected(state::includeCodeContent)
                 }
                 row {
-                    checkBox("Trim code whitespace")
+                    checkBox(CopySelectionBundle.message("settings.trimming.enable"))
                         .bindSelected(state::codeTrimming)
-                        .comment("Remove leading/trailing whitespace from copied code")
                 }
             }
-            group("Notification Settings") {
+            group(CopySelectionBundle.message("settings.group.behavior")) {
                 row {
-                    checkBox("Show copy notification")
+                    checkBox(CopySelectionBundle.message("settings.notification.enable"))
                         .bindSelected(state::enableNotification)
-                        .comment("Show toast notification after copying")
                 }
             }
-            group("History Settings") {
+            group(CopySelectionBundle.message("settings.history.size")) {
                 row("History size:") {
                     spinner(1..100)
                         .bindIntValue(state::copyHistorySize)
-                        .comment("Number of recent copies to remember")
+                }
+            }
+            group(CopySelectionBundle.message("settings.group.analytics")) {
+                row {
+                    checkBox(CopySelectionBundle.message("settings.analytics.enable"))
+                        .bindSelected(state::analyticsEnabled)
                 }
             }
         }.also { dialogPanel = it }

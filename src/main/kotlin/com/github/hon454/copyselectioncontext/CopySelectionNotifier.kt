@@ -11,7 +11,10 @@ object CopySelectionNotifier {
         
         NotificationGroupManager.getInstance()
             .getNotificationGroup("CopySelectionContext")
-            .createNotification("✓ Copied: $message", NotificationType.INFORMATION)
+            .createNotification(
+                CopySelectionBundle.message("notification.copied", message),
+                NotificationType.INFORMATION
+            )
             .notify(project)
     }
 }

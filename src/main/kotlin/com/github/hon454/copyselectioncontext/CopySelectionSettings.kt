@@ -20,7 +20,8 @@ class CopySelectionSettings : PersistentStateComponent<CopySelectionSettings.Sta
         var outputFormat: String = "claude",
         var codeTrimming: Boolean = false,
         var copyHistorySize: Int = 10,
-        var customFormatTemplate: String = ""
+        var customFormatTemplate: String = "",
+        var analyticsEnabled: Boolean = false
     )
 
     private var myState = State()
