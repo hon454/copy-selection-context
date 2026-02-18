@@ -1,66 +1,74 @@
 # Copy Selection Context
 
-> A JetBrains plugin to copy file paths with line numbers (and optionally code content) to clipboard for easy AI context sharing.
+[![Build](https://github.com/hon454/copy-selection-context/actions/workflows/build.yml/badge.svg)](https://github.com/hon454/copy-selection-context/actions/workflows/build.yml)
+[![Version](https://img.shields.io/jetbrains/plugin/v/com.github.hon454.copy-selection-context.svg)](https://plugins.jetbrains.com/plugin/com.github.hon454.copy-selection-context)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/com.github.hon454.copy-selection-context.svg)](https://plugins.jetbrains.com/plugin/com.github.hon454.copy-selection-context)
+[![License](https://img.shields.io/github/license/hon454/copy-selection-context.svg)](LICENSE)
+
+> Copy file path + line numbers + code to clipboard in one shortcut — formatted for AI assistants.
+
+AI 코딩 어시스턴트(Claude, ChatGPT 등)에게 코드 컨텍스트를 전달할 때, 파일 경로와 라인 번호를 일일이 타이핑하고 계신가요? **Copy Selection Context**는 한 번의 단축키로 `@path#Lline` 형식의 컨텍스트를 클립보드에 복사합니다.
 
 ## Features
 
-- **Copy with line numbers** — Get file path and exact line range
-- **Relative or absolute paths** — Choose project-relative or full file system paths
-- **Optional code content** — Include actual code in markdown format
-- **Toast notifications** — Visual feedback on copy success
-- **Status bar widget** — Shows last copied information
-- **No selection handling** — Copies current line when no text is selected
-- **Context menu integration** — Right-click in editor for quick access
-- **Keyboard shortcuts** — Customizable shortcuts for all actions
-- **Cross-platform** — Works on Windows, macOS, and Linux
+- **One-shortcut copy** — `Ctrl+Alt+C` 하나로 파일 경로 + 라인 번호 복사
+- **Relative or absolute paths** — 프로젝트 상대 경로 / 절대 경로 선택
+- **Code content included** — 마크다운 코드 블록으로 선택한 코드까지 포함 가능
+- **Copy history** — `Ctrl+Alt+H`로 최근 복사 이력 조회
+- **GitHub/GitLab permalink** — 선택한 라인의 Git 퍼머링크를 바로 복사
+- **Smart line handling** — 선택 없이 커서만 있으면 현재 줄 번호를 복사
+- **Context menu** — 에디터 우클릭 메뉴에서 모든 액션 접근
+- **Cross-platform** — Windows, macOS, Linux 모두 지원
 
 ## Installation
 
 ### From JetBrains Marketplace
 
-1. Go to `File` → `Settings` → `Plugins`
-2. Search for **"Copy Selection Context"**
-3. Click `Install`
+1. `File` → `Settings` → `Plugins`
+2. **"Copy Selection Context"** 검색
+3. `Install` 클릭
 
 ### From Disk
 
-1. Download the latest release `.zip` file
-2. Go to `File` → `Settings` → `Plugins`
-3. Click gear icon → `Install Plugin from Disk...`
-4. Select the downloaded `.zip` file
-5. Restart the IDE
+1. [Releases](https://github.com/hon454/copy-selection-context/releases) 페이지에서 최신 `.zip` 다운로드
+2. `File` → `Settings` → `Plugins` → ⚙️ → `Install Plugin from Disk...`
+3. 다운로드한 `.zip` 선택 → IDE 재시작
 
 ## Usage
 
-### Keyboard Shortcut
+### Keyboard Shortcuts
 
 | Action | Windows/Linux | macOS |
 |--------|---------------|-------|
 | Copy Selection Context | `Ctrl+Alt+C` | `Cmd+Alt+C` |
+| Show Copy History | `Ctrl+Alt+H` | `Ctrl+Alt+H` |
 
-One unified shortcut. Behavior is controlled via settings (path type + code content toggle).
-
-> You can customize this shortcut in `Settings` → `Keymap`
->
-> Additional explicit actions (Copy Relative Path, Copy Absolute Path, Copy with Code Content) are available in the editor context menu.
+> 단축키는 `Settings` → `Keymap`에서 변경할 수 있습니다.
 
 ### Context Menu
 
-1. Select text in the editor (or just place cursor on a line)
-2. Right-click to open the context menu
-3. Choose one of the Copy Selection Context actions
+에디터에서 우클릭 → **Copy Selection Context** 서브메뉴에서 개별 액션 선택:
 
-### Output Format (Claude Code Style)
+| Action | Description |
+|--------|-------------|
+| Copy Selection Context | 설정에 따라 경로 + 라인 복사 (메인 액션) |
+| Copy Relative Path with Line Numbers | 프로젝트 상대 경로로 복사 |
+| Copy Absolute Path with Line Numbers | 절대 경로로 복사 |
+| Copy with Code Content | 경로 + 라인 + 코드 블록 복사 |
+| Copy GitHub/GitLab Permalink | Git 원격 저장소 퍼머링크 복사 |
+| Show Copy History | 최근 복사 이력 팝업 |
 
-Output uses the ` @path#Lline ` format for seamless AI assistant integration.
+### Output Format
 
-**Plain path (default)**:
-- Single line: ` @src/main/kotlin/App.kt#L42 `
-- Multiple lines: ` @src/main/kotlin/App.kt#L250-253 `
+`@path#Lline` 형식으로 AI 어시스턴트에 바로 붙여넣기 가능합니다.
 
-**With code content (enable in settings)**:
+**경로만 (기본)**:
+- 단일 라인: `@src/main/kotlin/App.kt#L42`
+- 여러 라인: `@src/main/kotlin/App.kt#L250-253`
+
+**코드 포함 (설정에서 활성화)**:
 ````
- @src/main/kotlin/App.kt#L42-53 
+@src/main/kotlin/App.kt#L42-53
 ```kotlin
 fun calculateTotal(items: List<Item>): Double {
     return items.sumOf { it.price }
@@ -70,70 +78,40 @@ fun calculateTotal(items: List<Item>): Double {
 
 ### Settings
 
-Go to `Settings` → `Tools` → `Copy Selection Context` to configure:
+`Settings` → `Tools` → `Copy Selection Context`에서 설정:
 
-- **Path type** — Absolute (default) or Relative to project root
-- **Include code content** — Append a markdown code block with the selected code
+- **Path type** — Absolute (기본) 또는 Relative
+- **Include code content** — 코드 블록 포함 여부
+
+## Compatible IDEs
+
+IntelliJ Platform 2024.3+ 기반 모든 IDE에서 동작합니다:
+
+IntelliJ IDEA · Android Studio · PyCharm · WebStorm · PhpStorm · CLion · GoLand · Rider · RubyMine
 
 ## Development
 
 ```bash
-# Clone the repository
 git clone https://github.com/hon454/copy-selection-context.git
 cd copy-selection-context
 
-# Build the plugin
-./gradlew buildPlugin
-
-# Run in development IDE
-./gradlew runIde
+./gradlew buildPlugin    # 플러그인 빌드
+./gradlew runIde         # 개발용 IDE 실행
+./gradlew test           # 테스트 실행
 ```
 
-## Plugin Signing (for Marketplace Publishing)
+자세한 개발 및 배포 가이드는 [CONTRIBUTING.md](CONTRIBUTING.md)를 참고하세요.
 
-Generate a signing certificate using OpenSSL:
+## Support
 
-```bash
-# Generate encrypted private key
-openssl genpkey -aes-256-cbc -algorithm RSA -out private_encrypted.pem -pkeyopt rsa_keygen_bits:4096
+이 플러그인이 유용하셨다면 커피 한 잔 사주세요!
 
-# Extract unencrypted private key
-openssl rsa -in private_encrypted.pem -out private.pem
-
-# Generate certificate chain
-openssl req -key private.pem -new -x509 -days 365 -out chain.crt
-```
-
-Set environment variables before publishing:
-```bash
-export CERTIFICATE_CHAIN=$(cat chain.crt)
-export PRIVATE_KEY=$(cat private.pem)
-export PRIVATE_KEY_PASSWORD="your-password"
-export PUBLISH_TOKEN="your-jetbrains-token"
-```
-
-## Compatible IDEs
-
-This plugin works with all IntelliJ Platform-based IDEs (2024.3+):
-
-- IntelliJ IDEA
-- Android Studio
-- PyCharm
-- WebStorm
-- PhpStorm
-- CLion
-- GoLand
-- Rider
-- RubyMine
-
-## Requirements
-
-- Build 243 or higher (IntelliJ Platform 2024.3+)
+<a href="https://www.buymeacoffee.com/hon454s" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+Apache License 2.0 — see [LICENSE](LICENSE) for details.
 
 ## Author
 
-Made by [hon454](https://github.com/hon454)
+Made by [@hon454](https://github.com/hon454)
