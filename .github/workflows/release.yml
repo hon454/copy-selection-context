@@ -67,22 +67,16 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Ensure Gradle wrapper is executable
-        run: chmod +x ./gradlew
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build plugin
-        run: xvfb-run ./gradlew --no-daemon --stacktrace buildPlugin
+        run: ./gradlew buildPlugin
 
       - name: Diagnose build output
         if: always()
         run: |
-          echo "=== Gradle task summary ==="
-          xvfb-run ./gradlew --no-daemon buildPlugin --dry-run 2>/dev/null | head -50 || true
-          echo ""
-          echo "=== build/ directory structure ==="
+          echo "=== All ZIP/JAR files in build/ ==="
           find build/ -type f \( -name "*.zip" -o -name "*.jar" \) 2>/dev/null || echo "No ZIP/JAR files found in build/"
           echo ""
           echo "=== build/distributions/ ==="
@@ -90,9 +84,6 @@ jobs:
           echo ""
           echo "=== build/libs/ ==="
           ls -la build/libs/ 2>/dev/null || echo "build/libs/ does NOT exist"
-          echo ""
-          echo "=== build/classes/ ==="
-          find build/classes/ -name "*.class" 2>/dev/null | head -5 || echo "No compiled classes found"
 
       - name: Verify plugin ZIP exists
         run: |
@@ -119,4 +110,4 @@ jobs:
           env.PUBLISH_TOKEN != '' &&
           env.CERTIFICATE_CHAIN != '' &&
           env.PRIVATE_KEY != ''
-        run: ./gradlew --no-daemon publishPlugin
+        run: ./gradlew publishPlugin
