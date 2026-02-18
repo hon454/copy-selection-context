@@ -85,6 +85,12 @@ fun calculateTotal(items: List<Item>): Double {
 - **Path type** — Absolute (default) or Relative
 - **Include code content** — Whether to include the code block
 
+#### Settings Screen
+
+![Copy Selection Context settings screen](docs/images/settings-copy-selection-context.png)
+
+Configure path type, output format, code inclusion, notification behavior, and history options from one place.
+
 ## Compatible IDEs
 
 Works with all IDEs based on IntelliJ Platform 2024.3+:

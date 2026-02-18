@@ -85,6 +85,12 @@ fun calculateTotal(items: List<Item>): Double {
 - **Path type** — Absolute (기본) 또는 Relative
 - **Include code content** — 코드 블록 포함 여부
 
+#### 설정 화면
+
+![Copy Selection Context 설정 화면](docs/images/settings-copy-selection-context.png)
+
+하나의 화면에서 경로 타입, 출력 형식, 코드 포함 여부, 알림 동작, 이력 옵션을 함께 조정할 수 있습니다.
+
 ## 호환 IDE
 
 IntelliJ Platform 2024.3+ 기반 모든 IDE에서 동작합니다:
