@@ -70,8 +70,21 @@ jobs:
       - name: Ensure Gradle wrapper is executable
         run: chmod +x ./gradlew
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Build plugin
         run: ./gradlew --no-daemon buildPlugin
+
+      - name: Verify build output
+        run: |
+          echo "Build output:"
+          ls -la build/distributions/
+          ZIP_COUNT=$(find build/distributions/ -name "*.zip" | wc -l)
+          if [ "$ZIP_COUNT" -eq 0 ]; then
+            echo "::error::No ZIP files found in build/distributions/"
+            exit 1
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -80,6 +93,7 @@ jobs:
           name: ${{ steps.version.outputs.tag }}
           body_path: release-notes.md
           files: build/distributions/*.zip
+          fail_on_unmatched_files: true
           draft: false
           prerelease: false
 
