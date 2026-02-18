@@ -12,12 +12,14 @@ class CopySelectionContextAction : CopySelectionBaseAction() {
 
     override fun buildContent(path: String, lineRange: String, file: VirtualFile, editor: Editor): String {
         val settings = CopySelectionSettings.getInstance().state
+        val (startLine, endLine) = resolveLineNumbers(editor)
         return if (settings.includeCodeContent) {
-            val code = getCodeContent(editor)
+            var code = getCodeContent(editor)
+            code = applyCodeTrimming(code)
             val language = detectLanguage(file)
-            CopySelectionUtils.formatOutput(path, lineRange, code, language)
+            formatWithSettings(path, startLine, endLine, code, language)
         } else {
-            CopySelectionUtils.formatOutput(path, lineRange)
+            formatWithSettings(path, startLine, endLine)
         }
     }
 }
