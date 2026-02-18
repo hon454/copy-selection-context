@@ -44,31 +44,27 @@ jobs:
       - name: Report task outcomes
         if: always()
         run: |
-          echo "=== Gradle Task Outcomes ==="
-          TASKS=$(grep "^> Task" build-output.log 2>/dev/null || echo "NO_TASK_OUTPUT")
-          echo "$TASKS"
+          LOGFILE="build-output.log"
+          TOTAL_LINES=$(wc -l < "$LOGFILE" 2>/dev/null || echo "0")
+          echo "::warning::LOG_LINES: $TOTAL_LINES total lines in build output"
           
-          # Report as annotations (visible via API)
-          SKIPPED=$(echo "$TASKS" | grep -c "SKIPPED\|NO-SOURCE\|UP-TO-DATE" || true)
-          EXECUTED=$(echo "$TASKS" | grep -cv "SKIPPED\|NO-SOURCE\|UP-TO-DATE\|NO_TASK_OUTPUT" || true)
-          FAILED=$(echo "$TASKS" | grep -c "FAILED" || true)
-          echo "::warning::TASK_SUMMARY: executed=$EXECUTED skipped=$SKIPPED failed=$FAILED"
+          # Show first 3 lines
+          echo "::warning::HEAD: $(head -3 "$LOGFILE" 2>/dev/null | tr '\n' ' || ')"
           
-          # Report specific task outcomes as individual annotations
-          echo "$TASKS" | grep -i "buildPlugin\|prepareSandbox\|composedJar\|instrumentedJar\|compileKotlin\|jar\b\|patchPluginXml" | while IFS= read -r line; do
-            echo "::warning::$line"
-          done
+          # Show last 10 lines (most important — shows BUILD result)
+          echo "::warning::TAIL: $(tail -10 "$LOGFILE" 2>/dev/null | tr '\n' ' || ')"
           
-          # Build directory contents
-          echo ""
-          echo "=== build/ directory tree ==="
-          find build/ -type f 2>/dev/null | head -50 || echo "::error::build/ directory does NOT exist"
-          echo ""
-          echo "=== build/distributions/ ==="
-          ls -la build/distributions/ 2>/dev/null || echo "::error::build/distributions/ does NOT exist"
-          echo ""
-          echo "=== build/libs/ ==="
-          ls -la build/libs/ 2>/dev/null || echo "::warning::build/libs/ does NOT exist"
+          # Find any error/exception lines
+          ERRORS=$(grep -i "error\|exception\|fail\|cannot\|could not" "$LOGFILE" 2>/dev/null | head -5 | tr '\n' ' || ' || echo "NONE")
+          echo "::warning::ERRORS: $ERRORS"
+          
+          # Task lines (Gradle format: "> Task :name STATUS")
+          TASKS=$(grep "^> Task" "$LOGFILE" 2>/dev/null | tr '\n' ' || ' || echo "NO_TASK_LINES")
+          echo "::warning::TASKS: $TASKS"
+          
+          # Build directory
+          BUILD_FILES=$(find build/ -type f 2>/dev/null | head -20 | tr '\n' ' || ' || echo "NO_BUILD_DIR")
+          echo "::warning::BUILD_DIR: $BUILD_FILES"
 
       - name: Verify plugin ZIP exists
         run: |
