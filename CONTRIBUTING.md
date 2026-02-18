@@ -13,47 +13,47 @@
 git clone https://github.com/hon454/copy-selection-context.git
 cd copy-selection-context
 
-./gradlew buildPlugin    # 플러그인 ZIP 빌드 (build/distributions/)
-./gradlew runIde         # 플러그인이 설치된 개발용 IDE 실행
-./gradlew test           # 테스트 실행
-./gradlew verifyPlugin   # 플러그인 구조 검증
+./gradlew buildPlugin    # Build plugin ZIP (build/distributions/)
+./gradlew runIde         # Run dev IDE with plugin installed
+./gradlew test           # Run tests
+./gradlew verifyPlugin   # Verify plugin structure
 ```
 
 ## Project Structure
 
 ```
 src/main/kotlin/com/github/hon454/copyselectioncontext/
-├── CopySelectionContextAction.kt    # 메인 통합 액션 (Ctrl+Alt+C)
-├── CopySelectionBaseAction.kt       # 추상 베이스 (클립보드 로직)
-├── CopyRelativePathAction.kt        # 상대 경로 (컨텍스트 메뉴)
-├── CopyAbsolutePathAction.kt        # 절대 경로 (컨텍스트 메뉴)
-├── CopyWithCodeContentAction.kt     # 경로 + 코드 블록 (컨텍스트 메뉴)
-├── CopyGitPermalinkAction.kt        # GitHub/GitLab 퍼머링크
-├── ShowCopyHistoryAction.kt         # 복사 이력 팝업
-├── CopySelectionNotifier.kt         # 토스트 알림
-├── CopySelectionStatusBarWidget.kt  # 상태바 위젯
-├── CopySelectionSettings.kt         # 설정 영속화 (@Service + @State)
-└── CopySelectionConfigurable.kt     # 설정 UI (Tools 메뉴)
+├── CopySelectionContextAction.kt    # Main unified action (Ctrl+Alt+C)
+├── CopySelectionBaseAction.kt       # Abstract base (clipboard logic)
+├── CopyRelativePathAction.kt        # Relative path (context menu)
+├── CopyAbsolutePathAction.kt        # Absolute path (context menu)
+├── CopyWithCodeContentAction.kt     # Path + code block (context menu)
+├── CopyGitPermalinkAction.kt        # GitHub/GitLab permalink
+├── ShowCopyHistoryAction.kt         # Copy history popup
+├── CopySelectionNotifier.kt         # Toast notifications
+├── CopySelectionStatusBarWidget.kt  # Status bar widget
+├── CopySelectionSettings.kt         # Settings persistence (@Service + @State)
+└── CopySelectionConfigurable.kt     # Settings UI (Tools menu)
 ```
 
 ## Plugin Signing (for Marketplace Publishing)
 
-Marketplace에 배포하려면 플러그인 서명이 필요합니다.
+Plugin signing is required to publish to the JetBrains Marketplace.
 
-### 인증서 생성
+### Generate Certificates
 
 ```bash
-# 암호화된 개인 키 생성
+# Generate encrypted private key
 openssl genpkey -aes-256-cbc -algorithm RSA -out private_encrypted.pem -pkeyopt rsa_keygen_bits:4096
 
-# 비암호화 개인 키 추출
+# Extract unencrypted private key
 openssl rsa -in private_encrypted.pem -out private.pem
 
-# 인증서 체인 생성
+# Generate certificate chain
 openssl req -key private.pem -new -x509 -days 365 -out chain.crt
 ```
 
-### 환경 변수 설정
+### Set Environment Variables
 
 ```bash
 export CERTIFICATE_CHAIN=$(cat chain.crt)
@@ -62,7 +62,7 @@ export PRIVATE_KEY_PASSWORD="your-password"
 export PUBLISH_TOKEN="your-jetbrains-token"
 ```
 
-### 배포
+### Publish
 
 ```bash
 ./gradlew publishPlugin
@@ -70,7 +70,7 @@ export PUBLISH_TOKEN="your-jetbrains-token"
 
 ## Commit Convention
 
-[Conventional Commits](https://www.conventionalcommits.org/) 형식을 따릅니다.
+Follow [Conventional Commits](https://www.conventionalcommits.org/) format.
 
 ```
 type[(scope)]: concise subject
@@ -82,6 +82,6 @@ Body explaining WHY this change was made.
 
 ## Pull Requests
 
-- 하나의 PR에 하나의 기능/수정
-- 수동 테스트 절차 포함
-- 아키텍처 변경 시 AGENTS.md 업데이트
+- One feature/fix per PR
+- Include manual testing steps
+- Update AGENTS.md when architecture changes
