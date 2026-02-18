@@ -75,26 +75,12 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
-        with:
-          cache-disabled: true
 
       - name: Ensure gradlew is executable
         run: chmod +x ./gradlew
 
       - name: Build plugin
         run: ./gradlew buildPlugin --stacktrace
-
-      - name: Diagnose build output
-        if: always()
-        run: |
-          echo "=== All ZIP/JAR files in build/ ==="
-          find build/ -type f \( -name "*.zip" -o -name "*.jar" \) 2>/dev/null || echo "No ZIP/JAR files found in build/"
-          echo ""
-          echo "=== build/distributions/ ==="
-          ls -la build/distributions/ 2>/dev/null || echo "build/distributions/ does NOT exist"
-          echo ""
-          echo "=== build/libs/ ==="
-          ls -la build/libs/ 2>/dev/null || echo "build/libs/ does NOT exist"
 
       - name: Verify plugin ZIP exists
         run: |

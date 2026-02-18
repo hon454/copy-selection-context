@@ -31,40 +31,12 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
-        with:
-          cache-disabled: true
 
       - name: Ensure gradlew is executable
         run: chmod +x ./gradlew
       
       - name: Build plugin
-        run: |
-          ./gradlew buildPlugin --stacktrace --console=plain 2>&1 | tee build-output.log
-
-      - name: Report task outcomes
-        if: always()
-        run: |
-          LOGFILE="build-output.log"
-          TOTAL_LINES=$(wc -l < "$LOGFILE" 2>/dev/null || echo "0")
-          echo "::warning::LOG_LINES: $TOTAL_LINES total lines in build output"
-          
-          # Show first 3 lines
-          echo "::warning::HEAD: $(head -3 "$LOGFILE" 2>/dev/null | tr '\n' ' || ')"
-          
-          # Show last 10 lines (most important — shows BUILD result)
-          echo "::warning::TAIL: $(tail -10 "$LOGFILE" 2>/dev/null | tr '\n' ' || ')"
-          
-          # Find any error/exception lines
-          ERRORS=$(grep -i "error\|exception\|fail\|cannot\|could not" "$LOGFILE" 2>/dev/null | head -5 | tr '\n' ' || ' || echo "NONE")
-          echo "::warning::ERRORS: $ERRORS"
-          
-          # Task lines (Gradle format: "> Task :name STATUS")
-          TASKS=$(grep "^> Task" "$LOGFILE" 2>/dev/null | tr '\n' ' || ' || echo "NO_TASK_LINES")
-          echo "::warning::TASKS: $TASKS"
-          
-          # Build directory
-          BUILD_FILES=$(find build/ -type f 2>/dev/null | head -20 | tr '\n' ' || ' || echo "NO_BUILD_DIR")
-          echo "::warning::BUILD_DIR: $BUILD_FILES"
+        run: ./gradlew buildPlugin --stacktrace
 
       - name: Verify plugin ZIP exists
         run: |
