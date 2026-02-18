@@ -14,6 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - name: Maximize Build Space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false
+          large-packages: false
+
       - name: Checkout code
         uses: actions/checkout@v4
       
@@ -21,16 +27,18 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '21'
-          distribution: 'temurin'
+          distribution: 'zulu'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-disabled: true
 
       - name: Ensure gradlew is executable
         run: chmod +x ./gradlew
       
       - name: Build plugin
-        run: ./gradlew buildPlugin --no-build-cache --info
+        run: ./gradlew buildPlugin --stacktrace
 
       - name: Diagnose build output
         if: always()

@@ -36,6 +36,9 @@ kotlin {
 
 intellijPlatform {
     pluginConfiguration {
+        name = "Copy Selection Context"
+        version = project.version.toString()
+
         ideaVersion {
             sinceBuild.set("243")
         }
