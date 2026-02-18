@@ -22,12 +22,17 @@ class CopySelectionConfigurable : Configurable {
             }
             group(CopySelectionBundle.message("settings.group.output")) {
                 row(CopySelectionBundle.message("settings.format.output.label")) {
-                    comboBox(listOf("claude", "pathline"))
+                    comboBox(listOf("claude", "pathline", "template"))
                         .bindItem(
                             { state.outputFormat },
                             { state.outputFormat = it ?: "claude" }
                         )
-                        .comment("claude = @path#L format, pathline = path:line format")
+                        .comment("claude = @path#L format, pathline = path:line format, template = custom")
+                }
+                row(CopySelectionBundle.message("settings.template.label")) {
+                    textField()
+                        .bindText(state::customFormatTemplate)
+                        .comment("{path} {line} {range} {code} {lang} {filename}")
                 }
                 row {
                     checkBox(CopySelectionBundle.message("settings.include.code"))

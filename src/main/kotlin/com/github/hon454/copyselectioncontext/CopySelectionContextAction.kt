@@ -6,8 +6,14 @@ import com.intellij.openapi.vfs.VirtualFile
 
 class CopySelectionContextAction : CopySelectionBaseAction() {
     override fun getPath(project: Project, file: VirtualFile): String {
-        val settings = CopySelectionSettings.getInstance().state
-        return CopySelectionUtils.resolvePath(project, file, settings.defaultPathType)
+        val appSettings = CopySelectionSettings.getInstance().state
+        val projSettings = CopySelectionProjectSettings.getInstance(project).state
+        val pathType = if (projSettings.useProjectSettings) {
+            if (projSettings.pathType == "relative") PathType.RELATIVE else PathType.ABSOLUTE
+        } else {
+            appSettings.defaultPathType
+        }
+        return CopySelectionUtils.resolvePath(project, file, pathType)
     }
 
     override fun buildContent(path: String, lineRange: String, file: VirtualFile, editor: Editor, project: Project?): String {

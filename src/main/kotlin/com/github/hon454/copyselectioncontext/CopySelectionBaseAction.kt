@@ -43,9 +43,11 @@ abstract class CopySelectionBaseAction : AnAction() {
 
         copyToClipboard(result)
 
-        val settings = CopySelectionSettings.getInstance().state
-        if (settings.analyticsEnabled) {
-            CopySelectionAnalytics.getInstance()?.recordCopy(settings.outputFormat)
+        val appSettings = CopySelectionSettings.getInstance().state
+        if (appSettings.analyticsEnabled) {
+            val projSettings = CopySelectionProjectSettings.getInstance(project).state
+            val effectiveFormat = if (projSettings.useProjectSettings) projSettings.outputFormat else appSettings.outputFormat
+            CopySelectionAnalytics.getInstance()?.recordCopy(effectiveFormat)
         }
 
         lastHighlighter?.let { highlighter ->
