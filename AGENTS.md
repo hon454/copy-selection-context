@@ -23,12 +23,15 @@ JetBrains IDE plugin for copying code context (file path, line numbers, optional
 
 ## Build Commands
 
+**Windows (this project's dev environment):**
 ```bash
-./gradlew buildPlugin    # Build plugin ZIP (build/distributions/)
-./gradlew runIde         # Run IDE with plugin installed
-./gradlew verifyPlugin   # Verify plugin structure
-./gradlew publishPlugin  # Publish to Marketplace (requires PUBLISH_TOKEN)
+cmd //c "gradlew.bat buildPlugin"    # Build plugin ZIP (build/distributions/)
+cmd //c "gradlew.bat runIde"         # Run IDE with plugin installed
+cmd //c "gradlew.bat verifyPlugin"   # Verify plugin structure
+cmd //c "gradlew.bat publishPlugin"  # Publish to Marketplace (requires PUBLISH_TOKEN)
 ```
+
+> **Note**: `./gradlew` does not work in this environment. The shell is bash-on-Windows, so Gradle must be invoked via `cmd //c "gradlew.bat ..."` to run the Windows batch wrapper correctly.
 
 ## CI/CD
 
