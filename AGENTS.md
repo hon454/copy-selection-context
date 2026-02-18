@@ -30,6 +30,22 @@ JetBrains IDE plugin for copying code context (file path, line numbers, optional
 ./gradlew publishPlugin  # Publish to Marketplace (requires PUBLISH_TOKEN)
 ```
 
+## CI/CD
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `build.yml` | Push/PR to `main` | Build verification + artifact upload |
+| `release.yml` | Push `v*` tag | Build → GitHub Release (ZIP attached) → Marketplace publish (conditional) |
+
+### Release Process
+
+1. Bump `version` in `build.gradle.kts` to match the tag
+2. Commit, tag (`v<major>.<minor>.<patch>`), push
+3. `release.yml` auto-creates GitHub Release with commit-based release notes
+4. JetBrains Marketplace publish activates when signing secrets are configured
+
+**Version rule**: Tag version must match `build.gradle.kts` `version` — workflow fails on mismatch.
+
 ## Architecture Overview
 
 Single flat package: `com.github.hon454.copyselectioncontext/`
