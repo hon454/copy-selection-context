@@ -7,7 +7,7 @@ plugins {
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 group = "com.github.hon454"
-version = "1.0.0"
+version = "1.0.1"
 
 repositories {
     mavenCentral()
