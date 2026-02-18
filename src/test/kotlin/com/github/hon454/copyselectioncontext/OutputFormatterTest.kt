@@ -82,4 +82,140 @@ class OutputFormatterTest {
 
         assertIs<ClaudeCodeFormatter>(formatter)
     }
+
+    @Test
+    fun `ClaudeCodeFormatter handles code with triple backticks`() {
+        val formatter = ClaudeCodeFormatter()
+        val codeWithBackticks = "```\nsome code\n```"
+        val context = FormatContext(
+            path = "src/App.kt",
+            startLine = 42,
+            endLine = 53,
+            code = codeWithBackticks,
+            language = "kotlin"
+        )
+
+        val result = formatter.format(context)
+
+        // Should use 4+ backticks to avoid breaking markdown
+        assertTrue(result.contains("````kotlin"))
+        assertTrue(result.contains("````"))
+    }
+
+    @Test
+    fun `ClaudeCodeFormatter handles empty code string`() {
+        val formatter = ClaudeCodeFormatter()
+        val context = FormatContext(
+            path = "src/App.kt",
+            startLine = 42,
+            endLine = 53,
+            code = "",
+            language = "kotlin"
+        )
+
+        val result = formatter.format(context)
+
+        // Empty code should not produce code block
+        assertEquals(" @src/App.kt#L42-53 ", result)
+    }
+
+    @Test
+    fun `ClaudeCodeFormatter handles whitespace-only code`() {
+        val formatter = ClaudeCodeFormatter()
+        val context = FormatContext(
+            path = "src/App.kt",
+            startLine = 42,
+            endLine = 53,
+            code = "   \n  \n  ",
+            language = "kotlin"
+        )
+
+        val result = formatter.format(context)
+
+        // Whitespace-only code should not produce code block
+        assertEquals(" @src/App.kt#L42-53 ", result)
+    }
+
+    @Test
+    fun `ClaudeCodeFormatter handles path with hash character`() {
+        val formatter = ClaudeCodeFormatter()
+        val context = FormatContext(
+            path = "src/App#v2.kt",
+            startLine = 42,
+            endLine = 42
+        )
+
+        val result = formatter.format(context)
+
+        // Path with # should pass through unchanged
+        assertEquals(" @src/App#v2.kt#L42 ", result)
+    }
+
+    @Test
+    fun `PathLineFormatter handles code with triple backticks`() {
+        val formatter = PathLineFormatter()
+        val codeWithBackticks = "```\nsome code\n```"
+        val context = FormatContext(
+            path = "src/App.kt",
+            startLine = 42,
+            endLine = 53,
+            code = codeWithBackticks,
+            language = "kotlin"
+        )
+
+        val result = formatter.format(context)
+
+        // Should use 4+ backticks to avoid breaking markdown
+        assertTrue(result.contains("````kotlin"))
+        assertTrue(result.contains("````"))
+    }
+
+    @Test
+    fun `PathLineFormatter handles empty code string`() {
+        val formatter = PathLineFormatter()
+        val context = FormatContext(
+            path = "src/App.kt",
+            startLine = 42,
+            endLine = 53,
+            code = "",
+            language = "kotlin"
+        )
+
+        val result = formatter.format(context)
+
+        // Empty code should not produce code block
+        assertEquals("src/App.kt:42-53", result)
+    }
+
+    @Test
+    fun `PathLineFormatter handles whitespace-only code`() {
+        val formatter = PathLineFormatter()
+        val context = FormatContext(
+            path = "src/App.kt",
+            startLine = 42,
+            endLine = 53,
+            code = "   \n  \n  ",
+            language = "kotlin"
+        )
+
+        val result = formatter.format(context)
+
+        // Whitespace-only code should not produce code block
+        assertEquals("src/App.kt:42-53", result)
+    }
+
+    @Test
+    fun `PathLineFormatter handles path with hash character`() {
+        val formatter = PathLineFormatter()
+        val context = FormatContext(
+            path = "src/App#v2.kt",
+            startLine = 42,
+            endLine = 42
+        )
+
+        val result = formatter.format(context)
+
+        // Path with # should pass through unchanged
+        assertEquals("src/App#v2.kt:42", result)
+    }
 }

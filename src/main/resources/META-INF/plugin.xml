@@ -38,6 +38,10 @@
         
         <!-- Settings Configurable -->
         <applicationConfigurable parentId="tools" instance="com.github.hon454.copyselectioncontext.CopySelectionConfigurable" id="CopySelectionContext.Settings" displayName="Copy Selection Context"/>
+
+        <statusBarWidgetFactory implementation="com.github.hon454.copyselectioncontext.CopySelectionStatusBarWidgetFactory"
+                                id="CopySelectionStatusBarWidget"
+                                order="last"/>
     </extensions>
     
     <actions>
