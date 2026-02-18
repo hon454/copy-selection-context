@@ -38,43 +38,37 @@ jobs:
         run: chmod +x ./gradlew
       
       - name: Build plugin
-        run: ./gradlew buildPlugin --stacktrace
+        run: |
+          ./gradlew buildPlugin --stacktrace --console=plain 2>&1 | tee build-output.log
 
-      - name: Diagnose build output
+      - name: Report task outcomes
         if: always()
         run: |
-          REPORT="build-diagnostics.txt"
-          {
-            echo "=== Build Diagnostics ==="
-            echo "Date: $(date -u)"
-            echo ""
-            echo "=== build/ directory tree (first 100 files) ==="
-            find build/ -type f 2>/dev/null | head -100 || echo "build/ does NOT exist"
-            echo ""
-            echo "=== All ZIP files in build/ ==="
-            find build/ -type f -name "*.zip" 2>/dev/null || echo "No ZIP files"
-            echo ""
-            echo "=== All JAR files in build/ ==="
-            find build/ -type f -name "*.jar" 2>/dev/null || echo "No JAR files"
-            echo ""
-            echo "=== build/distributions/ ==="
-            ls -la build/distributions/ 2>/dev/null || echo "build/distributions/ does NOT exist"
-            echo ""
-            echo "=== build/libs/ ==="
-            ls -la build/libs/ 2>/dev/null || echo "build/libs/ does NOT exist"
-            echo ""
-            echo "=== Disk space ==="
-            df -h .
-          } | tee "$REPORT"
-          cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-diagnostics
-          path: build-diagnostics.txt
-          if-no-files-found: warn
+          echo "=== Gradle Task Outcomes ==="
+          TASKS=$(grep "^> Task" build-output.log 2>/dev/null || echo "NO_TASK_OUTPUT")
+          echo "$TASKS"
+          
+          # Report as annotations (visible via API)
+          SKIPPED=$(echo "$TASKS" | grep -c "SKIPPED\|NO-SOURCE\|UP-TO-DATE" || true)
+          EXECUTED=$(echo "$TASKS" | grep -cv "SKIPPED\|NO-SOURCE\|UP-TO-DATE\|NO_TASK_OUTPUT" || true)
+          FAILED=$(echo "$TASKS" | grep -c "FAILED" || true)
+          echo "::warning::TASK_SUMMARY: executed=$EXECUTED skipped=$SKIPPED failed=$FAILED"
+          
+          # Report specific task outcomes as individual annotations
+          echo "$TASKS" | grep -i "buildPlugin\|prepareSandbox\|composedJar\|instrumentedJar\|compileKotlin\|jar\b\|patchPluginXml" | while IFS= read -r line; do
+            echo "::warning::$line"
+          done
+          
+          # Build directory contents
+          echo ""
+          echo "=== build/ directory tree ==="
+          find build/ -type f 2>/dev/null | head -50 || echo "::error::build/ directory does NOT exist"
+          echo ""
+          echo "=== build/distributions/ ==="
+          ls -la build/distributions/ 2>/dev/null || echo "::error::build/distributions/ does NOT exist"
+          echo ""
+          echo "=== build/libs/ ==="
+          ls -la build/libs/ 2>/dev/null || echo "::warning::build/libs/ does NOT exist"
 
       - name: Verify plugin ZIP exists
         run: |
