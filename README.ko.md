@@ -103,9 +103,15 @@ IntelliJ IDEA · Android Studio · PyCharm · WebStorm · PhpStorm · CLion · G
 git clone https://github.com/hon454/copy-selection-context.git
 cd copy-selection-context
 
+# Unix / macOS
 ./gradlew buildPlugin    # 플러그인 ZIP 빌드
 ./gradlew runIde         # 플러그인이 설치된 개발용 IDE 실행
 ./gradlew test           # 테스트 실행
+
+# Windows
+gradlew.bat buildPlugin
+gradlew.bat runIde
+gradlew.bat test
 ```
 
 자세한 개발 및 배포 가이드는 [CONTRIBUTING.md](CONTRIBUTING.md)를 참고하세요.

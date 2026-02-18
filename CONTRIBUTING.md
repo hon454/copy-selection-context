@@ -13,10 +13,17 @@
 git clone https://github.com/hon454/copy-selection-context.git
 cd copy-selection-context
 
+# Unix / macOS
 ./gradlew buildPlugin    # Build plugin ZIP (build/distributions/)
 ./gradlew runIde         # Run dev IDE with plugin installed
 ./gradlew test           # Run tests
 ./gradlew verifyPlugin   # Verify plugin structure
+
+# Windows
+gradlew.bat buildPlugin
+gradlew.bat runIde
+gradlew.bat test
+gradlew.bat verifyPlugin
 ```
 
 ## Project Structure

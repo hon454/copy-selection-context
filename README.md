@@ -103,9 +103,15 @@ IntelliJ IDEA · Android Studio · PyCharm · WebStorm · PhpStorm · CLion · G
 git clone https://github.com/hon454/copy-selection-context.git
 cd copy-selection-context
 
+# Unix / macOS
 ./gradlew buildPlugin    # Build plugin ZIP
 ./gradlew runIde         # Run dev IDE with plugin
 ./gradlew test           # Run tests
+
+# Windows
+gradlew.bat buildPlugin
+gradlew.bat runIde
+gradlew.bat test
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development and release guides.
