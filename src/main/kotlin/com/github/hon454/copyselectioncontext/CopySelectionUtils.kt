@@ -1,5 +1,6 @@
 package com.github.hon454.copyselectioncontext
 
+import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
@@ -79,6 +80,40 @@ object CopySelectionUtils {
             val currentLine = editor.caretModel.logicalPosition.line + 1
             "$currentLine"
         }
+    }
+
+    fun resolveLineNumbers(editor: Editor, caret: Caret): Pair<Int, Int> {
+        val document = editor.document
+        return if (caret.hasSelection()) {
+            val startLine = document.getLineNumber(caret.selectionStart) + 1
+            val endLine = document.getLineNumber(caret.selectionEnd) + 1
+            Pair(startLine, endLine)
+        } else {
+            val currentLine = caret.logicalPosition.line + 1
+            Pair(currentLine, currentLine)
+        }
+    }
+
+    fun resolveLineRange(editor: Editor, caret: Caret): String {
+        val (startLine, endLine) = resolveLineNumbers(editor, caret)
+        return toLineRange(startLine, endLine)
+    }
+
+    fun resolveLineRanges(editor: Editor): List<String> {
+        val caretModel = editor.caretModel
+        if (caretModel.caretCount <= 1) {
+            return listOf(resolveLineRange(editor))
+        }
+
+        val ranges = mutableListOf<String>()
+        caretModel.runForEachCaret { caret ->
+            ranges.add(resolveLineRange(editor, caret))
+        }
+        return ranges
+    }
+
+    fun toLineRange(startLine: Int, endLine: Int): String {
+        return if (startLine == endLine) "$startLine" else "$startLine-$endLine"
     }
 
     fun getCodeContent(editor: Editor): String {

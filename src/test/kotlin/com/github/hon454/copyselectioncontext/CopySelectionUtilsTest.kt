@@ -1,6 +1,8 @@
 package com.github.hon454.copyselectioncontext
 
 import com.intellij.openapi.editor.CaretModel
+import com.intellij.openapi.editor.Caret
+import com.intellij.openapi.editor.CaretAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
@@ -16,6 +18,60 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class CopySelectionUtilsTest {
+    @Test
+    fun `resolveLineRanges returns single block for single caret`() {
+        val editor = mockk<Editor>()
+        val selectionModel = mockk<SelectionModel>()
+        val caretModel = mockk<CaretModel>()
+        val document = mockk<Document>()
+
+        every { editor.selectionModel } returns selectionModel
+        every { editor.caretModel } returns caretModel
+        every { editor.document } returns document
+        every { caretModel.caretCount } returns 1
+        every { selectionModel.hasSelection() } returns false
+        every { caretModel.logicalPosition } returns LogicalPosition(9, 0)
+
+        val result = CopySelectionUtils.resolveLineRanges(editor)
+
+        assertEquals(listOf("10"), result)
+    }
+
+    @Test
+    fun `resolveLineRanges returns multiple blocks joined by double newlines for two carets`() {
+        val editor = mockk<Editor>()
+        val caretModel = mockk<CaretModel>()
+        val document = mockk<Document>()
+        val caret1 = mockk<Caret>()
+        val caret2 = mockk<Caret>()
+
+        every { editor.caretModel } returns caretModel
+        every { editor.document } returns document
+        every { caretModel.caretCount } returns 2
+
+        every { caret1.hasSelection() } returns true
+        every { caret1.selectionStart } returns 0
+        every { caret1.selectionEnd } returns 10
+        every { document.getLineNumber(0) } returns 0
+        every { document.getLineNumber(10) } returns 1
+
+        every { caret2.hasSelection() } returns true
+        every { caret2.selectionStart } returns 30
+        every { caret2.selectionEnd } returns 30
+        every { document.getLineNumber(30) } returns 3
+
+        every { caretModel.runForEachCaret(any<CaretAction>()) } answers {
+            val action = firstArg<CaretAction>()
+            action.perform(caret1)
+            action.perform(caret2)
+        }
+
+        val result = CopySelectionUtils.resolveLineRanges(editor)
+
+        assertEquals(listOf("1-2", "4"), result)
+        assertEquals("1-2\n\n4", result.joinToString("\n\n"))
+    }
+
     @Test
     fun `resolvePath returns absolute path`() {
         val project = mockk<Project>()
