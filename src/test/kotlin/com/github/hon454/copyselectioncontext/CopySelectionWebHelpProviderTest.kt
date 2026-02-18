@@ -29,7 +29,7 @@ class CopySelectionWebHelpProviderTest {
         val url = provider.getHelpPageUrl(CopySelectionWebHelpProvider.HELP_TOPIC_FORMATS)
         assertNotNull(url)
         assertTrue(url.startsWith("https://github.com/hon454/copy-selection-context"))
-        assertTrue(url.contains("#output-format-claude-code-style"))
+        assertTrue(url.contains("#output-format"))
     }
 
     @Test

@@ -14,7 +14,7 @@ class CopySelectionWebHelpProvider : WebHelpProvider() {
         return when (helpTopicId) {
             HELP_TOPIC_MAIN -> "$BASE_URL#readme"
             HELP_TOPIC_SETTINGS -> "$BASE_URL#settings"
-            HELP_TOPIC_FORMATS -> "$BASE_URL#output-format-claude-code-style"
+            HELP_TOPIC_FORMATS -> "$BASE_URL#output-format"
             else -> null
         }
     }
