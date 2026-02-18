@@ -41,6 +41,7 @@ test-output.*
 
 # OS
 .DS_Store
+nul
 
 # Tools
 .sisyphus/
