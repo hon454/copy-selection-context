@@ -45,9 +45,7 @@ abstract class CopySelectionBaseAction : AnAction() {
 
         val appSettings = CopySelectionSettings.getInstance().state
         if (appSettings.analyticsEnabled) {
-            val projSettings = CopySelectionProjectSettings.getInstance(project).state
-            val effectiveFormat = if (projSettings.useProjectSettings) projSettings.outputFormat else appSettings.outputFormat
-            CopySelectionAnalytics.getInstance()?.recordCopy(effectiveFormat)
+            CopySelectionAnalytics.getInstance()?.recordCopy(appSettings.outputFormat)
         }
 
         lastHighlighter?.let { highlighter ->
@@ -84,7 +82,7 @@ abstract class CopySelectionBaseAction : AnAction() {
 
     protected open fun buildContent(path: String, lineRange: String, file: VirtualFile, editor: Editor, project: Project? = null): String {
         val (startLine, endLine) = resolveLineNumbers(editor)
-        return formatWithSettings(path, startLine, endLine, project = project)
+        return formatWithSettings(path, startLine, endLine)
     }
 
     protected open fun buildContentForCaret(
@@ -113,16 +111,9 @@ abstract class CopySelectionBaseAction : AnAction() {
         }
     }
 
-    protected fun formatWithSettings(path: String, startLine: Int, endLine: Int, code: String? = null, language: String = "", project: Project? = null): String {
-        val appSettings = CopySelectionSettings.getInstance().state
-        val outputFormat = if (project != null) {
-            val projSettings = CopySelectionProjectSettings.getInstance(project).state
-            if (projSettings.useProjectSettings) projSettings.outputFormat else appSettings.outputFormat
-        } else {
-            appSettings.outputFormat
-        }
-        val effectiveSettings = appSettings.copy(outputFormat = outputFormat)
-        val formatter = OutputFormatterFactory.getFormatterForSettings(effectiveSettings)
+    protected fun formatWithSettings(path: String, startLine: Int, endLine: Int, code: String? = null, language: String = ""): String {
+        val settings = CopySelectionSettings.getInstance().state
+        val formatter = OutputFormatterFactory.getFormatterForSettings(settings)
         val context = FormatContext(path = path, startLine = startLine, endLine = endLine, code = code, language = language)
         return formatter.format(context)
     }

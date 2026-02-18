@@ -40,14 +40,8 @@
         <applicationConfigurable parentId="tools" instance="com.github.hon454.copyselectioncontext.CopySelectionConfigurable" id="CopySelectionContext.Settings" displayName="Copy Selection Context"/>
 
         <projectService serviceImplementation="com.github.hon454.copyselectioncontext.CopyHistoryService"/>
-        <projectService serviceImplementation="com.github.hon454.copyselectioncontext.CopySelectionProjectSettings"/>
 
         <applicationService serviceImplementation="com.github.hon454.copyselectioncontext.CopySelectionAnalytics"/>
-
-        <projectConfigurable parentId="tools"
-                             instance="com.github.hon454.copyselectioncontext.CopySelectionProjectConfigurable"
-                             id="CopySelectionContext.ProjectSettings"
-                             displayName="Copy Selection Context (Project)"/>
 
         <statusBarWidgetFactory implementation="com.github.hon454.copyselectioncontext.CopySelectionStatusBarWidgetFactory"
                                  id="CopySelectionStatusBarWidget"
