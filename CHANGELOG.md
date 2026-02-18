@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-02-18
+
+### Changed
+- Switch release notes from commit-based to CHANGELOG.md-based generation
+- Integrate gradle-changelog-plugin with CHANGELOG.md as single source of truth
+- Improve Marketplace listing with detailed plugin description and change notes
+
 ## [1.0.2] - 2026-02-18
 
 ### Added
@@ -58,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Toast notifications
 - IntelliJ Platform 2024.3+ compatibility
 
-[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/hon454/copy-selection-context/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/hon454/copy-selection-context/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/hon454/copy-selection-context/commits/v1.0.1
