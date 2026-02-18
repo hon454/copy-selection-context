@@ -30,19 +30,43 @@ jobs:
         run: chmod +x ./gradlew
       
       - name: Build plugin
-        run: ./gradlew buildPlugin --no-build-cache
+        run: ./gradlew buildPlugin --no-build-cache --info
 
       - name: Diagnose build output
         if: always()
         run: |
-          echo "=== All ZIP/JAR files in build/ ==="
-          find build/ -type f \( -name "*.zip" -o -name "*.jar" \) 2>/dev/null || echo "No ZIP/JAR files found in build/"
-          echo ""
-          echo "=== build/distributions/ ==="
-          ls -la build/distributions/ 2>/dev/null || echo "build/distributions/ does NOT exist"
-          echo ""
-          echo "=== build/libs/ ==="
-          ls -la build/libs/ 2>/dev/null || echo "build/libs/ does NOT exist"
+          REPORT="build-diagnostics.txt"
+          {
+            echo "=== Build Diagnostics ==="
+            echo "Date: $(date -u)"
+            echo ""
+            echo "=== build/ directory tree (first 100 files) ==="
+            find build/ -type f 2>/dev/null | head -100 || echo "build/ does NOT exist"
+            echo ""
+            echo "=== All ZIP files in build/ ==="
+            find build/ -type f -name "*.zip" 2>/dev/null || echo "No ZIP files"
+            echo ""
+            echo "=== All JAR files in build/ ==="
+            find build/ -type f -name "*.jar" 2>/dev/null || echo "No JAR files"
+            echo ""
+            echo "=== build/distributions/ ==="
+            ls -la build/distributions/ 2>/dev/null || echo "build/distributions/ does NOT exist"
+            echo ""
+            echo "=== build/libs/ ==="
+            ls -la build/libs/ 2>/dev/null || echo "build/libs/ does NOT exist"
+            echo ""
+            echo "=== Disk space ==="
+            df -h .
+          } | tee "$REPORT"
+          cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-diagnostics
+          path: build-diagnostics.txt
+          if-no-files-found: warn
 
       - name: Verify plugin ZIP exists
         run: |
