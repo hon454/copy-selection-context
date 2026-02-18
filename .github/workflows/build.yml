@@ -30,7 +30,7 @@ jobs:
         run: chmod +x ./gradlew
       
       - name: Build plugin
-        run: ./gradlew buildPlugin
+        run: ./gradlew buildPlugin --no-build-cache
 
       - name: Diagnose build output
         if: always()
