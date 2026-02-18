@@ -89,4 +89,8 @@ tasks {
     test {
         useJUnitPlatform()
     }
+
+    buildSearchableOptions {
+        jvmArgs("-Xshare:off")
+    }
 }
