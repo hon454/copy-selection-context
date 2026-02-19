@@ -1,9 +1,10 @@
 # Copy Selection Context
 
-[![Build](https://github.com/hon454/copy-selection-context/actions/workflows/build.yml/badge.svg)](https://github.com/hon454/copy-selection-context/actions/workflows/build.yml)
-[![Version](https://img.shields.io/jetbrains/plugin/v/com.github.hon454.copy-selection-context.svg)](https://plugins.jetbrains.com/plugin/30262-copy-selection-context)
-[![Downloads](https://img.shields.io/jetbrains/plugin/d/com.github.hon454.copy-selection-context.svg)](https://plugins.jetbrains.com/plugin/30262-copy-selection-context)
-[![License](https://img.shields.io/github/license/hon454/copy-selection-context.svg)](LICENSE)
+[![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/com.github.hon454.copy-selection-context?label=Marketplace)](https://plugins.jetbrains.com/plugin/30262-copy-selection-context)
+[![Release](https://img.shields.io/github/v/release/hon454/copy-selection-context)](https://github.com/hon454/copy-selection-context/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/hon454/copy-selection-context/total)](https://github.com/hon454/copy-selection-context/releases)
+[![Contributors](https://img.shields.io/github/contributors/hon454/copy-selection-context)](https://github.com/hon454/copy-selection-context/graphs/contributors)
+[![License](https://img.shields.io/github/license/hon454/copy-selection-context)](LICENSE)
 
 **[한국어](README.ko.md)**
 
