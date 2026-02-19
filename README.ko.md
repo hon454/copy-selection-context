@@ -1,8 +1,8 @@
 # Copy Selection Context
 
 [![Build](https://github.com/hon454/copy-selection-context/actions/workflows/build.yml/badge.svg)](https://github.com/hon454/copy-selection-context/actions/workflows/build.yml)
-[![Version](https://img.shields.io/jetbrains/plugin/v/com.github.hon454.copy-selection-context.svg)](https://plugins.jetbrains.com/plugin/com.github.hon454.copy-selection-context)
-[![Downloads](https://img.shields.io/jetbrains/plugin/d/com.github.hon454.copy-selection-context.svg)](https://plugins.jetbrains.com/plugin/com.github.hon454.copy-selection-context)
+[![Version](https://img.shields.io/jetbrains/plugin/v/com.github.hon454.copy-selection-context.svg)](https://plugins.jetbrains.com/plugin/30262-copy-selection-context)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/com.github.hon454.copy-selection-context.svg)](https://plugins.jetbrains.com/plugin/30262-copy-selection-context)
 [![License](https://img.shields.io/github/license/hon454/copy-selection-context.svg)](LICENSE)
 
 **[English](README.md)**
