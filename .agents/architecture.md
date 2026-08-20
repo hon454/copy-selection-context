@@ -6,9 +6,10 @@
 2. **CopySelectionContextAction** reads settings (path type + code content toggle)
 3. **Action** extracts editor context (file path, line range, optionally code)
 4. **CopyPasteManager** writes formatted text to clipboard
-5. **CopySelectionNotifier** shows toast notification (BALLOON type)
-6. **CopySelectionStatusBarWidget** updates (currently stub, prints to console)
-7. **CopySelectionSettings** provides path type and code content preferences
+5. **CopySelectionHighlighter** replaces the gutter marker scoped to the active editor
+6. **CopySelectionNotifier** shows toast notification (BALLOON type)
+7. **CopySelectionStatusBarWidget** updates (currently stub, prints to console)
+8. **CopySelectionSettings** provides path type and code content preferences
 
 ## Output Formats
 
@@ -27,6 +28,8 @@ fun example() {
 ## Source File Details
 
 - **CopySelectionBaseAction.kt** (~55 lines): Abstract base. `buildPathString()` (line range formatting), `copyToClipboard()` (CopyPasteManager), `update()` (action enablement). Subclasses implement abstract `getPath()`.
+
+- **CopySelectionHighlighter.kt**: Stores the last gutter highlighter in each `Editor`'s user data and only removes it through that editor's `MarkupModel`.
 
 - **CopySelectionContextAction.kt** (~105 lines): Main unified action. Reads path type + code content from `CopySelectionSettings`. Contains `resolvePath()`, `resolveLineRange()`, `getCodeContent()`, `detectLanguage()` (15 file type mappings). Only action with shortcut: `Ctrl+Alt+C` / `Meta+Alt+C`.
 

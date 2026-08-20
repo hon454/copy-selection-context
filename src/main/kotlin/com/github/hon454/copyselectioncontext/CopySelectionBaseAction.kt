@@ -5,9 +5,6 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.editor.markup.HighlighterLayer
-import com.intellij.openapi.editor.markup.HighlighterTargetArea
-import com.intellij.openapi.editor.markup.RangeHighlighter
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.WindowManager
@@ -15,10 +12,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import java.awt.datatransfer.StringSelection
 
 abstract class CopySelectionBaseAction : AnAction() {
-    companion object {
-        private var lastHighlighter: RangeHighlighter? = null
-    }
-
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.getData(CommonDataKeys.PROJECT) ?: return
         val editor = e.getData(CommonDataKeys.EDITOR) ?: return
@@ -48,20 +41,8 @@ abstract class CopySelectionBaseAction : AnAction() {
             CopySelectionAnalytics.getInstance()?.recordCopy(appSettings.outputFormat)
         }
 
-        lastHighlighter?.let { highlighter ->
-            editor.markupModel.removeHighlighter(highlighter)
-        }
-        lastHighlighter = null
-
         val (gutterStartLine, gutterEndLine) = resolveLineNumbers(editor)
-        val startOffset = editor.document.getLineStartOffset(gutterStartLine - 1)
-        val endOffset = editor.document.getLineEndOffset(gutterEndLine - 1)
-        lastHighlighter = editor.markupModel.addRangeHighlighter(
-            startOffset, endOffset,
-            HighlighterLayer.ADDITIONAL_SYNTAX,
-            null,
-            HighlighterTargetArea.LINES_IN_RANGE
-        ).also { it.gutterIconRenderer = CopySelectionGutterIconRenderer() }
+        CopySelectionHighlighter.update(editor, gutterStartLine, gutterEndLine)
 
         val historyService = project.getService(CopyHistoryService::class.java)
         val maxSize = CopySelectionSettings.getInstance().state.copyHistorySize
