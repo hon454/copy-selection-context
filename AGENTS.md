@@ -15,9 +15,9 @@ JetBrains IDE plugin for copying code context (file path, line numbers, optional
 
 | Component | Version |
 |-----------|---------|
-| Kotlin | 2.1.0 |
-| Gradle | 9.3.1 |
-| IntelliJ Platform Plugin | 2.11.0 |
+| Kotlin | 2.4.10 |
+| Gradle | 9.7.1 |
+| IntelliJ Platform Plugin | 2.18.1 |
 | JVM Toolchain | 21 |
 | Min IDE Version | 2024.3 |
 
