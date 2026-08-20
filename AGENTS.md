@@ -57,6 +57,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 |------|------|
 | `CopySelectionContextAction.kt` | Main unified action (`Ctrl+Alt+C` shortcut) |
 | `CopySelectionBaseAction.kt` | Abstract base with clipboard logic |
+| `CopySelectionHighlighter.kt` | Editor-scoped gutter highlighter lifecycle |
 | `CopyRelativePathAction.kt` | Relative path (context menu only) |
 | `CopyAbsolutePathAction.kt` | Absolute path (context menu only) |
 | `CopyWithCodeContentAction.kt` | Path + markdown code block (context menu only) |
