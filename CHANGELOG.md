@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-08-21
+
+### Changed
+- Update Kotlin, Gradle, the IntelliJ Platform Gradle Plugin, test dependencies, and GitHub Actions
+- Preserve IntelliJ Platform 2024.3 compatibility while verifying against newer IDE releases
+- Refresh README badges with a focused GitHub and JetBrains Marketplace set
+- Suppress Class Data Sharing warnings during searchable options generation
+
+### Fixed
+- Scope selection gutter highlighters to their owning editor, preventing cross-editor ownership assertions
+
 ## [1.0.3] - 2026-02-18
 
 ### Changed
@@ -65,7 +76,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Toast notifications
 - IntelliJ Platform 2024.3+ compatibility
 
-[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/hon454/copy-selection-context/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/hon454/copy-selection-context/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/hon454/copy-selection-context/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/hon454/copy-selection-context/commits/v1.0.1
