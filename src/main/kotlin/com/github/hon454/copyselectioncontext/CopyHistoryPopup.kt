@@ -9,8 +9,14 @@ import java.awt.datatransfer.StringSelection
 import javax.swing.JComponent
 
 object CopyHistoryPopup {
-    private data class PopupItem(val preview: String, val content: String) {
-        override fun toString(): String = preview
+    internal sealed interface PopupItem {
+        data class Entry(val preview: String, val content: String) : PopupItem {
+            override fun toString(): String = preview
+        }
+
+        data object ClearAll : PopupItem {
+            override fun toString(): String = CopySelectionBundle.message("history.popup.clear.all")
+        }
     }
 
     fun show(project: Project, component: JComponent? = null) {
@@ -18,17 +24,14 @@ object CopyHistoryPopup {
         val entries = service.getEntries()
         if (entries.isEmpty()) return
 
-        val items = entries.map { entry ->
-            PopupItem(
-                preview = entry.content.take(80).replace("\n", " "),
-                content = entry.content
-            )
-        }
+        val items = createItems(entries)
 
         val popup = JBPopupFactory.getInstance().createPopupChooserBuilder(items)
             .setTitle(CopySelectionBundle.message("history.popup.title"))
             .setItemChosenCallback { selected ->
-                CopyPasteManager.getInstance().setContents(StringSelection(selected.content))
+                handleSelection(service, selected) { content ->
+                    CopyPasteManager.getInstance().setContents(StringSelection(content))
+                }
             }
             .createPopup()
 
@@ -36,6 +39,25 @@ object CopyHistoryPopup {
             popup.show(RelativePoint(component, Point(0, 0)))
         } else {
             popup.showInFocusCenter()
+        }
+    }
+
+    internal fun createItems(entries: List<CopyHistoryService.HistoryEntry>): List<PopupItem> =
+        entries.map { entry ->
+            PopupItem.Entry(
+                preview = entry.content.take(80).replace("\n", " "),
+                content = entry.content
+            )
+        } + PopupItem.ClearAll
+
+    internal fun handleSelection(
+        service: CopyHistoryService,
+        selected: PopupItem,
+        copyContent: (String) -> Unit
+    ) {
+        when (selected) {
+            is PopupItem.Entry -> copyContent(selected.content)
+            PopupItem.ClearAll -> service.clear()
         }
     }
 }

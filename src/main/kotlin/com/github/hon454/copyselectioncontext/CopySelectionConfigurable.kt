@@ -93,8 +93,9 @@ class CopySelectionConfigurable : Configurable {
             }
             group(CopySelectionBundle.message("settings.history.size")) {
                 row(CopySelectionBundle.message("settings.history.size.label")) {
-                    spinner(1..100)
+                    spinner(0..100)
                         .bindIntValue(state::copyHistorySize)
+                        .comment(CopySelectionBundle.message("settings.history.size.comment"))
                 }
             }
             group(CopySelectionBundle.message("settings.group.analytics")) {
@@ -112,7 +113,10 @@ class CopySelectionConfigurable : Configurable {
     }
 
     override fun isModified() = dialogPanel?.isModified() ?: false
-    override fun apply() { dialogPanel?.apply() }
+    override fun apply() {
+        dialogPanel?.apply()
+        CopyHistoryService.trimOpenProjects(settings.state.copyHistorySize)
+    }
 
     override fun reset() {
         dialogPanel?.reset()

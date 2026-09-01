@@ -85,6 +85,9 @@ fun calculateTotal(items: List<Item>): Double {
 
 - **Path type** — Absolute (default) or Relative
 - **Include code content** — Whether to include the code block
+- **Copy history size** — Keep up to 100 entries, or set to `0` to disable history
+
+Copy history may contain copied code. It is stored only in the IDE's local, non-roaming workspace data and is not written to shareable project settings. Use **Clear all history** at the bottom of the history popup to remove every entry. When the maximum size is reduced, older entries are removed immediately; history previously stored in `copySelectionHistory.xml` is migrated to local workspace storage and the legacy file is cleaned up by the IDE.
 
 #### Settings Screen
 

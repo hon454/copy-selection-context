@@ -85,6 +85,9 @@ fun calculateTotal(items: List<Item>): Double {
 
 - **Path type** — Absolute（デフォルト）またはRelative
 - **Include code content** — コードブロックを含めるかどうか
+- **Copy history size** — 最大100件を保持するか、`0`に設定して履歴を無効化
+
+コピー履歴にはコピーしたコードが含まれる場合があります。データはIDEのローカルな非ローミングワークスペースにのみ保存され、共有可能なプロジェクト設定には書き込まれません。履歴ポップアップ下部の **Clear all history** ですべての項目を削除できます。最大件数を減らすと古い項目はすぐに削除され、以前 `copySelectionHistory.xml` に保存された履歴はローカルワークスペースストレージへ移行された後、IDEによって旧ファイルが削除されます。
 
 #### 設定画面
 
