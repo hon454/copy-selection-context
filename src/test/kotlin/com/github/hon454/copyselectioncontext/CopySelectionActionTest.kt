@@ -30,7 +30,7 @@ class CopySelectionActionTest {
         every { selectionModel.selectionStart } returns 0
         every { selectionModel.selectionEnd } returns 20
         every { document.getLineNumber(0) } returns 0
-        every { document.getLineNumber(20) } returns 2
+        every { document.getLineNumber(19) } returns 2
 
         val result = CopySelectionUtils.resolveLineRange(editor)
 

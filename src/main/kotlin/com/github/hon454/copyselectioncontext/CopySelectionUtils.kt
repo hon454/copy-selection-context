@@ -70,24 +70,23 @@ object CopySelectionUtils {
     }
 
     fun resolveLineRange(editor: Editor): String {
+        val (startLine, endLine) = resolveLineNumbers(editor)
+        return toLineRange(startLine, endLine)
+    }
+
+    fun resolveLineNumbers(editor: Editor): Pair<Int, Int> {
         val selectionModel = editor.selectionModel
-        val document = editor.document
         return if (selectionModel.hasSelection()) {
-            val startLine = document.getLineNumber(selectionModel.selectionStart) + 1
-            val endLine = document.getLineNumber(selectionModel.selectionEnd) + 1
-            if (startLine == endLine) "$startLine" else "$startLine-$endLine"
+            resolveSelectedLineNumbers(editor, selectionModel.selectionStart, selectionModel.selectionEnd)
         } else {
             val currentLine = editor.caretModel.logicalPosition.line + 1
-            "$currentLine"
+            Pair(currentLine, currentLine)
         }
     }
 
     fun resolveLineNumbers(editor: Editor, caret: Caret): Pair<Int, Int> {
-        val document = editor.document
         return if (caret.hasSelection()) {
-            val startLine = document.getLineNumber(caret.selectionStart) + 1
-            val endLine = document.getLineNumber(caret.selectionEnd) + 1
-            Pair(startLine, endLine)
+            resolveSelectedLineNumbers(editor, caret.selectionStart, caret.selectionEnd)
         } else {
             val currentLine = caret.logicalPosition.line + 1
             Pair(currentLine, currentLine)
@@ -118,6 +117,14 @@ object CopySelectionUtils {
 
     fun toLineRange(startLine: Int, endLine: Int): String {
         return if (startLine == endLine) "$startLine" else "$startLine-$endLine"
+    }
+
+    private fun resolveSelectedLineNumbers(editor: Editor, selectionStart: Int, selectionEnd: Int): Pair<Int, Int> {
+        val document = editor.document
+        val startLine = document.getLineNumber(selectionStart) + 1
+        val finalIncludedOffset = selectionEnd - 1
+        val endLine = document.getLineNumber(finalIncludedOffset) + 1
+        return Pair(startLine, endLine)
     }
 
     fun getCodeContent(editor: Editor): String {

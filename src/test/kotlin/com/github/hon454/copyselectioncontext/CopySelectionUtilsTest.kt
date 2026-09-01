@@ -13,6 +13,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -53,12 +54,10 @@ class CopySelectionUtilsTest {
         every { caret1.selectionStart } returns 0
         every { caret1.selectionEnd } returns 10
         every { document.getLineNumber(0) } returns 0
-        every { document.getLineNumber(10) } returns 1
+        every { document.getLineNumber(9) } returns 1
 
-        every { caret2.hasSelection() } returns true
-        every { caret2.selectionStart } returns 30
-        every { caret2.selectionEnd } returns 30
-        every { document.getLineNumber(30) } returns 3
+        every { caret2.hasSelection() } returns false
+        every { caret2.logicalPosition } returns LogicalPosition(3, 0)
 
         every { caretModel.runForEachCaret(any<CaretAction>()) } answers {
             val action = firstArg<CaretAction>()
@@ -126,11 +125,87 @@ class CopySelectionUtilsTest {
         every { selectionModel.selectionStart } returns 10
         every { selectionModel.selectionEnd } returns 20
         every { document.getLineNumber(10) } returns 1
-        every { document.getLineNumber(20) } returns 3
+        every { document.getLineNumber(19) } returns 3
 
         val result = CopySelectionUtils.resolveLineRange(editor)
 
         assertEquals("2-4", result)
+    }
+
+    @Test
+    fun `resolveLineNumbers excludes the line at the selection end offset`() {
+        val editor = mockk<Editor>()
+        val selectionModel = mockk<SelectionModel>()
+        val document = mockk<Document>()
+
+        every { editor.selectionModel } returns selectionModel
+        every { editor.document } returns document
+        every { selectionModel.hasSelection() } returns true
+        every { selectionModel.selectionStart } returns 0
+        every { selectionModel.selectionEnd } returns 6
+        every { document.getLineNumber(0) } returns 0
+        every { document.getLineNumber(5) } returns 0
+
+        val result = CopySelectionUtils.resolveLineNumbers(editor)
+
+        assertEquals(Pair(1, 1), result)
+        verify(exactly = 0) { document.getLineNumber(6) }
+    }
+
+    @Test
+    fun `resolveLineNumbers handles a selection ending at EOF`() {
+        val editor = mockk<Editor>()
+        val selectionModel = mockk<SelectionModel>()
+        val document = mockk<Document>()
+
+        every { editor.selectionModel } returns selectionModel
+        every { editor.document } returns document
+        every { selectionModel.hasSelection() } returns true
+        every { selectionModel.selectionStart } returns 6
+        every { selectionModel.selectionEnd } returns 12
+        every { document.getLineNumber(6) } returns 1
+        every { document.getLineNumber(11) } returns 1
+
+        val result = CopySelectionUtils.resolveLineNumbers(editor)
+
+        assertEquals(Pair(2, 2), result)
+    }
+
+    @Test
+    fun `resolveLineNumbers excludes the empty line after a trailing newline`() {
+        val editor = mockk<Editor>()
+        val selectionModel = mockk<SelectionModel>()
+        val document = mockk<Document>()
+
+        every { editor.selectionModel } returns selectionModel
+        every { editor.document } returns document
+        every { selectionModel.hasSelection() } returns true
+        every { selectionModel.selectionStart } returns 0
+        every { selectionModel.selectionEnd } returns 6
+        every { document.getLineNumber(0) } returns 0
+        every { document.getLineNumber(5) } returns 0
+
+        val result = CopySelectionUtils.resolveLineNumbers(editor)
+
+        assertEquals(Pair(1, 1), result)
+    }
+
+    @Test
+    fun `resolveLineNumbers uses the current line for an empty selection`() {
+        val editor = mockk<Editor>()
+        val selectionModel = mockk<SelectionModel>()
+        val caretModel = mockk<CaretModel>()
+
+        every { editor.selectionModel } returns selectionModel
+        every { editor.caretModel } returns caretModel
+        every { selectionModel.hasSelection() } returns false
+        every { selectionModel.selectionStart } returns 8
+        every { selectionModel.selectionEnd } returns 8
+        every { caretModel.logicalPosition } returns LogicalPosition(2, 4)
+
+        val result = CopySelectionUtils.resolveLineNumbers(editor)
+
+        assertEquals(Pair(3, 3), result)
     }
 
     @Test
@@ -269,7 +344,7 @@ class CopySelectionUtilsTest {
         every { selectionModel.selectionStart } returns 10
         every { selectionModel.selectionEnd } returns 15
         every { document.getLineNumber(10) } returns 5
-        every { document.getLineNumber(15) } returns 5
+        every { document.getLineNumber(14) } returns 5
 
         val result = CopySelectionUtils.resolveLineRange(editor)
 
