@@ -1,9 +1,24 @@
 package com.github.hon454.copyselectioncontext
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.util.Properties
 
 class CopySelectionBundleTest {
+
+    @Test
+    fun `Korean bundle has the same keys as the base bundle`() {
+        val baseKeys = loadBundleKeys("messages/CopySelectionBundle.properties")
+        val koreanKeys = loadBundleKeys("messages/CopySelectionBundle_ko.properties")
+
+        assertEquals(
+            baseKeys,
+            koreanKeys,
+            "Korean bundle keys must match the base bundle. " +
+                "Missing: ${baseKeys - koreanKeys}; Extra: ${koreanKeys - baseKeys}"
+        )
+    }
 
     @Test
     fun `notification copied key resolves`() {
@@ -91,5 +106,14 @@ class CopySelectionBundleTest {
         ).forEach { key ->
             assertTrue(CopySelectionBundle.message(key).isNotBlank(), "Key '$key' should resolve to non-blank string")
         }
+    }
+
+    private fun loadBundleKeys(resourcePath: String): Set<String> {
+        val properties = Properties()
+        val stream = requireNotNull(javaClass.classLoader.getResourceAsStream(resourcePath)) {
+            "Missing test resource: $resourcePath"
+        }
+        stream.use(properties::load)
+        return properties.stringPropertyNames()
     }
 }
