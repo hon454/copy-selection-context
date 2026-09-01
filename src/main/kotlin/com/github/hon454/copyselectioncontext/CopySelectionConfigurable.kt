@@ -1,23 +1,27 @@
 package com.github.hon454.copyselectioncontext
 
+import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.dsl.builder.*
 import javax.swing.JComponent
 import javax.swing.JComboBox
-import javax.swing.JLabel
-import javax.swing.JTextField
+import javax.swing.JTextArea
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 
-class CopySelectionConfigurable : Configurable {
-    private val settings = CopySelectionSettings.getInstance()
+class CopySelectionConfigurable internal constructor(
+    private val settings: CopySelectionSettings,
+    private val trimOpenProjectHistory: (Int) -> Unit = CopyHistoryService::trimOpenProjects
+) : Configurable {
+    constructor() : this(CopySelectionSettings.getInstance())
+
     private var dialogPanel: DialogPanel? = null
     private var outputFormatCombo: JComboBox<OutputFormatOption>? = null
     private var presetCombo: JComboBox<String>? = null
-    private var templateTextField: JTextField? = null
-    private var previewLabel: JLabel? = null
-    private var validationLabel: JLabel? = null
+    private var templateTextArea: JTextArea? = null
+    private var previewTextArea: JTextArea? = null
+    private var updatingPresetSelection = false
 
     override fun getDisplayName() = CopySelectionBundle.message("settings.title")
 
@@ -53,29 +57,54 @@ class CopySelectionConfigurable : Configurable {
                         }
                 }
                 row(CopySelectionBundle.message("settings.template.label")) {
-                    textField()
+                    textArea()
+                        .rows(TEMPLATE_EDITOR_ROWS)
+                        .columns(TEMPLATE_COLUMNS)
+                        .align(AlignX.FILL)
+                        .resizableColumn()
                         .bindText(state::customFormatTemplate)
                         .comment(CopySelectionBundle.message("settings.template.variables.comment"))
+                        .accessibleName(CopySelectionBundle.message("settings.template.label"))
+                        .accessibleDescription(CopySelectionBundle.message("settings.template.variables.comment"))
+                        .validationOnApply { component ->
+                            if (isTemplateFormatSelected()) {
+                                templateValidationMessage(component.text)?.let { error(it) }
+                            } else {
+                                null
+                            }
+                        }
+                        .validationOnInput { component ->
+                            if (isTemplateFormatSelected()) {
+                                templateValidationMessage(component.text)?.let { error(it) }
+                            } else {
+                                null
+                            }
+                        }
                         .also { cell ->
-                            templateTextField = cell.component
+                            templateTextArea = cell.component
                             cell.component.document.addDocumentListener(object : DocumentListener {
-                                override fun insertUpdate(e: DocumentEvent) = updatePreviewAndValidation()
-                                override fun removeUpdate(e: DocumentEvent) = updatePreviewAndValidation()
-                                override fun changedUpdate(e: DocumentEvent) = updatePreviewAndValidation()
+                                override fun insertUpdate(e: DocumentEvent) = updatePreview()
+                                override fun removeUpdate(e: DocumentEvent) = updatePreview()
+                                override fun changedUpdate(e: DocumentEvent) = updatePreview()
                             })
                         }
-                }
+                }.resizableRow()
                 row(CopySelectionBundle.message("settings.template.preview.label")) {
-                    label("")
-                        .also { cell -> previewLabel = cell.component }
-                }
-                row {
-                    label("")
-                        .also { cell ->
-                            validationLabel = cell.component
-                            cell.component.isVisible = false
+                    textArea()
+                        .rows(PREVIEW_ROWS)
+                        .columns(TEMPLATE_COLUMNS)
+                        .align(AlignX.FILL)
+                        .resizableColumn()
+                        .accessibleName(CopySelectionBundle.message("settings.template.preview.label"))
+                        .accessibleDescription(CopySelectionBundle.message("settings.template.preview.description"))
+                        .applyToComponent {
+                            isEditable = false
+                            isFocusable = true
                         }
-                }
+                        .also { cell ->
+                            previewTextArea = cell.component
+                        }
+                }.resizableRow()
                 row {
                     checkBox(CopySelectionBundle.message("settings.include.code"))
                         .bindSelected(state::includeCodeContent)
@@ -107,25 +136,47 @@ class CopySelectionConfigurable : Configurable {
         }
         dialogPanel = panel
         updatePresetSelection()
-        updatePreviewAndValidation()
+        updatePreview()
         updateTemplateControls()
         return panel
     }
 
     override fun isModified() = dialogPanel?.isModified() ?: false
+
     override fun apply() {
+        val validationMessage = if (isTemplateFormatSelected()) {
+            templateValidationMessage(templateTextArea?.text.orEmpty())
+        } else {
+            null
+        }
+        if (validationMessage != null) {
+            throw ConfigurationException(validationMessage)
+        }
         dialogPanel?.apply()
-        CopyHistoryService.trimOpenProjects(settings.state.copyHistorySize)
+        trimOpenProjectHistory(settings.state.copyHistorySize)
     }
 
     override fun reset() {
         dialogPanel?.reset()
         updatePresetSelection()
-        updatePreviewAndValidation()
+        updatePreview()
         updateTemplateControls()
     }
 
+    override fun disposeUIResources() {
+        dialogPanel = null
+        outputFormatCombo = null
+        presetCombo = null
+        templateTextArea = null
+        previewTextArea = null
+        updatingPresetSelection = false
+    }
+
     private fun applySelectedPreset() {
+        if (updatingPresetSelection) {
+            return
+        }
+
         val customLabel = CopySelectionBundle.message("settings.template.preset.custom")
         val selected = presetCombo?.selectedItem as? String ?: return
         if (selected == customLabel) {
@@ -133,30 +184,47 @@ class CopySelectionConfigurable : Configurable {
         }
 
         val presetTemplate = TemplateFormatter.PRESETS.find { it.first == selected }?.second ?: return
-        templateTextField?.text = presetTemplate
-        updatePreviewAndValidation()
+        templateTextArea?.text = presetTemplate
+        updatePreview()
     }
 
     private fun updatePresetSelection() {
-        val currentTemplate = templateTextField?.text ?: settings.state.customFormatTemplate
+        val currentTemplate = templateTextArea?.text ?: settings.state.customFormatTemplate
         val customLabel = CopySelectionBundle.message("settings.template.preset.custom")
         val presetName = TemplateFormatter.PRESETS.find { it.second == currentTemplate }?.first ?: customLabel
         if (presetCombo?.selectedItem != presetName) {
-            presetCombo?.selectedItem = presetName
+            updatingPresetSelection = true
+            try {
+                presetCombo?.selectedItem = presetName
+            } finally {
+                updatingPresetSelection = false
+            }
         }
     }
 
     private fun updateTemplateControls() {
-        val isTemplate = outputFormatCombo?.selectedItem == OutputFormatOption.TEMPLATE
+        val isTemplate = isTemplateFormatSelected()
         presetCombo?.isEnabled = isTemplate
-        templateTextField?.isEnabled = isTemplate
-        previewLabel?.isEnabled = isTemplate
-        validationLabel?.isEnabled = isTemplate
+        templateTextArea?.isEnabled = isTemplate
+        previewTextArea?.isEnabled = isTemplate
     }
 
-    private fun updatePreviewAndValidation() {
-        val template = templateTextField?.text ?: settings.state.customFormatTemplate
-        val sampleContext = FormatContext(
+    private fun updatePreview() {
+        val template = templateTextArea?.text ?: settings.state.customFormatTemplate
+        previewTextArea?.text = renderTemplatePreview(template)
+        previewTextArea?.caretPosition = 0
+        updatePresetSelection()
+    }
+
+    private fun isTemplateFormatSelected() =
+        outputFormatCombo?.selectedItem == OutputFormatOption.TEMPLATE
+
+    companion object {
+        internal const val TEMPLATE_EDITOR_ROWS = 6
+        internal const val PREVIEW_ROWS = 6
+        private const val TEMPLATE_COLUMNS = 60
+
+        private val SAMPLE_CONTEXT = FormatContext(
             path = "src/main/kotlin/Example.kt",
             startLine = 42,
             endLine = 53,
@@ -165,28 +233,17 @@ class CopySelectionConfigurable : Configurable {
             filename = "Example.kt"
         )
 
-        val rendered = if (template.isBlank()) "" else TemplateFormatter(template).format(sampleContext)
-        previewLabel?.text = toHtml(rendered)
+        internal fun renderTemplatePreview(template: String): String =
+            if (template.isBlank()) "" else TemplateFormatter(template).format(SAMPLE_CONTEXT)
 
-        val unknownVariables = TemplateFormatter.findUnknownVariables(template)
-        if (unknownVariables.isEmpty()) {
-            validationLabel?.isVisible = false
-            validationLabel?.text = ""
-        } else {
+        internal fun templateValidationMessage(template: String): String? {
+            val unknownVariables = TemplateFormatter.findUnknownVariables(template)
+            if (unknownVariables.isEmpty()) {
+                return null
+            }
+
             val unknowns = unknownVariables.joinToString(", ") { "{$it}" }
-            validationLabel?.text = CopySelectionBundle.message("settings.template.validation.unknown", unknowns)
-            validationLabel?.isVisible = true
+            return CopySelectionBundle.message("settings.template.validation.unknown", unknowns)
         }
-
-        updatePresetSelection()
-    }
-
-    private fun toHtml(text: String): String {
-        val escaped = text
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\n", "<br>")
-        return "<html>$escaped</html>"
     }
 }
