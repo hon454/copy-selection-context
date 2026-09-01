@@ -6,7 +6,7 @@
 [![Contributors](https://img.shields.io/github/contributors/hon454/copy-selection-context)](https://github.com/hon454/copy-selection-context/graphs/contributors)
 [![License](https://img.shields.io/github/license/hon454/copy-selection-context)](LICENSE)
 
-**[English](README.md)** · **[한국어](README.ko.md)** · **简体中文** · **[日本語](README.ja.md)**
+**[English](README.md)** · **[한국어](README.ko.md)** · **简体中文** · **[繁體中文](README.zh-TW.md)** · **[日本語](README.ja.md)**
 
 > 使用一个快捷键将文件路径、行号和代码复制到剪贴板——采用可直接粘贴到 AI 助手的格式。
 

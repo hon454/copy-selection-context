@@ -76,7 +76,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 - **Plugin ID**: `com.github.hon454.copy-selection-context` (kebab-case)
 - **Notification Group ID**: `"CopySelectionContext"` (PascalCase, no spaces)
 - **PRs**: One feature per PR, include manual testing steps, update AGENTS.md if architecture changes
-- **README**: Multilingual — `README.md` (English, primary), `README.ko.md` (Korean), `README.zh-CN.md` (Simplified Chinese), and `README.ja.md` (Japanese). Any README change MUST be applied to all four files. Keep section structure, order, and content in sync across them.
+- **README**: Multilingual — `README.md` (English, primary), `README.ko.md` (Korean), `README.zh-CN.md` (Simplified Chinese), `README.zh-TW.md` (Traditional Chinese), and `README.ja.md` (Japanese). Any README change MUST be applied to all five files. Keep section structure, order, and content in sync across them.
 
 ### Commit Convention
 
