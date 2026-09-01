@@ -63,7 +63,7 @@ abstract class CopySelectionBaseAction : AnAction() {
 
     protected open fun buildContent(path: String, lineRange: String, file: VirtualFile, editor: Editor, project: Project? = null): String {
         val (startLine, endLine) = resolveLineNumbers(editor)
-        return formatWithSettings(path, startLine, endLine)
+        return formatWithSettings(path, startLine, endLine, file)
     }
 
     protected open fun buildContentForCaret(
@@ -92,10 +92,24 @@ abstract class CopySelectionBaseAction : AnAction() {
         }
     }
 
-    protected fun formatWithSettings(path: String, startLine: Int, endLine: Int, code: String? = null, language: String = ""): String {
+    protected fun formatWithSettings(
+        path: String,
+        startLine: Int,
+        endLine: Int,
+        file: VirtualFile,
+        code: String? = null,
+        language: String = ""
+    ): String {
         val settings = CopySelectionSettings.getInstance().state
         val formatter = OutputFormatterFactory.getFormatterForSettings(settings)
-        val context = FormatContext(path = path, startLine = startLine, endLine = endLine, code = code, language = language)
+        val context = FormatContext(
+            path = path,
+            startLine = startLine,
+            endLine = endLine,
+            code = code,
+            language = language,
+            filename = file.name
+        )
         return formatter.format(context)
     }
 
