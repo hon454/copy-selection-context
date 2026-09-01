@@ -56,22 +56,23 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | File | Role |
 |------|------|
 | `CopySelectionContextAction.kt` | Main unified action (`Ctrl+Alt+C` shortcut) |
-| `CopySelectionBaseAction.kt` | Abstract base with clipboard logic |
+| `CopySelectionBaseAction.kt` | Shared copy pipeline: formatting, clipboard, analytics, highlighting, history, notifications, and status updates |
+| `OutputFormatter.kt` / `TemplateFormatter.kt` | Built-in Claude Code and Path:Line formats plus custom templates |
+| `CopySelectionUtils.kt` | Path, line range, selected code, multi-caret, and language helpers |
 | `CopySelectionHighlighter.kt` | Editor-scoped gutter highlighter lifecycle |
-| `CopyHistoryService.kt` | Project history in local, non-roaming workspace state |
-| `CopyHistoryPopup.kt` | Browse, re-copy, and clear local history |
 | `CopyRelativePathAction.kt` | Relative path (context menu only) |
 | `CopyAbsolutePathAction.kt` | Absolute path (context menu only) |
 | `CopyWithCodeContentAction.kt` | Path + markdown code block (context menu only) |
+| `CopyGitPermalinkAction.kt` / `GitRepositoryMetadataResolver.kt` / `GitPermalinkGenerator.kt` | Async, worktree-safe GitHub/GitLab permalink generation |
+| `CopyHistoryService.kt` / `CopyHistoryPopup.kt` | Local non-roaming project history, migration, re-copy, and clear-all |
+| `CopyPreview.kt` | Bounded, single-line, Unicode-safe, markup-escaped previews |
+| `CopySelectionAnalytics.kt` | Opt-in, local-only usage counters |
 | `CopySelectionNotifier.kt` | Toast notifications (BALLOON) |
-| `CopySelectionStatusBarWidget.kt` | Status bar widget (stub) |
+| `CopySelectionStatusBarWidget.kt` / `CopySelectionStatusBarWidgetFactory.kt` | Last-copy status display and click-to-copy behavior |
 | `CopySelectionSettings.kt` | Settings persistence (`@Service` + `@State`) |
-| `CopySelectionConfigurable.kt` | Settings UI (Tools menu) |
-| `CopyGitPermalinkAction.kt` | Async GitHub/GitLab permalink action |
-| `GitRepositoryMetadataResolver.kt` | Worktree-aware Git metadata and ref resolution |
-| `GitPermalinkGenerator.kt` | Remote URL normalization and encoded permalink generation |
+| `CopySelectionConfigurable.kt` | Settings UI with multiline template editor, preview, and validation |
 
-**Flow**: User trigger -> Action reads settings -> Extract editor context -> CopyPasteManager -> Local history (when enabled) -> Notification
+**Flow**: User trigger -> Action reads settings -> Extract editor context -> Format output -> CopyPasteManager -> optional local analytics -> gutter marker -> project history -> optional notification -> status bar update
 
 ## Conventions
 

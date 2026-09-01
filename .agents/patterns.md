@@ -2,7 +2,27 @@
 
 ## AnAction Inheritance
 
-All actions extend `CopySelectionBaseAction` -> `AnAction`. Override `actionPerformed(AnActionEvent)`.
+### Shared copy-pipeline actions
+
+`CopySelectionBaseAction` extends `AnAction` and owns the standard copy pipeline. Four registered actions inherit that shared behavior:
+
+- `CopySelectionContextAction`
+- `CopyRelativePathAction`
+- `CopyAbsolutePathAction`
+- `CopyWithCodeContentAction`
+
+These subclasses implement `getPath()` and may override `buildContent()`.
+
+### Specialized direct actions
+
+Two registered actions extend `AnAction` directly because their workflows do not use the standard copy pipeline:
+
+- `CopyGitPermalinkAction` resolves repository metadata on a pooled thread and copies a permalink on the UI thread only when the request is still current. Resolution failure reports an error and leaves the clipboard unchanged.
+- `ShowCopyHistoryAction` opens the project history popup.
+
+The specialized actions override `actionPerformed(AnActionEvent)` themselves, while shared-pipeline actions inherit that implementation from `CopySelectionBaseAction`.
+
+Editor-backed copy actions use the following event-data extraction pattern; `ShowCopyHistoryAction` only requires the project.
 
 ```kotlin
 // Extract editor context from AnActionEvent
@@ -11,7 +31,7 @@ val editor = e.getData(CommonDataKeys.EDITOR) ?: return
 val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
 ```
 
-Base class provides: `buildPathString()`, `copyToClipboard()`, `update()`, abstract `getPath()`.
+The base class pipeline covers path and content formatting, clipboard writes, optional analytics, gutter highlighting, project history, notifications, and status-bar updates.
 
 ## Clipboard
 
@@ -25,7 +45,10 @@ CopyPasteManager.getInstance().setContents(content)
 ```kotlin
 NotificationGroupManager.getInstance()
     .getNotificationGroup("CopySelectionContext")  // No spaces, must match plugin.xml
-    .createNotification("✓ Copied: $message", NotificationType.INFORMATION)
+    .createNotification(
+        CopySelectionBundle.message("notification.copied", CopyPreview.notification(message)),
+        NotificationType.INFORMATION,
+    )
     .notify(project)
 ```
 
@@ -37,18 +60,21 @@ NotificationGroupManager.getInstance()
 class CopySelectionSettings : PersistentStateComponent<CopySelectionSettings.State>
 ```
 
-## No Selection -> Current Line
+## Selection Range and Current-Line Fallback
 
 ```kotlin
-val lineRange = if (selectionModel.hasSelection()) {
+val lines = if (selectionModel.hasSelection()) {
     val startLine = document.getLineNumber(selectionModel.selectionStart) + 1
-    val endLine = document.getLineNumber(selectionModel.selectionEnd) + 1
-    if (startLine == endLine) "$startLine" else "$startLine-$endLine"
+    val finalIncludedOffset = selectionModel.selectionEnd - 1
+    val endLine = document.getLineNumber(finalIncludedOffset) + 1
+    Pair(startLine, endLine)
 } else {
     val currentLine = editor.caretModel.logicalPosition.line + 1
-    "$currentLine"
+    Pair(currentLine, currentLine)
 }
 ```
+
+IntelliJ selection ends are exclusive, so line resolution must use `selectionEnd - 1`. Multi-caret actions resolve each caret independently and join formatted blocks with a blank line.
 
 ## Path Normalization
 
@@ -58,18 +84,15 @@ val normalizedPath = path.replace("\\", "/")
 
 ## Language Detection
 
-`detectLanguage(file: VirtualFile): String` maps `file.fileType.name` to markdown language identifiers.
+`CopySelectionUtils.detectLanguage(file: VirtualFile): String` maps `file.fileType.name` to markdown language identifiers.
 
-15 mappings: kotlin, java, csharp, javascript, typescript, python, ruby, go, rust, php, swift, html, css, xml, sql. Returns `""` for unknown types.
+There are 39 explicit mappings, including Kotlin, Java, C#, JavaScript/TypeScript, Python, markup/config formats, shell, and common systems languages. Unknown file types fall back to the lowercase file extension.
 
-## Status Bar Widget (Stub)
+## Status Bar Widget
 
 ```kotlin
-object CopySelectionStatusBarWidget {
-    fun update(message: String) {
-        println("Status: $message")
-    }
-}
+class CopySelectionStatusBarWidget(project: Project) :
+    EditorBasedWidget(project), TextPresentation
 ```
 
-Full implementation would need: `StatusBarWidget` interface with `TextPresentation`, `getAlignment()` returning Float (e.g., 0.0f), `AtomicReference<String>` for thread-safe storage, Factory class registered via `statusBarWidgetFactory` in plugin.xml.
+The widget stores the full last-copied content in an `AtomicReference`, shows a bounded single-line preview with a total 40-character budget including its prefix, and copies the full value again when clicked. `CopyPreview` preserves Unicode code points, escapes notification/tooltip markup, and never cuts an escape entity. `CopySelectionStatusBarWidgetFactory` registers the widget through `statusBarWidgetFactory` in `plugin.xml`; standard path/code actions call `update()` after copying.

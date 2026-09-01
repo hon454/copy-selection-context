@@ -16,9 +16,14 @@ AI 코딩 어시스턴트(Claude, ChatGPT 등)에게 코드 컨텍스트를 전�
 
 - **원클릭 복사** — `Ctrl+Alt+C` 하나로 파일 경로 + 라인 번호 복사
 - **상대/절대 경로** — 프로젝트 상대 경로 또는 절대 경로 선택
+- **유연한 출력 형식** — Claude Code 참조, Path:Line 출력, 사용자 정의 템플릿 지원
 - **코드 내용 포함** — 마크다운 코드 블록으로 선택한 코드까지 포함 가능
 - **복사 이력** — `Ctrl+Alt+H`로 최근 복사 이력 조회
 - **GitHub/GitLab 퍼머링크** — 선택한 라인의 Git 퍼머링크를 바로 복사
+- **복사 피드백** — 복사한 라인 표시, 선택적 알림, 상태 표시줄의 마지막 복사 내용 제공
+- **다중 caret 컨텍스트** — 각 caret을 독립적으로 형식화하고 경로/코드 블록 사이를 빈 줄로 구분
+- **정확한 선택 끝 처리** — IntelliJ의 `selectionEnd - 1`을 마지막 포함 offset으로 사용해 불필요한 다음 줄 제외
+- **로컬라이즈된 설정** — 출력 형식 이름을 번역하고 영어/한국어 리소스 키 구성을 동일하게 유지
 - **스마트 라인 처리** — 선택 없이 커서만 있으면 현재 줄 번호를 복사
 - **컨텍스트 메뉴** — 에디터 우클릭 메뉴에서 모든 액션 접근
 - **크로스 플랫폼** — Windows, macOS, Linux 모두 지원
@@ -63,15 +68,26 @@ AI 코딩 어시스턴트(Claude, ChatGPT 등)에게 코드 컨텍스트를 전�
 
 ### 출력 형식
 
-`@path#Lline` 형식으로 AI 어시스턴트에 바로 붙여넣기 가능합니다.
+메인 액션과 개별 경로/코드 액션은 설정에서 선택한 출력 형식을 사용합니다. 경로 구분자는 슬래시(`/`)로 통일됩니다.
 
-**경로만 (기본)**:
-- 단일 라인: `@src/main/kotlin/App.kt#L42`
-- 여러 라인: `@src/main/kotlin/App.kt#L250-253`
+각 caret은 고유한 1부터 시작하는 포함 범위와 선택적 코드 블록을 만들며, 블록 사이는 빈 줄로 구분됩니다. IntelliJ 선택 끝은 exclusive이므로 `selectionEnd - 1`이 마지막 포함 라인을 결정하며, 다음 줄 시작에서 끝난 선택은 그 줄을 포함하지 않습니다.
 
-**코드 포함 (설정에서 활성화)**:
+**Claude Code (`claude`, 기본)**:
+- 단일 라인: ` @src/main/kotlin/App.kt#L42 `
+- 여러 라인: ` @src/main/kotlin/App.kt#L250-253 `
+
+**Path:Line (`pathline`)**:
+- 단일 라인: `src/main/kotlin/App.kt:42`
+- 여러 라인: `src/main/kotlin/App.kt:250-253`
+
+**사용자 정의 템플릿 (`template`)**:
+- Path and Range, Claude Reference, With Code Block 프리셋으로 시작하거나 직접 템플릿 입력
+- 일반 복사 액션이 채우는 변수: `{path}`, `{line}`, `{range}`, `{code}`, `{lang}`, `{filename}`
+- 설정 화면에서 결과를 미리 보고 알 수 없는 변수를 확인
+
+**코드 포함** (Claude Code와 Path:Line은 코드 블록을 추가하며, 사용자 정의 템플릿은 `{code}`로 배치):
 ````
-@src/main/kotlin/App.kt#L42-53
+ @src/main/kotlin/App.kt#L42-53
 ```kotlin
 fun calculateTotal(items: List<Item>): Double {
     return items.sumOf { it.price }
@@ -79,13 +95,27 @@ fun calculateTotal(items: List<Item>): Double {
 ```
 ````
 
+별도 **Copy GitHub/GitLab Permalink** 액션은 백그라운드 스레드에서 일반 저장소 또는 linked worktree 메타데이터를 읽고 각 caret의 커밋 고정 URL을 만듭니다. 가장 최근 요청만 클립보드를 갱신할 수 있습니다. 원격 주소나 커밋을 확인할 수 없으면 오류를 알리고 클립보드는 변경하지 않습니다.
+
+### 이력, 알림 및 상태 표시
+
+- 일반 경로/코드 복사 액션은 프로젝트별 이력 앞에 항목을 추가합니다. `Ctrl+Alt+H`를 누르면 저장된 항목을 볼 수 있고, 항목을 선택하면 전체 내용을 다시 복사합니다.
+- 복사 알림은 기본으로 켜져 있으며 끌 수 있습니다. 일반 경로/코드 복사와 Git 퍼머링크 복사 후에 표시됩니다.
+- 일반 복사는 활성 에디터의 거터 표시를 교체하고 상태 표시줄 위젯에 prefix를 포함해 최대 40자인 단일 라인, Unicode-safe, markup-escaped 미리보기를 표시합니다. 위젯을 클릭하면 마지막 전체 값을 다시 복사합니다.
+- 선택적 로컬 사용 분석은 IDE 애플리케이션 설정에 복사 횟수와 출력 형식 사용량을 기록합니다. 기본으로 꺼져 있으며 데이터를 기기 밖으로 전송하지 않습니다.
+
 ### 설정
 
 `Settings` → `Tools` → `Copy Selection Context`에서 설정:
 
 - **Path type** — Absolute (기본) 또는 Relative
-- **Include code content** — 코드 블록 포함 여부
-- **Copy history size** — 최대 100개까지 보관하거나 `0`으로 설정해 이력 비활성화
+- **Output format** — Claude Code (기본), Path:Line 또는 Custom Template
+- **Custom format template** — 프리셋을 선택하거나 접근성 라벨과 변수 검증이 있는 6행 다중 라인 편집기 및 포커스 가능한 6행 실시간 미리보기 사용
+- **Include code content** — 선택한 코드 또는 선택이 없을 때 현재 라인을 포함 (기본: 끔)
+- **Trim code whitespace** — 포함한 코드 앞뒤의 공백 제거 (기본: 끔)
+- **Show copy notifications** — 지원하는 복사 액션 후 풍선 알림 표시 (기본: 켬)
+- **Copy history size** — 프로젝트별 항목 0~100개 보관 (기본: 10), `0`이면 이력을 비활성화하고 삭제
+- **Local usage analytics** — 이 기기에만 선택적 복사 카운터 저장 (기본: 끔)
 
 복사 이력에는 복사한 코드가 포함될 수 있습니다. 이 데이터는 IDE의 로컬 비로밍 작업 공간에만 저장되며 공유 가능한 프로젝트 설정에는 기록되지 않습니다. 이력 팝업 하단의 **모든 히스토리 삭제**로 전체 항목을 지울 수 있습니다. 최대 크기를 줄이면 오래된 항목이 즉시 제거되며, 기존 `copySelectionHistory.xml`의 이력은 로컬 작업 공간 저장소로 마이그레이션된 후 IDE가 레거시 파일을 정리합니다.
 
@@ -93,7 +123,7 @@ fun calculateTotal(items: List<Item>): Double {
 
 ![Copy Selection Context 설정 화면](docs/images/settings-copy-selection-context.png)
 
-하나의 화면에서 경로 타입, 출력 형식, 코드 포함 여부, 알림 동작, 이력 옵션을 함께 조정할 수 있습니다.
+하나의 화면에서 경로 타입, 출력과 템플릿, 코드 처리, 알림, 이력, 로컬 분석을 함께 조정할 수 있습니다.
 
 ## 호환 IDE
 
@@ -119,6 +149,8 @@ gradlew.bat test
 ```
 
 자세한 개발 및 배포 가이드는 [CONTRIBUTING.md](CONTRIBUTING.md)를 참고하세요.
+
+테스트 모음에는 실제 IntelliJ 에디터/액션/클립보드와 비동기 퍼머링크 흐름을 검증하는 `CopySelectionActionFixtureTest`가 포함됩니다. CI는 아티팩트 게시 전에 전체 테스트, 프로젝트 및 구조 검사, `verifyPlugin` 호환성 검사, 플러그인 패키징, ZIP 검사와 진단 업로드를 실행합니다.
 
 ## 후원
 
