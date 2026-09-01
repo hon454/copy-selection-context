@@ -7,27 +7,34 @@ import com.intellij.openapi.editor.markup.RangeHighlighter
 import com.intellij.openapi.util.Key
 
 internal object CopySelectionHighlighter {
-    private val lastHighlighterKey = Key.create<RangeHighlighter>(
-        "CopySelectionContext.lastHighlighter"
+    private val lastHighlightersKey = Key.create<List<RangeHighlighter>>(
+        "CopySelectionContext.lastHighlighters"
     )
 
     fun update(editor: Editor, startLine: Int, endLine: Int) {
+        update(editor, listOf(Pair(startLine, endLine)))
+    }
+
+    fun update(editor: Editor, lineRanges: List<Pair<Int, Int>>) {
         val markupModel = editor.markupModel
-        editor.getUserData(lastHighlighterKey)
-            ?.takeIf { it.isValid }
-            ?.let(markupModel::removeHighlighter)
+        editor.getUserData(lastHighlightersKey)
+            .orEmpty()
+            .filter { it.isValid }
+            .forEach(markupModel::removeHighlighter)
 
         val document = editor.document
-        val startOffset = document.getLineStartOffset(startLine - 1)
-        val endOffset = document.getLineEndOffset(endLine - 1)
-        val highlighter = markupModel.addRangeHighlighter(
-            startOffset,
-            endOffset,
-            HighlighterLayer.ADDITIONAL_SYNTAX,
-            null,
-            HighlighterTargetArea.LINES_IN_RANGE,
-        ).also { it.gutterIconRenderer = CopySelectionGutterIconRenderer() }
+        val highlighters = lineRanges.map { (startLine, endLine) ->
+            val startOffset = document.getLineStartOffset(startLine - 1)
+            val endOffset = document.getLineEndOffset(endLine - 1)
+            markupModel.addRangeHighlighter(
+                startOffset,
+                endOffset,
+                HighlighterLayer.ADDITIONAL_SYNTAX,
+                null,
+                HighlighterTargetArea.LINES_IN_RANGE,
+            ).also { it.gutterIconRenderer = CopySelectionGutterIconRenderer() }
+        }
 
-        editor.putUserData(lastHighlighterKey, highlighter)
+        editor.putUserData(lastHighlightersKey, highlighters)
     }
 }

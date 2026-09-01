@@ -132,6 +132,18 @@ object CopySelectionUtils {
         }
     }
 
+    fun getCodeContent(editor: Editor, caret: Caret): String {
+        return if (caret.hasSelection()) {
+            caret.selectedText ?: ""
+        } else {
+            val document = editor.document
+            val caretLine = caret.logicalPosition.line
+            val lineStart = document.getLineStartOffset(caretLine)
+            val lineEnd = document.getLineEndOffset(caretLine)
+            document.getText(TextRange(lineStart, lineEnd))
+        }
+    }
+
     fun detectLanguage(file: VirtualFile): String {
         val fileTypeName = file.fileType.name.lowercase()
         return LANGUAGE_MAP[fileTypeName] ?: file.extension?.lowercase().orEmpty()
