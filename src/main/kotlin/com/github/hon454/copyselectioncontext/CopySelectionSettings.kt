@@ -30,10 +30,16 @@ class CopySelectionSettings : PersistentStateComponent<CopySelectionSettings.Sta
 
     override fun loadState(state: State) {
         state.copyHistorySize = state.copyHistorySize.coerceIn(0, 100)
+        if (state.outputFormat == LEGACY_GITHUB_FORMAT) {
+            state.outputFormat = DEFAULT_OUTPUT_FORMAT
+        }
         myState = state
     }
 
     companion object {
+        private const val LEGACY_GITHUB_FORMAT = "github"
+        private const val DEFAULT_OUTPUT_FORMAT = "claude"
+
         fun getInstance(): CopySelectionSettings {
             return ApplicationManager.getApplication().getService(CopySelectionSettings::class.java)
         }

@@ -2,6 +2,7 @@ package com.github.hon454.copyselectioncontext
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -291,5 +292,25 @@ class OutputFormatterTest {
         val result = formatter.format(context)
 
         assertEquals(" @src/App.kt#L5 ", result)
+    }
+
+    @Test
+    fun `legacy github format falls back without placeholder url`() {
+        val formatter = OutputFormatterFactory.getFormatter("github")
+        val context = FormatContext(path = "src/App.kt", startLine = 5, endLine = 5)
+
+        val result = formatter.format(context)
+
+        assertEquals(" @src/App.kt#L5 ", result)
+        assertFalse(result.contains("{owner}"))
+        assertFalse(result.contains("{repo}"))
+        assertFalse(result.contains("{sha}"))
+    }
+
+    @Test
+    fun `available formatters exclude github placeholder format`() {
+        val keys = OutputFormatterFactory.getAvailableFormatters().map { it.key }
+
+        assertEquals(listOf("claude", "pathline", "template"), keys)
     }
 }

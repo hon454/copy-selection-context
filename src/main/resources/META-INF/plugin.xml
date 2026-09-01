@@ -17,7 +17,7 @@ One shortcut (<code>Ctrl+Alt+C</code> / <code>Cmd+Alt+C</code>) copies your curr
     <li><strong>Code content as markdown</strong> — include the selected code as a fenced markdown code block with language tag</li>
     <li><strong>Private copy history</strong> — <code>Ctrl+Alt+H</code> opens locally stored history with clear-all and disable controls</li>
     <li><strong>GitHub/GitLab permalink</strong> — generate a permanent link to the exact lines in your remote repository</li>
-    <li><strong>Template-based output formatting</strong> — choose from built-in presets (Claude Code, Path:Line, GitHub Permalink, Custom) or define your own template with variable placeholders</li>
+    <li><strong>Template-based output formatting</strong> — choose from built-in presets (Claude Code, Path:Line, Custom) or define your own template with variable placeholders</li>
     <li><strong>Live template preview</strong> — settings UI shows a real-time preview and validates template variables before you save</li>
     <li><strong>Smart line handling</strong> — copies the current line number when no text is selected, so the shortcut always produces useful output</li>
     <li><strong>Status bar widget</strong> — displays the last copied text in the IDE status bar; click it to copy again</li>

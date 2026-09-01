@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Prevent legacy GitHub output format settings from copying placeholder URLs while preserving the dedicated GitHub/GitLab permalink action
+
 ## [1.0.4] - 2026-08-21
 
 ### Changed
@@ -30,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Copy History browser — browse and re-copy recent entries (`Ctrl+Alt+H`)
 - GitHub/GitLab permalink generation for selected lines
-- Template-based output formatting with presets (Claude Code, Path:Line, GitHub Permalink, Custom)
+- Template-based output formatting with presets (Claude Code, Path:Line, Custom)
 - Live template preview and variable validation in settings
 - Status bar widget — shows last copied text, click to re-copy
 

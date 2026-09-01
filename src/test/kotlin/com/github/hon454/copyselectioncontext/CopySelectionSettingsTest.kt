@@ -115,4 +115,22 @@ class CopySelectionSettingsTest {
         settings.loadState(CopySelectionSettings.State(copyHistorySize = 101))
         assertEquals(100, settings.state.copyHistorySize)
     }
+
+    @Test
+    fun `loadState migrates legacy github format to claude`() {
+        val settings = CopySelectionSettings()
+
+        settings.loadState(CopySelectionSettings.State(outputFormat = "github"))
+
+        assertEquals("claude", settings.state.outputFormat)
+    }
+
+    @Test
+    fun `loadState preserves supported output format`() {
+        val settings = CopySelectionSettings()
+
+        settings.loadState(CopySelectionSettings.State(outputFormat = "pathline"))
+
+        assertEquals("pathline", settings.state.outputFormat)
+    }
 }
