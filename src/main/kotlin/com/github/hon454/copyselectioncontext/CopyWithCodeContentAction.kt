@@ -19,17 +19,19 @@ class CopyWithCodeContentAction : CopySelectionBaseAction() {
         return formatWithSettings(path, startLine, endLine, file, code, language)
     }
 
-    internal override fun buildContentForCaret(
+    protected override fun buildContentForCaret(
         path: String,
+        lineRange: String,
         startLine: Int,
         endLine: Int,
         file: VirtualFile,
         editor: Editor,
         caret: Caret,
+        project: Project?,
     ): String {
         var code = getCodeContent(editor, caret)
         code = applyCodeTrimming(code)
         val language = detectLanguage(file)
-        return formatWithSettings(path, startLine, endLine, code, language)
+        return formatWithSettings(path, startLine, endLine, file, code, language)
     }
 }

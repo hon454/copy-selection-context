@@ -87,7 +87,7 @@ class CopySelectionMultiCaretTest {
         every { currentLineCaret.hasSelection() } returns false
         every { currentLineCaret.logicalPosition } returns LogicalPosition(4, 0)
         every { document.getLineNumber(0) } returns 0
-        every { document.getLineNumber(12) } returns 1
+        every { document.getLineNumber(11) } returns 1
         every { document.getLineStartOffset(4) } returns 40
         every { document.getLineEndOffset(4) } returns 48
         every { document.getText(TextRange(40, 48)) } returns "second()"
@@ -99,6 +99,7 @@ class CopySelectionMultiCaretTest {
         every { file.fileType } returns fileType
         every { fileType.name } returns "Kotlin"
         every { file.extension } returns "kt"
+        every { file.name } returns "App.kt"
 
         return MultiCaretFixture(editor, selectedCaret, currentLineCaret, file)
     }

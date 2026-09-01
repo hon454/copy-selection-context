@@ -21,7 +21,7 @@ abstract class CopySelectionBaseAction : AnAction() {
         val caretCount = editor.caretModel.caretCount
 
         val copyResult = if (caretCount > 1) {
-            buildMultiCaretContent(path, file, editor)
+            buildMultiCaretContent(path, file, editor, project)
         } else {
             val (startLine, endLine) = resolveLineNumbers(editor)
             val lineRange = CopySelectionUtils.toLineRange(startLine, endLine)
@@ -63,24 +63,32 @@ abstract class CopySelectionBaseAction : AnAction() {
         return formatWithSettings(path, startLine, endLine, file)
     }
 
-    internal open fun buildContentForCaret(
+    protected open fun buildContentForCaret(
         path: String,
+        lineRange: String,
         startLine: Int,
         endLine: Int,
         file: VirtualFile,
         editor: Editor,
         caret: Caret,
+        project: Project? = null,
     ): String {
-        return formatWithSettings(path, startLine, endLine)
+        return formatWithSettings(path, startLine, endLine, file)
     }
 
-    internal fun buildMultiCaretContent(path: String, file: VirtualFile, editor: Editor): CaretCopyResult {
+    internal fun buildMultiCaretContent(
+        path: String,
+        file: VirtualFile,
+        editor: Editor,
+        project: Project? = null,
+    ): CaretCopyResult {
         val blocks = mutableListOf<String>()
         val lineRanges = mutableListOf<Pair<Int, Int>>()
         editor.caretModel.runForEachCaret { caret ->
             val (startLine, endLine) = CopySelectionUtils.resolveLineNumbers(editor, caret)
+            val lineRange = CopySelectionUtils.toLineRange(startLine, endLine)
             lineRanges.add(Pair(startLine, endLine))
-            blocks.add(buildContentForCaret(path, startLine, endLine, file, editor, caret))
+            blocks.add(buildContentForCaret(path, lineRange, startLine, endLine, file, editor, caret, project))
         }
         return CaretCopyResult(CopySelectionUtils.joinCaretBlocks(blocks), lineRanges)
     }

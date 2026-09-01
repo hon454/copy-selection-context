@@ -4,6 +4,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.vcs.ProjectLevelVcsManager
 import java.awt.datatransfer.StringSelection
@@ -19,7 +20,7 @@ class CopyGitPermalinkAction : AnAction() {
         val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
         val requestId = requests.begin()
 
-        val (startLine, endLine) = CopySelectionUtils.resolveLineNumbers(editor)
+        val lineRanges = resolveLineRanges(editor)
         val vcsManager = ProjectLevelVcsManager.getInstance(project)
         if (vcsManager.getVcsFor(file) == null) {
             CopySelectionNotifier.notifyPermalinkFailure(project)
@@ -34,7 +35,7 @@ class CopyGitPermalinkAction : AnAction() {
         val application = ApplicationManager.getApplication()
 
         application.executeOnPooledThread {
-            val permalink = tryBuildPermalink(rootPath, filePath, startLine, endLine)
+            val permalink = tryBuildPermalink(rootPath, filePath, lineRanges)
             application.invokeLater {
                 if (project.isDisposed) return@invokeLater
                 requests.runIfCurrent(requestId) {
@@ -54,11 +55,30 @@ class CopyGitPermalinkAction : AnAction() {
             e.getData(CommonDataKeys.EDITOR) != null
     }
 
+    internal fun resolveLineRanges(editor: Editor): List<Pair<Int, Int>> {
+        if (editor.caretModel.caretCount <= 1) {
+            return listOf(CopySelectionUtils.resolveLineNumbers(editor))
+        }
+
+        return editor.caretModel.allCarets
+            .sortedBy { it.selectionStart }
+            .map { caret -> CopySelectionUtils.resolveLineNumbers(editor, caret) }
+    }
+
+    internal fun buildPermalinkContent(
+        lineRanges: List<Pair<Int, Int>>,
+        buildBlock: (startLine: Int, endLine: Int) -> String?,
+    ): String? {
+        val blocks = lineRanges.map { (startLine, endLine) ->
+            buildBlock(startLine, endLine) ?: return null
+        }
+        return CopySelectionUtils.joinCaretBlocks(blocks)
+    }
+
     private fun tryBuildPermalink(
         rootPath: String,
         filePath: String,
-        startLine: Int,
-        endLine: Int
+        lineRanges: List<Pair<Int, Int>>
     ): String? {
         return try {
             val root = Path.of(rootPath).toAbsolutePath().normalize()
@@ -66,13 +86,15 @@ class CopyGitPermalinkAction : AnAction() {
             if (!file.startsWith(root)) return null
             val relativePath = root.relativize(file).toString().replace('\\', '/')
             val metadata = GitRepositoryMetadataResolver.resolve(root) ?: return null
-            GitPermalinkGenerator.buildPermalinkFromRemote(
-                metadata.remoteUrl,
-                metadata.commitSha,
-                relativePath,
-                startLine,
-                endLine
-            )
+            buildPermalinkContent(lineRanges) { startLine, endLine ->
+                GitPermalinkGenerator.buildPermalinkFromRemote(
+                    metadata.remoteUrl,
+                    metadata.commitSha,
+                    relativePath,
+                    startLine,
+                    endLine
+                )
+            }
         } catch (_: Exception) {
             null
         }
