@@ -80,6 +80,23 @@ class GitPermalinkGeneratorTest {
     }
 
     @Test
+    fun `remote path traversal returns null`() {
+        listOf(
+            "https://github.com/owner/../victim.git",
+            "https://github.com/owner/%2e%2e/victim.git",
+            "https://github.com/owner/./repo.git",
+            "https://github.com/owner//repo.git",
+            "https://github.com/owner/repo/extra.git",
+            "git@gitlab.com:group//project.git"
+        ).forEach { remoteUrl ->
+            assertNull(
+                GitPermalinkGenerator.parseRemoteUrl(remoteUrl),
+                "Remote '$remoteUrl' should be rejected"
+            )
+        }
+    }
+
+    @Test
     fun `build permalink single line`() {
         val url = GitPermalinkGenerator.buildPermalink(
             repoUrl = "https://github.com/owner/repo",

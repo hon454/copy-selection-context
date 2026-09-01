@@ -8,13 +8,16 @@ import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.vcs.ProjectLevelVcsManager
 import java.awt.datatransfer.StringSelection
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicLong
 
 class CopyGitPermalinkAction : AnAction() {
+    private val requests = LatestPermalinkRequestTracker()
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.getData(CommonDataKeys.PROJECT) ?: return
         val editor = e.getData(CommonDataKeys.EDITOR) ?: return
         val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
+        val requestId = requests.begin()
 
         val (startLine, endLine) = CopySelectionUtils.resolveLineNumbers(editor)
         val vcsManager = ProjectLevelVcsManager.getInstance(project)
@@ -34,11 +37,13 @@ class CopyGitPermalinkAction : AnAction() {
             val permalink = tryBuildPermalink(rootPath, filePath, startLine, endLine)
             application.invokeLater {
                 if (project.isDisposed) return@invokeLater
-                if (permalink == null) {
-                    CopySelectionNotifier.notifyPermalinkFailure(project)
-                } else {
-                    CopyPasteManager.getInstance().setContents(StringSelection(permalink))
-                    CopySelectionNotifier.notify(project, permalink)
+                requests.runIfCurrent(requestId) {
+                    if (permalink == null) {
+                        CopySelectionNotifier.notifyPermalinkFailure(project)
+                    } else {
+                        CopyPasteManager.getInstance().setContents(StringSelection(permalink))
+                        CopySelectionNotifier.notify(project, permalink)
+                    }
                 }
             }
         }
@@ -71,5 +76,17 @@ class CopyGitPermalinkAction : AnAction() {
         } catch (_: Exception) {
             null
         }
+    }
+}
+
+internal class LatestPermalinkRequestTracker {
+    private val latestRequestId = AtomicLong()
+
+    fun begin(): Long = latestRequestId.incrementAndGet()
+
+    fun runIfCurrent(requestId: Long, action: () -> Unit): Boolean {
+        if (latestRequestId.get() != requestId) return false
+        action()
+        return true
     }
 }

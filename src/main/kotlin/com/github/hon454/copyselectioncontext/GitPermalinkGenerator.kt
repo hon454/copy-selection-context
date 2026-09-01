@@ -58,12 +58,19 @@ object GitPermalinkGenerator {
 
     private fun canonicalRepository(host: String, rawPath: String): Pair<String, String>? {
         val normalizedHost = host.lowercase()
-        val repositoryPath = rawPath
-            .trim()
-            .trim('/')
-            .removeSuffix(".git")
-            .takeIf { it.count { character -> character == '/' } >= 1 }
-            ?: return null
+        if (rawPath != rawPath.trim()) return null
+        val repositoryPath = rawPath.removePrefix("/").removeSuffix(".git")
+        val segments = repositoryPath.split('/')
+        if (repositoryPath.contains('\\') ||
+            segments.any { it.isEmpty() || it == "." || it == ".." }
+        ) return null
+        val validNamespace = when (normalizedHost) {
+            "github.com" -> segments.size == 2
+            "gitlab.com" -> segments.size >= 2
+            else -> false
+        }
+        if (!validNamespace) return null
+
         return Pair("https://$normalizedHost/$repositoryPath", normalizedHost)
     }
 
