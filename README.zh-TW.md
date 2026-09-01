@@ -85,6 +85,9 @@ fun calculateTotal(items: List<Item>): Double {
 
 - **Path type** — Absolute（預設）或 Relative
 - **Include code content** — 是否包含程式碼區塊
+- **Copy history size** — 最多保留 100 筆記錄，或設為 `0` 以停用歷史記錄
+
+複製歷史記錄可能包含已複製的程式碼。資料僅儲存在 IDE 的本機、非漫遊工作區中，不會寫入可共享的專案設定。使用歷史記錄彈出視窗底部的 **Clear all history** 可移除所有項目。縮小最大筆數時，較舊的項目會立即移除；先前儲存在 `copySelectionHistory.xml` 的歷史記錄會遷移至本機工作區儲存空間，之後 IDE 會清理舊檔案。
 
 #### 設定畫面
 
