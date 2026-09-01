@@ -6,7 +6,7 @@
 [![Contributors](https://img.shields.io/github/contributors/hon454/copy-selection-context)](https://github.com/hon454/copy-selection-context/graphs/contributors)
 [![License](https://img.shields.io/github/license/hon454/copy-selection-context)](LICENSE)
 
-**[한국어](README.ko.md)**
+**English** · **[한국어](README.ko.md)** · **[简体中文](README.zh-CN.md)** · **[日本語](README.ja.md)**
 
 > Copy file path + line numbers + code to clipboard in one shortcut — formatted for AI assistants.
 

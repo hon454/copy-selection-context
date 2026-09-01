@@ -6,7 +6,7 @@
 [![Contributors](https://img.shields.io/github/contributors/hon454/copy-selection-context)](https://github.com/hon454/copy-selection-context/graphs/contributors)
 [![License](https://img.shields.io/github/license/hon454/copy-selection-context)](LICENSE)
 
-**[English](README.md)**
+**[English](README.md)** · **한국어** · **[简体中文](README.zh-CN.md)** · **[日本語](README.ja.md)**
 
 > 파일 경로 + 라인 번호 + 코드를 한 번의 단축키로 클립보드에 복사 — AI 어시스턴트에 바로 붙여넣기 가능한 형식으로.
 
