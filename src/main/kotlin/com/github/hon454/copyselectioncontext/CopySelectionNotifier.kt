@@ -8,11 +8,11 @@ object CopySelectionNotifier {
     fun notify(project: Project?, message: String) {
         if (project == null) return
         if (!CopySelectionSettings.getInstance().state.enableNotification) return
-        
+
         NotificationGroupManager.getInstance()
             .getNotificationGroup("CopySelectionContext")
             .createNotification(
-                CopySelectionBundle.message("notification.copied", message),
+                notificationText(message),
                 NotificationType.INFORMATION
             )
             .notify(project)
@@ -29,4 +29,7 @@ object CopySelectionNotifier {
             )
             .notify(project)
     }
+
+    internal fun notificationText(message: String): String =
+        CopySelectionBundle.message("notification.copied", CopyPreview.notification(message))
 }

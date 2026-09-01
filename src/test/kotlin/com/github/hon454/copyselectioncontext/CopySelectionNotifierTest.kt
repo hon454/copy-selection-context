@@ -7,6 +7,8 @@ import io.mockk.unmockkObject
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class CopySelectionNotifierTest {
 
@@ -42,5 +44,18 @@ class CopySelectionNotifierTest {
         val mockProject = mockk<com.intellij.openapi.project.Project>()
         
         CopySelectionNotifier.notify(mockProject, "test message")
+    }
+
+    @Test
+    fun `notification text uses a safe bounded preview`() {
+        val message = "src/App.kt:10-20\n<script>😀 ${"x".repeat(1_000)}</script>"
+
+        val notification = CopySelectionNotifier.notificationText(message)
+
+        assertTrue(notification.contains("src/App.kt:10-20"))
+        assertTrue(notification.length <= CopyPreview.NOTIFICATION_MAX_LENGTH + 20)
+        assertFalse(notification.any { it == '\n' || it == '\r' })
+        assertFalse(notification.contains("<script>"))
+        assertTrue(notification.contains("&lt;script&gt;"))
     }
 }

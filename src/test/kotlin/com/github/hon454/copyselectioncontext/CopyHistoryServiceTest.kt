@@ -110,4 +110,14 @@ class CopyHistoryServiceTest {
         assertEquals(CopyHistoryPopup.PopupItem.ClearAll, clearAll)
         assertTrue(service.getEntries().isEmpty())
     }
+
+    @Test
+    fun `history preserves complete copied content`() {
+        val service = CopyHistoryService()
+        val content = "src/App.kt:10-20\n<script>😀 ${"x".repeat(10_000)}</script>"
+
+        service.addEntry(content)
+
+        assertEquals(content, service.getEntries().single().content)
+    }
 }
