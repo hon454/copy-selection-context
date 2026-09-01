@@ -7,8 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0]
+
+> **v1.1.0 release candidate scope:** All component pull requests are integrated.
+> The changes below remain unreleased until this release-candidate pull request
+> passes every release gate and v1.1.0 is tagged.
+
+### Added
+- Add local-only copy-history privacy controls, including disable, clear-all, deterministic trimming, and legacy cleanup behavior (#10)
+- Add accessible multiline custom-template editing with bounded preview and apply-time variable validation (#15)
+
+### Changed
+- Gate packaging and publication on tests, plugin structure checks, and supported-IDE compatibility verification (#12)
+- Show localized output-format names while preserving stable settings keys (#13)
+- Keep the English and Korean resource bundles on the same active key set (#14)
+- Synchronize architecture and user guides with the integrated settings, output, history, notification, analytics, and status behavior (#17)
+- Align contributor release instructions with the changelog-driven workflow (#18)
+- Exercise complete action flows with IntelliJ Platform fixtures, including clipboard and feedback side effects (#19)
+
 ### Fixed
-- Prevent legacy GitHub output format settings from copying placeholder URLs while preserving the dedicated GitHub/GitLab permalink action
+- Preserve each caret's own range and code when copying multi-caret selections (#5)
+- Honor exclusive selection end offsets without adding the following line (#6)
+- Populate `{filename}` consistently in runtime custom-template output (#7)
+- Resolve project-relative paths by path boundaries instead of string prefixes (#8)
+- Generate reliable GitHub and GitLab permalinks for worktrees, packed refs, detached HEADs, remote variants, and encoded paths (#9)
+- Keep notification and status previews concise, single-line, Unicode-safe, and markup-safe without truncating clipboard history (#11)
+- Prevent generic formatter settings from emitting unresolved GitHub permalink placeholders (#16)
 
 ## [1.0.4] - 2026-08-21
 
@@ -79,7 +103,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Toast notifications
 - IntelliJ Platform 2024.3+ compatibility
 
-[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.0.4...HEAD
+[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/hon454/copy-selection-context/compare/v1.0.4...v1.1.0
 [1.0.4]: https://github.com/hon454/copy-selection-context/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/hon454/copy-selection-context/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/hon454/copy-selection-context/compare/v1.0.1...v1.0.2
