@@ -72,8 +72,22 @@ jobs:
             echo "Release ${{ steps.version.outputs.tag }}" > release-notes.md
           fi
 
+      - name: Run test suite
+        run: ./gradlew test --stacktrace --console=plain
+
+      - name: Verify plugin project and structure
+        run: >-
+          ./gradlew
+          verifyPluginProjectConfiguration
+          verifyPluginStructure
+          --stacktrace
+          --console=plain
+
+      - name: Verify plugin compatibility
+        run: ./gradlew verifyPlugin --stacktrace --console=plain
+
       - name: Build plugin
-        run: ./gradlew buildPlugin --stacktrace
+        run: ./gradlew buildPlugin --stacktrace --console=plain
 
       - name: Verify plugin ZIP exists
         run: |
@@ -83,6 +97,19 @@ jobs:
           fi
           echo "Plugin ZIP found:"
           ls -la build/distributions/*.zip
+
+      - name: Upload validation reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: validation-reports
+          path: |
+            build/reports/tests/
+            build/test-results/
+            build/reports/pluginVerifier/
+            build/reports/problems/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
