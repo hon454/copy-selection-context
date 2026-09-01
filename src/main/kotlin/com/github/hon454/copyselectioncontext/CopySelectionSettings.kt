@@ -29,6 +29,7 @@ class CopySelectionSettings : PersistentStateComponent<CopySelectionSettings.Sta
     override fun getState(): State = myState
 
     override fun loadState(state: State) {
+        state.copyHistorySize = state.copyHistorySize.coerceIn(0, 100)
         myState = state
     }
 

@@ -69,7 +69,8 @@ class CopySelectionBundleTest {
             "widget.tooltip",
             "widget.empty",
             "history.popup.title",
-            "history.popup.empty"
+            "history.popup.empty",
+            "history.popup.clear.all"
         ).forEach { key ->
             assertTrue(CopySelectionBundle.message(key).isNotBlank(), "Key '$key' should resolve to non-blank string")
         }
@@ -85,6 +86,7 @@ class CopySelectionBundleTest {
             "settings.notification.enable",
             "settings.trimming.enable",
             "settings.history.size",
+            "settings.history.size.comment",
             "settings.template.label"
         ).forEach { key ->
             assertTrue(CopySelectionBundle.message(key).isNotBlank(), "Key '$key' should resolve to non-blank string")

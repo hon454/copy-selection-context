@@ -15,13 +15,13 @@ One shortcut (<code>Ctrl+Alt+C</code> / <code>Cmd+Alt+C</code>) copies your curr
     <li><strong>One-shortcut copy</strong> — <code>Ctrl+Alt+C</code> (Windows/Linux) / <code>Cmd+Alt+C</code> (macOS) copies path + line numbers based on your settings</li>
     <li><strong>Relative or absolute paths</strong> — choose project-relative or full absolute paths per your workflow</li>
     <li><strong>Code content as markdown</strong> — include the selected code as a fenced markdown code block with language tag</li>
-    <li><strong>Copy History browser</strong> — <code>Ctrl+Alt+H</code> opens a popup to browse and re-copy recent entries</li>
+    <li><strong>Private copy history</strong> — <code>Ctrl+Alt+H</code> opens locally stored history with clear-all and disable controls</li>
     <li><strong>GitHub/GitLab permalink</strong> — generate a permanent link to the exact lines in your remote repository</li>
     <li><strong>Template-based output formatting</strong> — choose from built-in presets (Claude Code, Path:Line, GitHub Permalink, Custom) or define your own template with variable placeholders</li>
     <li><strong>Live template preview</strong> — settings UI shows a real-time preview and validates template variables before you save</li>
     <li><strong>Smart line handling</strong> — copies the current line number when no text is selected, so the shortcut always produces useful output</li>
     <li><strong>Status bar widget</strong> — displays the last copied text in the IDE status bar; click it to copy again</li>
-    <li><strong>Configurable settings</strong> — path type, output format, code trimming, notification toggle, and history size all adjustable at <em>Settings → Tools → Copy Selection Context</em></li>
+    <li><strong>Configurable settings</strong> — path type, output format, code trimming, notification toggle, and local history size (set to 0 to disable) all adjustable at <em>Settings → Tools → Copy Selection Context</em></li>
     <li><strong>Context menu integration</strong> — all actions available in the editor right-click menu under the Copy Selection Context submenu</li>
 </ul>
 <h3>Output Format</h3>

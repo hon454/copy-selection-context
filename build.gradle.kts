@@ -1,4 +1,5 @@
 import org.jetbrains.changelog.Changelog
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -22,11 +23,15 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter-api:6.1.3")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:6.1.3")
-    testRuntimeOnly("junit:junit:4.13.2")
-    testImplementation("io.mockk:mockk:1.14.11")
+    testImplementation("junit:junit:4.13.2")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:6.1.3")
+    testImplementation("io.mockk:mockk:1.14.11") {
+        exclude(group = "org.jetbrains.kotlinx")
+    }
 
     intellijPlatform {
         intellijIdeaCommunity("2024.3")
+        testFramework(TestFrameworkType.Bundled)
     }
 }
 

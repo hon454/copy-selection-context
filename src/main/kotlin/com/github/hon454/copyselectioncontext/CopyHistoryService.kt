@@ -1,18 +1,27 @@
 package com.github.hon454.copyselectioncontext
 
 import com.intellij.openapi.components.PersistentStateComponent
+import com.intellij.openapi.components.RoamingType
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
+import com.intellij.openapi.components.StoragePathMacros
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ProjectManager
 
 @Service(Service.Level.PROJECT)
-@State(name = "CopySelectionHistory", storages = [Storage("copySelectionHistory.xml")])
+@State(
+    name = "CopySelectionHistory",
+    storages = [
+        Storage(StoragePathMacros.WORKSPACE_FILE, roamingType = RoamingType.DISABLED),
+        Storage(value = "copySelectionHistory.xml", deprecated = true)
+    ]
+)
 class CopyHistoryService : PersistentStateComponent<CopyHistoryService.State> {
 
-    data class HistoryEntry(val content: String = "", val timestamp: Long = 0L)
+    data class HistoryEntry(var content: String = "", var timestamp: Long = 0L)
 
-    data class State(val entries: MutableList<HistoryEntry> = mutableListOf())
+    data class State(var entries: MutableList<HistoryEntry> = mutableListOf())
 
     private var myState = State()
 
@@ -23,10 +32,14 @@ class CopyHistoryService : PersistentStateComponent<CopyHistoryService.State> {
     }
 
     fun addEntry(content: String, maxSize: Int = 50) {
-        myState.entries.add(0, HistoryEntry(content = content, timestamp = System.currentTimeMillis()))
-        if (myState.entries.size > maxSize) {
-            myState.entries.removeAt(myState.entries.size - 1)
+        val limit = maxSize.coerceAtLeast(0)
+        if (limit == 0) {
+            clear()
+            return
         }
+
+        myState.entries.add(0, HistoryEntry(content = content, timestamp = System.currentTimeMillis()))
+        trimToSize(limit)
     }
 
     fun getEntries(): List<HistoryEntry> = myState.entries.toList()
@@ -35,8 +48,21 @@ class CopyHistoryService : PersistentStateComponent<CopyHistoryService.State> {
         myState.entries.clear()
     }
 
+    fun trimToSize(maxSize: Int) {
+        val limit = maxSize.coerceAtLeast(0)
+        if (myState.entries.size > limit) {
+            myState.entries.subList(limit, myState.entries.size).clear()
+        }
+    }
+
     companion object {
         fun getInstance(project: Project): CopyHistoryService =
             project.getService(CopyHistoryService::class.java)
+
+        fun trimOpenProjects(maxSize: Int) {
+            ProjectManager.getInstance().openProjects.forEach { project ->
+                project.getService(CopyHistoryService::class.java)?.trimToSize(maxSize)
+            }
+        }
     }
 }

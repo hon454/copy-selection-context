@@ -6,10 +6,11 @@
 2. **CopySelectionContextAction** reads settings (path type + code content toggle)
 3. **Action** extracts editor context (file path, line range, optionally code)
 4. **CopyPasteManager** writes formatted text to clipboard
-5. **CopySelectionHighlighter** replaces the gutter marker scoped to the active editor
-6. **CopySelectionNotifier** shows toast notification (BALLOON type)
-7. **CopySelectionStatusBarWidget** updates (currently stub, prints to console)
-8. **CopySelectionSettings** provides path type and code content preferences
+5. **CopyHistoryService** stores the result in local, non-roaming workspace state when history is enabled
+6. **CopySelectionHighlighter** replaces the gutter marker scoped to the active editor
+7. **CopySelectionNotifier** shows toast notification (BALLOON type)
+8. **CopySelectionStatusBarWidget** updates (currently stub, prints to console)
+9. **CopySelectionSettings** provides formatting, behavior, and history preferences
 
 ## Output Formats
 
@@ -45,11 +46,15 @@ fun example() {
 
 - **GitPermalinkGenerator.kt**: Normalizes supported GitHub/GitLab HTTPS and SSH remote forms and percent-encodes repository-relative file paths.
 
+- **CopyHistoryService.kt**: Project-level history service persisted in the IDE's local workspace state with roaming disabled. Size zero disables and clears history; shrinking retains the newest entries deterministically. The deprecated `copySelectionHistory.xml` storage entry migrates and cleans up legacy shareable state.
+
+- **CopyHistoryPopup.kt**: Popup chooser for re-copying local history entries, with a clear-all action.
+
 - **CopySelectionNotifier.kt** (~17 lines): Singleton. `NotificationGroupManager` BALLOON notifications with checkmark prefix. Group ID: `"CopySelectionContext"` (must match plugin.xml).
 
 - **CopySelectionStatusBarWidget.kt** (~9 lines): Stub (console only). Full impl needs `StatusBarWidget` + `TextPresentation` + `getAlignment(): Float` + Factory class.
 
-- **CopySelectionSettings.kt** (~39 lines): `@Service` + `@State`. Persists to `CopySelectionPlugin.xml`. Settings: `defaultPathType` (ABSOLUTE), `includeCodeContent` (false). `PathType` enum: RELATIVE, ABSOLUTE.
+- **CopySelectionSettings.kt**: `@Service` + `@State`. Persists to `CopySelectionPlugin.xml`. Includes output, notification, analytics, and copy history size preferences. `PathType` enum: RELATIVE, ABSOLUTE.
 
 - **CopySelectionConfigurable.kt** (~70 lines): Settings UI under Tools menu. Swing radio buttons (path type) + checkbox (code content). Implements `Configurable` lifecycle: `isModified()`, `apply()`, `reset()`, `disposeUIResources()`.
 

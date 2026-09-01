@@ -95,4 +95,24 @@ class CopySelectionSettingsTest {
         assertEquals("verbose", state.outputFormat)
         assertEquals(50, state.copyHistorySize)
     }
+
+    @Test
+    fun `loadState accepts zero to disable history`() {
+        val settings = CopySelectionSettings()
+
+        settings.loadState(CopySelectionSettings.State(copyHistorySize = 0))
+
+        assertEquals(0, settings.state.copyHistorySize)
+    }
+
+    @Test
+    fun `loadState clamps invalid history sizes`() {
+        val settings = CopySelectionSettings()
+
+        settings.loadState(CopySelectionSettings.State(copyHistorySize = -1))
+        assertEquals(0, settings.state.copyHistorySize)
+
+        settings.loadState(CopySelectionSettings.State(copyHistorySize = 101))
+        assertEquals(100, settings.state.copyHistorySize)
+    }
 }

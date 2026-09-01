@@ -58,6 +58,8 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `CopySelectionContextAction.kt` | Main unified action (`Ctrl+Alt+C` shortcut) |
 | `CopySelectionBaseAction.kt` | Abstract base with clipboard logic |
 | `CopySelectionHighlighter.kt` | Editor-scoped gutter highlighter lifecycle |
+| `CopyHistoryService.kt` | Project history in local, non-roaming workspace state |
+| `CopyHistoryPopup.kt` | Browse, re-copy, and clear local history |
 | `CopyRelativePathAction.kt` | Relative path (context menu only) |
 | `CopyAbsolutePathAction.kt` | Absolute path (context menu only) |
 | `CopyWithCodeContentAction.kt` | Path + markdown code block (context menu only) |
@@ -69,7 +71,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `GitRepositoryMetadataResolver.kt` | Worktree-aware Git metadata and ref resolution |
 | `GitPermalinkGenerator.kt` | Remote URL normalization and encoded permalink generation |
 
-**Flow**: User trigger -> Action reads settings -> Extract editor context -> CopyPasteManager -> Notification
+**Flow**: User trigger -> Action reads settings -> Extract editor context -> CopyPasteManager -> Local history (when enabled) -> Notification
 
 ## Conventions
 

@@ -85,6 +85,9 @@ fun calculateTotal(items: List<Item>): Double {
 
 - **Path type** — Absolute (기본) 또는 Relative
 - **Include code content** — 코드 블록 포함 여부
+- **Copy history size** — 최대 100개까지 보관하거나 `0`으로 설정해 이력 비활성화
+
+복사 이력에는 복사한 코드가 포함될 수 있습니다. 이 데이터는 IDE의 로컬 비로밍 작업 공간에만 저장되며 공유 가능한 프로젝트 설정에는 기록되지 않습니다. 이력 팝업 하단의 **모든 히스토리 삭제**로 전체 항목을 지울 수 있습니다. 최대 크기를 줄이면 오래된 항목이 즉시 제거되며, 기존 `copySelectionHistory.xml`의 이력은 로컬 작업 공간 저장소로 마이그레이션된 후 IDE가 레거시 파일을 정리합니다.
 
 #### 설정 화면
 
