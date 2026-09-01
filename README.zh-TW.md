@@ -16,9 +16,11 @@
 
 - **快速鍵複製** — 按下 `Ctrl+Alt+C`，立即複製檔案路徑和行號
 - **相對或絕對路徑** — 可選擇專案相對路徑或絕對路徑
+- **彈性的輸出格式** — 支援 Claude Code 參照、Path:Line 輸出或自訂範本
 - **包含程式碼內容** — 可選擇將所選程式碼以 Markdown 程式碼區塊形式包含在內
 - **複製歷史記錄** — 按下 `Ctrl+Alt+H` 瀏覽最近的複製歷史記錄
 - **GitHub/GitLab 永久連結** — 複製所選行對應的 Git 永久連結
+- **複製回饋** — 標示已複製的行、顯示可選通知，並在狀態列保留最近一次複製內容
 - **智慧行號處理** — 未選取文字時複製游標所在行的行號
 - **內容選單** — 可從編輯器右鍵選單存取所有操作
 - **跨平台** — 支援 Windows、macOS 和 Linux
@@ -63,15 +65,24 @@
 
 ### 輸出格式
 
-輸出為 `@path#Lline` 格式，可直接貼到 AI 助理中。
+主要操作與個別路徑/程式碼操作會使用設定中選擇的輸出格式。路徑統一使用正斜線。
 
-**僅路徑（預設）**：
-- 單行：`@src/main/kotlin/App.kt#L42`
-- 多行：`@src/main/kotlin/App.kt#L250-253`
+**Claude Code (`claude`，預設)**：
+- 單行：` @src/main/kotlin/App.kt#L42 `
+- 多行：` @src/main/kotlin/App.kt#L250-253 `
 
-**包含程式碼內容（在設定中啟用）**：
+**Path:Line (`pathline`)**：
+- 單行：`src/main/kotlin/App.kt:42`
+- 多行：`src/main/kotlin/App.kt:250-253`
+
+**自訂範本 (`template`)**：
+- 可從 Path and Range、Claude Reference 或 With Code Block 預設開始，也可以自行輸入範本
+- 可用變數：`{path}`、`{line}`、`{range}`、`{code}`、`{lang}` 與 `{filename}`
+- 設定畫面會預覽結果並提示未知變數
+
+**包含程式碼內容**（Claude Code 與 Path:Line 會附加程式碼區塊；自訂範本透過 `{code}` 放置內容）：
 ````
-@src/main/kotlin/App.kt#L42-53
+ @src/main/kotlin/App.kt#L42-53
 ```kotlin
 fun calculateTotal(items: List<Item>): Double {
     return items.sumOf { it.price }
@@ -79,13 +90,27 @@ fun calculateTotal(items: List<Item>): Double {
 ```
 ````
 
+個別的 **Copy GitHub/GitLab Permalink** 操作會為所選行產生固定到提交的 URL。若無法解析儲存庫遠端位址或提交，操作會顯示錯誤並保持剪貼簿不變。
+
+### 歷史記錄、通知與狀態
+
+- 標準路徑/程式碼複製操作會將項目加入專案專屬歷史記錄。按下 `Ctrl+Alt+H` 可開啟已儲存項目，選取後會再次複製完整內容。
+- 複製通知預設啟用，也可以關閉。標準路徑/程式碼複製與 Git 永久連結成功後會顯示通知。
+- 標準複製會替換作用中編輯器的邊欄標記，並在狀態列小工具顯示安全、單行且有長度限制的前 40 個字元。按一下小工具可再次複製最後一次的完整內容。
+- 可選的本機使用分析會在 IDE 應用程式設定中記錄複製次數與輸出格式使用量。預設關閉，且不會將資料傳送到裝置之外。
+
 ### 設定
 
 `Settings` → `Tools` → `Copy Selection Context`：
 
 - **Path type** — Absolute（預設）或 Relative
-- **Include code content** — 是否包含程式碼區塊
-- **Copy history size** — 最多保留 100 筆記錄，或設為 `0` 以停用歷史記錄
+- **Output format** — Claude Code（預設）、Path:Line 或 Custom Template
+- **Custom format template** — 選擇預設，或使用即時預覽與變數驗證編輯多行範本
+- **Include code content** — 包含所選程式碼；未選取時包含目前行（預設關閉）
+- **Trim code whitespace** — 移除所含程式碼首尾的空白（預設關閉）
+- **Show copy notifications** — 在支援的複製操作後顯示氣泡通知（預設開啟）
+- **Copy history size** — 每個專案保留 0–100 筆記錄（預設：10）；設為 `0` 會停用並清空歷史記錄
+- **Local usage analytics** — 僅在本機儲存選擇啟用的複製計數（預設關閉）
 
 複製歷史記錄可能包含已複製的程式碼。資料僅儲存在 IDE 的本機、非漫遊工作區中，不會寫入可共享的專案設定。使用歷史記錄彈出視窗底部的 **Clear all history** 可移除所有項目。縮小最大筆數時，較舊的項目會立即移除；先前儲存在 `copySelectionHistory.xml` 的歷史記錄會遷移至本機工作區儲存空間，之後 IDE 會清理舊檔案。
 
@@ -93,7 +118,7 @@ fun calculateTotal(items: List<Item>): Double {
 
 ![Copy Selection Context 設定畫面](docs/images/settings-copy-selection-context.png)
 
-可在同一個畫面中設定路徑類型、輸出格式、是否包含程式碼、通知行為和歷史記錄選項。
+可在同一個畫面中設定路徑類型、輸出與多行範本、程式碼處理、通知、歷史記錄和本機分析。
 
 ## 相容的 IDE
 

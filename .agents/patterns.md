@@ -11,7 +11,7 @@ val editor = e.getData(CommonDataKeys.EDITOR) ?: return
 val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
 ```
 
-Base class provides: `buildPathString()`, `copyToClipboard()`, `update()`, abstract `getPath()`.
+Base class provides the shared action pipeline: path and content formatting, clipboard writes, optional analytics, gutter highlighting, project history, notifications, and status-bar updates. Subclasses implement `getPath()` and may override `buildContent()`.
 
 ## Clipboard
 
@@ -58,18 +58,15 @@ val normalizedPath = path.replace("\\", "/")
 
 ## Language Detection
 
-`detectLanguage(file: VirtualFile): String` maps `file.fileType.name` to markdown language identifiers.
+`CopySelectionUtils.detectLanguage(file: VirtualFile): String` maps `file.fileType.name` to markdown language identifiers.
 
-15 mappings: kotlin, java, csharp, javascript, typescript, python, ruby, go, rust, php, swift, html, css, xml, sql. Returns `""` for unknown types.
+There are 39 explicit mappings, including Kotlin, Java, C#, JavaScript/TypeScript, Python, markup/config formats, shell, and common systems languages. Unknown file types fall back to the lowercase file extension.
 
-## Status Bar Widget (Stub)
+## Status Bar Widget
 
 ```kotlin
-object CopySelectionStatusBarWidget {
-    fun update(message: String) {
-        println("Status: $message")
-    }
-}
+class CopySelectionStatusBarWidget(project: Project) :
+    EditorBasedWidget(project), TextPresentation
 ```
 
-Full implementation would need: `StatusBarWidget` interface with `TextPresentation`, `getAlignment()` returning Float (e.g., 0.0f), `AtomicReference<String>` for thread-safe storage, Factory class registered via `statusBarWidgetFactory` in plugin.xml.
+The widget stores the last copied content in an `AtomicReference`, shows a 40-character preview, and copies the full value again when clicked. `CopySelectionStatusBarWidgetFactory` registers it through `statusBarWidgetFactory` in `plugin.xml`; standard path/code actions call `update()` after copying.

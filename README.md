@@ -16,9 +16,11 @@ Tired of manually typing file paths and line numbers when sharing code context w
 
 - **One-shortcut copy** — `Ctrl+Alt+C` copies file path + line numbers instantly
 - **Relative or absolute paths** — Choose between project-relative or absolute paths
+- **Flexible output formats** — Use Claude Code references, Path:Line output, or a custom template
 - **Code content included** — Optionally include selected code as a markdown code block
 - **Copy history** — `Ctrl+Alt+H` to browse recent copy history
 - **GitHub/GitLab permalink** — Copy a Git permalink for the selected lines
+- **Copy feedback** — Mark the copied lines, show an optional notification, and retain the last copy in the status bar
 - **Smart line handling** — Copies current line number when no text is selected
 - **Context menu** — Access all actions from the editor right-click menu
 - **Cross-platform** — Works on Windows, macOS, and Linux
@@ -63,15 +65,24 @@ Right-click in the editor → **Copy Selection Context** submenu:
 
 ### Output Format
 
-Outputs in `@path#Lline` format, ready to paste into AI assistants.
+The main action and explicit path/code actions use the output format selected in settings. Paths are normalized to forward slashes.
 
-**Path only (default)**:
-- Single line: `@src/main/kotlin/App.kt#L42`
-- Multiple lines: `@src/main/kotlin/App.kt#L250-253`
+**Claude Code (`claude`, default)**:
+- Single line: ` @src/main/kotlin/App.kt#L42 `
+- Multiple lines: ` @src/main/kotlin/App.kt#L250-253 `
 
-**With code content (enable in settings)**:
+**Path:Line (`pathline`)**:
+- Single line: `src/main/kotlin/App.kt:42`
+- Multiple lines: `src/main/kotlin/App.kt:250-253`
+
+**Custom template (`template`)**:
+- Start from the Path and Range, Claude Reference, or With Code Block preset, or enter your own template
+- Available variables: `{path}`, `{line}`, `{range}`, `{code}`, `{lang}`, and `{filename}`
+- The settings screen previews the result and flags unknown variables
+
+**With code content** (Claude Code and Path:Line append a fenced block; custom templates place it with `{code}`):
 ````
-@src/main/kotlin/App.kt#L42-53
+ @src/main/kotlin/App.kt#L42-53
 ```kotlin
 fun calculateTotal(items: List<Item>): Double {
     return items.sumOf { it.price }
@@ -79,13 +90,27 @@ fun calculateTotal(items: List<Item>): Double {
 ```
 ````
 
+The separate **Copy GitHub/GitLab Permalink** action builds a commit-specific URL for the selected lines. If the repository remote or commit cannot be resolved, it falls back to an `@relative/path#L...` reference.
+
+### History, Notifications, and Status
+
+- Standard path/code copy actions save entries in project-specific history. `Ctrl+Alt+H` opens the configured number of recent entries, and choosing one copies its full content again.
+- Copy notifications are enabled by default and can be disabled. They are shown after standard path/code copies and Git permalink copies.
+- A standard copy replaces the gutter marker in the active editor and updates the status-bar widget with the first 40 characters. Click the widget to copy the full last value again.
+- Optional local usage analytics count copies and output-format usage in the IDE's application settings. Analytics are disabled by default and do not send data off the machine.
+
 ### Settings
 
 `Settings` → `Tools` → `Copy Selection Context`:
 
 - **Path type** — Absolute (default) or Relative
-- **Include code content** — Whether to include the code block
-- **Copy history size** — Keep up to 100 entries, or set to `0` to disable history
+- **Output format** — Claude Code (default), Path:Line, or Custom Template
+- **Custom format template** — Choose a preset or edit a template with live preview and variable validation
+- **Include code content** — Include selected code, or the current line when nothing is selected (off by default)
+- **Trim code whitespace** — Remove leading and trailing whitespace from included code (off by default)
+- **Show copy notifications** — Show a balloon after supported copy actions (on by default)
+- **Copy history size** — Keep 0–100 entries per project (default: 10); set `0` to disable and clear history
+- **Local usage analytics** — Store opt-in copy counters only on this machine (off by default)
 
 Copy history may contain copied code. It is stored only in the IDE's local, non-roaming workspace data and is not written to shareable project settings. Use **Clear all history** at the bottom of the history popup to remove every entry. When the maximum size is reduced, older entries are removed immediately; history previously stored in `copySelectionHistory.xml` is migrated to local workspace storage and the legacy file is cleaned up by the IDE.
 
@@ -93,7 +118,7 @@ Copy history may contain copied code. It is stored only in the IDE's local, non-
 
 ![Copy Selection Context settings screen](docs/images/settings-copy-selection-context.png)
 
-Configure path type, output format, code inclusion, notification behavior, and history options from one place.
+Configure path type, output and templates, code handling, notifications, history, and local analytics from one place.
 
 ## Compatible IDEs
 

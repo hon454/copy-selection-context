@@ -16,9 +16,11 @@ ClaudeやChatGPTなどのAIコーディングアシスタントにコードの�
 
 - **ショートカットでコピー** — `Ctrl+Alt+C`でファイルパスと行番号をすぐにコピー
 - **相対パスまたは絶対パス** — プロジェクト相対パスと絶対パスから選択可能
+- **柔軟な出力形式** — Claude Code参照、Path:Line出力、カスタムテンプレートに対応
 - **コード内容を含める** — 選択したコードをMarkdownコードブロックとして追加可能
 - **コピー履歴** — `Ctrl+Alt+H`で最近のコピー履歴を表示
 - **GitHub/GitLabパーマリンク** — 選択した行のGitパーマリンクをコピー
+- **コピーのフィードバック** — コピーした行のマーク、任意の通知、ステータスバーへの最新コピー内容の保持
 - **スマートな行番号処理** — テキストが選択されていない場合は現在の行番号をコピー
 - **コンテキストメニュー** — エディターの右クリックメニューからすべてのアクションにアクセス
 - **クロスプラットフォーム** — Windows、macOS、Linuxに対応
@@ -63,15 +65,24 @@ ClaudeやChatGPTなどのAIコーディングアシスタントにコードの�
 
 ### 出力形式
 
-AIアシスタントにそのまま貼り付けられる`@path#Lline`形式で出力します。
+メインアクションと個別のパス/コードアクションは、設定で選択した出力形式を使用します。パス区切り文字はスラッシュに統一されます。
 
-**パスのみ（デフォルト）**：
-- 1行：`@src/main/kotlin/App.kt#L42`
-- 複数行：`@src/main/kotlin/App.kt#L250-253`
+**Claude Code (`claude`、デフォルト)**：
+- 1行：` @src/main/kotlin/App.kt#L42 `
+- 複数行：` @src/main/kotlin/App.kt#L250-253 `
 
-**コード内容を含める（設定で有効化）**：
+**Path:Line (`pathline`)**：
+- 1行：`src/main/kotlin/App.kt:42`
+- 複数行：`src/main/kotlin/App.kt:250-253`
+
+**カスタムテンプレート (`template`)**：
+- Path and Range、Claude Reference、With Code Blockプリセットから開始するか、独自のテンプレートを入力
+- 使用可能な変数：`{path}`、`{line}`、`{range}`、`{code}`、`{lang}`、`{filename}`
+- 設定画面で結果をプレビューし、不明な変数を検出
+
+**コード内容を含める**（Claude CodeとPath:Lineはコードブロックを追加し、カスタムテンプレートは`{code}`で配置）：
 ````
-@src/main/kotlin/App.kt#L42-53
+ @src/main/kotlin/App.kt#L42-53
 ```kotlin
 fun calculateTotal(items: List<Item>): Double {
     return items.sumOf { it.price }
@@ -79,13 +90,27 @@ fun calculateTotal(items: List<Item>): Double {
 ```
 ````
 
+個別の **Copy GitHub/GitLab Permalink** アクションは、選択した行に対してコミット固定のURLを生成します。リポジトリのリモートまたはコミットを解決できない場合は、`@relative/path#L...`参照にフォールバックします。
+
+### 履歴、通知、ステータス
+
+- 標準のパス/コードコピーアクションは、プロジェクト別の履歴に項目を保存します。`Ctrl+Alt+H`で設定件数の最近の項目を開き、選択すると完全な内容を再度コピーします。
+- コピー通知はデフォルトで有効ですが、無効にできます。標準のパス/コードコピーとGitパーマリンクコピーの後に表示されます。
+- 標準コピーはアクティブエディターのガターマーカーを置き換え、ステータスバーウィジェットに先頭40文字を表示します。ウィジェットをクリックすると最後の完全な値を再度コピーします。
+- 任意のローカル使用状況分析は、IDEのアプリケーション設定にコピー回数と出力形式の使用量を記録します。デフォルトでは無効で、データを端末外へ送信しません。
+
 ### 設定
 
 `Settings` → `Tools` → `Copy Selection Context`：
 
 - **Path type** — Absolute（デフォルト）またはRelative
-- **Include code content** — コードブロックを含めるかどうか
-- **Copy history size** — 最大100件を保持するか、`0`に設定して履歴を無効化
+- **Output format** — Claude Code（デフォルト）、Path:Line、Custom Template
+- **Custom format template** — プリセットを選択するか、ライブプレビューと変数検証を使ってテンプレートを編集
+- **Include code content** — 選択したコード、または未選択時の現在行を含める（デフォルト：オフ）
+- **Trim code whitespace** — 含めたコードの先頭と末尾の空白を削除（デフォルト：オフ）
+- **Show copy notifications** — 対応するコピーアクション後にバルーン通知を表示（デフォルト：オン）
+- **Copy history size** — プロジェクトごとに0～100件を保持（デフォルト：10）。`0`で履歴を無効化して削除
+- **Local usage analytics** — オプトインのコピーカウンターをこの端末だけに保存（デフォルト：オフ）
 
 コピー履歴にはコピーしたコードが含まれる場合があります。データはIDEのローカルな非ローミングワークスペースにのみ保存され、共有可能なプロジェクト設定には書き込まれません。履歴ポップアップ下部の **Clear all history** ですべての項目を削除できます。最大件数を減らすと古い項目はすぐに削除され、以前 `copySelectionHistory.xml` に保存された履歴はローカルワークスペースストレージへ移行された後、IDEによって旧ファイルが削除されます。
 
@@ -93,7 +118,7 @@ fun calculateTotal(items: List<Item>): Double {
 
 ![Copy Selection Contextの設定画面](docs/images/settings-copy-selection-context.png)
 
-パスの種類、出力形式、コードを含めるかどうか、通知の動作、履歴オプションを1つの画面で設定できます。
+パスの種類、出力とテンプレート、コード処理、通知、履歴、ローカル分析を1つの画面で設定できます。
 
 ## 対応IDE
 
