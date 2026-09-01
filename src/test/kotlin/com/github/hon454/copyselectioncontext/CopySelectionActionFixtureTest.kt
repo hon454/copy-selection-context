@@ -5,6 +5,8 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.ide.CopyPasteManager
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.datatransfer.DataFlavor
@@ -36,12 +38,16 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
             "single.txt",
             "<selection>first line\nsecond</selection> line\nthird line",
         )
+        settings().enableNotification = true
 
-        perform(CopySelectionContextAction())
+        val action = RecordingCopySelectionContextAction()
+        perform(action)
 
         val expected = "${relativePath()}:1-2"
         assertEquals(expected, clipboardText())
         assertEquals(listOf(expected), historyContents())
+        assertEquals(listOf(expected), action.notificationMessages)
+        assertEquals(listOf(expected), action.statusBarMessages)
         assertEquals(1, myFixture.editor.markupModel.allHighlighters.size)
         assertTrue(
             myFixture.editor.markupModel.allHighlighters.single().gutterIconRenderer is
@@ -113,8 +119,65 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         )
     }
 
+    fun testGitPermalinkActionCoversAsyncMultiCaretSuccessAndFailure() {
+        myFixture.configureByText(
+            "permalink.txt",
+            "first line\nsecond line\nthird line\nfourth line",
+        )
+        val document = myFixture.editor.document
+        val primaryCaret = myFixture.editor.caretModel.primaryCaret
+        primaryCaret.moveToLogicalPosition(LogicalPosition(1, 0))
+        primaryCaret.setSelection(document.getLineStartOffset(1), document.getLineEndOffset(1))
+        val secondCaret = requireNotNull(
+            myFixture.editor.caretModel.addCaret(
+                myFixture.editor.logicalToVisualPosition(LogicalPosition(3, 0)),
+            ),
+        )
+        secondCaret.setSelection(document.getLineStartOffset(3), document.getLineEndOffset(3))
+        val clipboardSentinel = "clipboard-before-permalink"
+        CopyPasteManager.getInstance().setContents(StringSelection(clipboardSentinel))
+        val resolvedPermalink =
+            "https://github.com/owner/repo/blob/abc123/src/permalink.txt#L2\n\n" +
+                "https://github.com/owner/repo/blob/abc123/src/permalink.txt#L4"
+
+        val resolvedAction = StubCopyGitPermalinkAction(resolvedPermalink)
+        perform(resolvedAction)
+
+        assertEquals(clipboardSentinel, clipboardText())
+        assertEquals(1, resolvedAction.backgroundActions.size)
+        assertTrue(resolvedAction.uiActions.isEmpty())
+
+        resolvedAction.runBackgroundAction()
+
+        assertEquals(clipboardSentinel, clipboardText())
+        assertEquals(1, resolvedAction.uiActions.size)
+        assertEquals(myFixture.file.virtualFile.path, resolvedAction.requestedFilePath)
+        assertEquals(listOf(Pair(2, 2), Pair(4, 4)), resolvedAction.requestedLineRanges)
+
+        resolvedAction.runUiAction()
+
+        assertEquals(resolvedPermalink, clipboardText())
+        assertEquals(listOf(resolvedPermalink), resolvedAction.successMessages)
+        assertEquals(0, resolvedAction.failureCount)
+
+        myFixture.configureByText("failed-permalink.txt", "first line\nsecond<caret> line")
+        val failureSentinel = "clipboard-before-failure"
+        CopyPasteManager.getInstance().setContents(StringSelection(failureSentinel))
+        val failedAction = StubCopyGitPermalinkAction(null)
+
+        perform(failedAction)
+        failedAction.runBackgroundAction()
+        failedAction.runUiAction()
+
+        assertEquals(failureSentinel, clipboardText())
+        assertEquals(1, failedAction.failureCount)
+        assertTrue(failedAction.successMessages.isEmpty())
+    }
+
     fun testActionReturnsWithoutSideEffectsWhenRequiredDataKeysAreUnavailable() {
         myFixture.configureByText("missing.txt", "content<caret>")
+        settings().enableNotification = true
+        val action = RecordingCopySelectionContextAction()
         val contexts = listOf(
             actionContext(includeProject = false),
             actionContext(includeEditor = false),
@@ -126,10 +189,12 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
             CopyPasteManager.getInstance().setContents(StringSelection(sentinel))
             CopyHistoryService.getInstance(project).clear()
 
-            perform(CopySelectionContextAction(), context)
+            perform(action, context)
 
             assertEquals(sentinel, clipboardText())
             assertTrue(historyContents().isEmpty())
+            assertTrue(action.notificationMessages.isEmpty())
+            assertTrue(action.statusBarMessages.isEmpty())
         }
     }
 
@@ -175,6 +240,66 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
             CommonDataKeys.EDITOR.name -> myFixture.editor.takeIf { includeEditor }
             CommonDataKeys.VIRTUAL_FILE.name -> myFixture.file.virtualFile.takeIf { includeFile }
             else -> null
+        }
+    }
+
+    private class RecordingCopySelectionContextAction : CopySelectionContextAction() {
+        val notificationMessages = mutableListOf<String>()
+        val statusBarMessages = mutableListOf<String>()
+
+        override fun showNotification(project: Project, content: String) {
+            notificationMessages.add(content)
+        }
+
+        override fun updateStatusBar(project: Project, content: String) {
+            statusBarMessages.add(content)
+        }
+    }
+
+    private class StubCopyGitPermalinkAction(
+        private val permalink: String?,
+    ) : CopyGitPermalinkAction() {
+        val backgroundActions = mutableListOf<() -> Unit>()
+        val uiActions = mutableListOf<() -> Unit>()
+        val successMessages = mutableListOf<String>()
+        var failureCount = 0
+        var requestedFilePath: String? = null
+        var requestedLineRanges: List<Pair<Int, Int>>? = null
+
+        override fun resolveGitRootPath(project: Project, file: VirtualFile): String = "/fixture-repo"
+
+        override fun executeInBackground(action: () -> Unit) {
+            backgroundActions.add(action)
+        }
+
+        override fun invokeOnUiThread(action: () -> Unit) {
+            uiActions.add(action)
+        }
+
+        override fun tryBuildPermalink(
+            rootPath: String,
+            filePath: String,
+            lineRanges: List<Pair<Int, Int>>,
+        ): String? {
+            requestedFilePath = filePath
+            requestedLineRanges = lineRanges
+            return permalink
+        }
+
+        override fun showPermalinkFailure(project: Project) {
+            failureCount += 1
+        }
+
+        override fun showPermalinkSuccess(project: Project, permalink: String) {
+            successMessages.add(permalink)
+        }
+
+        fun runBackgroundAction() {
+            backgroundActions.removeAt(0).invoke()
+        }
+
+        fun runUiAction() {
+            uiActions.removeAt(0).invoke()
         }
     }
 }

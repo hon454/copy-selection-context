@@ -6,12 +6,14 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.ide.CopyPasteManager
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.ProjectLevelVcsManager
+import com.intellij.openapi.vfs.VirtualFile
 import java.awt.datatransfer.StringSelection
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicLong
 
-class CopyGitPermalinkAction : AnAction() {
+open class CopyGitPermalinkAction : AnAction() {
     private val requests = LatestPermalinkRequestTracker()
 
     override fun actionPerformed(e: AnActionEvent) {
@@ -21,29 +23,23 @@ class CopyGitPermalinkAction : AnAction() {
         val requestId = requests.begin()
 
         val lineRanges = resolveLineRanges(editor)
-        val vcsManager = ProjectLevelVcsManager.getInstance(project)
-        if (vcsManager.getVcsFor(file) == null) {
-            CopySelectionNotifier.notifyPermalinkFailure(project)
-            return
-        }
-        val rootPath = vcsManager.getVcsRootFor(file)?.path
+        val rootPath = resolveGitRootPath(project, file)
         if (rootPath == null) {
-            CopySelectionNotifier.notifyPermalinkFailure(project)
+            showPermalinkFailure(project)
             return
         }
         val filePath = file.path
-        val application = ApplicationManager.getApplication()
 
-        application.executeOnPooledThread {
+        executeInBackground {
             val permalink = tryBuildPermalink(rootPath, filePath, lineRanges)
-            application.invokeLater {
-                if (project.isDisposed) return@invokeLater
+            invokeOnUiThread {
+                if (project.isDisposed) return@invokeOnUiThread
                 requests.runIfCurrent(requestId) {
                     if (permalink == null) {
-                        CopySelectionNotifier.notifyPermalinkFailure(project)
+                        showPermalinkFailure(project)
                     } else {
                         CopyPasteManager.getInstance().setContents(StringSelection(permalink))
-                        CopySelectionNotifier.notify(project, permalink)
+                        showPermalinkSuccess(project, permalink)
                     }
                 }
             }
@@ -53,6 +49,28 @@ class CopyGitPermalinkAction : AnAction() {
     override fun update(e: AnActionEvent) {
         e.presentation.isEnabledAndVisible = e.getData(CommonDataKeys.PROJECT) != null &&
             e.getData(CommonDataKeys.EDITOR) != null
+    }
+
+    protected open fun resolveGitRootPath(project: Project, file: VirtualFile): String? {
+        val vcsManager = ProjectLevelVcsManager.getInstance(project)
+        if (vcsManager.getVcsFor(file) == null) return null
+        return vcsManager.getVcsRootFor(file)?.path
+    }
+
+    protected open fun executeInBackground(action: () -> Unit) {
+        ApplicationManager.getApplication().executeOnPooledThread(action)
+    }
+
+    protected open fun invokeOnUiThread(action: () -> Unit) {
+        ApplicationManager.getApplication().invokeLater(action)
+    }
+
+    protected open fun showPermalinkFailure(project: Project) {
+        CopySelectionNotifier.notifyPermalinkFailure(project)
+    }
+
+    protected open fun showPermalinkSuccess(project: Project, permalink: String) {
+        CopySelectionNotifier.notify(project, permalink)
     }
 
     internal fun resolveLineRanges(editor: Editor): List<Pair<Int, Int>> {
@@ -75,7 +93,7 @@ class CopyGitPermalinkAction : AnAction() {
         return CopySelectionUtils.joinCaretBlocks(blocks)
     }
 
-    private fun tryBuildPermalink(
+    protected open fun tryBuildPermalink(
         rootPath: String,
         filePath: String,
         lineRanges: List<Pair<Int, Int>>

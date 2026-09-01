@@ -94,6 +94,9 @@ tasks {
 
     test {
         useJUnitPlatform()
+        // IntelliJ's JUnit 3 fixtures and JUnit 5 TestApplication fixtures retain
+        // engine-scoped application state, so keep each test class in its own JVM.
+        forkEvery = 1
     }
 
     buildSearchableOptions {
