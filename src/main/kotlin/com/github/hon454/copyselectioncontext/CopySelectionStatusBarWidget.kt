@@ -15,21 +15,28 @@ class CopySelectionStatusBarWidget(project: Project) :
 
     companion object {
         const val ID = "CopySelectionStatusBarWidget"
+        private const val STATUS_PREFIX = "📋 "
     }
 
     private val lastCopied = AtomicReference("")
 
     override fun ID() = ID
     override fun getPresentation() = this
-    override fun getText() = lastCopied.get().let { if (it.isBlank()) "" else "📋 ${it.take(40)}" }
-    override fun getTooltipText() = lastCopied.get().ifBlank { CopySelectionBundle.message("widget.tooltip") }
+    override fun getText() = lastCopied.get().let { content ->
+        if (content.isBlank()) {
+            ""
+        } else {
+            STATUS_PREFIX + CopyPreview.status(content, CopyPreview.STATUS_MAX_LENGTH - STATUS_PREFIX.length)
+        }
+    }
+
+    override fun getTooltipText() = lastCopied.get().let { content ->
+        if (content.isBlank()) CopySelectionBundle.message("widget.tooltip") else CopyPreview.tooltip(content)
+    }
     override fun getAlignment() = 0f
 
     override fun getClickConsumer() = Consumer<MouseEvent> {
-        val content = lastCopied.get()
-        if (content.isNotBlank()) {
-            CopyPasteManager.getInstance().setContents(StringSelection(content))
-        }
+        copyLastValue()
     }
 
     override fun install(statusBar: StatusBar) {
@@ -39,5 +46,12 @@ class CopySelectionStatusBarWidget(project: Project) :
     fun update(content: String) {
         lastCopied.set(content)
         myStatusBar?.updateWidget(ID)
+    }
+
+    private fun copyLastValue() {
+        val content = lastCopied.get()
+        if (content.isNotBlank()) {
+            CopyPasteManager.getInstance().setContents(StringSelection(content))
+        }
     }
 }
