@@ -45,45 +45,68 @@ src/main/kotlin/com/github/hon454/copyselectioncontext/
 
 ## Release Process
 
-Releases are automated via GitHub Actions. Pushing a version tag triggers the workflow.
+Releases are automated by [`.github/workflows/release.yml`](.github/workflows/release.yml). Pushing a tag that starts with `v` triggers the workflow.
 
 ### Steps
 
-1. **Update the version** in `build.gradle.kts`:
+1. **Update the `[Unreleased]` section** in [`CHANGELOG.md`](CHANGELOG.md) with the user-visible changes in the release. Keep entries under the appropriate Keep a Changelog headings, such as `Added`, `Changed`, or `Fixed`.
+
+2. **Update the version** in `build.gradle.kts`:
    ```kotlin
    version = "1.2.0"
    ```
 
-2. **Commit the version bump**:
+3. **Patch the changelog** with the Gradle Changelog Plugin. The task moves the `[Unreleased]` entries into a versioned `1.2.0` section and creates a new `[Unreleased]` section:
    ```bash
-   git add build.gradle.kts
-   git commit -m "chore: bump version to 1.2.0"
+   # Unix / macOS
+   ./gradlew patchChangelog
+
+   # Windows
+   gradlew.bat patchChangelog
    ```
 
-3. **Create and push the tag**:
+4. **Preview the release notes** with the same changelog task options used by the release workflow:
+   ```bash
+   ./gradlew getChangelog \
+     --console=plain \
+     -q \
+     --no-header \
+     --no-links \
+     --no-summary
+   ```
+
+5. **Commit the version and changelog updates** using the repository's commit convention:
+   ```bash
+   git add build.gradle.kts CHANGELOG.md
+   git commit -m "chore(release): prepare 1.2.0" \
+     -m "Move the accumulated changelog entries into the 1.2.0 release and align the Gradle project version with the release tag."
+   ```
+
+6. **Create and push the tag** after the release commit is on `main`:
    ```bash
    git tag v1.2.0
    git push origin main v1.2.0
    ```
 
-4. The **Release workflow** (`release.yml`) runs automatically and:
+7. The **Release workflow** runs automatically and:
    - Verifies the tag version matches `build.gradle.kts`
+   - Generates release notes from the matching version section in `CHANGELOG.md`
    - Builds the plugin
-   - Creates a GitHub Release with commit-based release notes
+   - Creates a non-draft, non-prerelease GitHub Release named after the tag
    - Attaches the plugin ZIP to the release
-   - Publishes to JetBrains Marketplace (if signing secrets are configured)
+   - Publishes to JetBrains Marketplace only when `PUBLISH_TOKEN`, `CERTIFICATE_CHAIN`, and `PRIVATE_KEY` are all non-empty
 
 ### Version Rules
 
-- Tag format: `v<major>.<minor>.<patch>` (e.g., `v1.2.0`)
-- Tag version **must match** the `version` in `build.gradle.kts` — the workflow fails otherwise
+- The workflow is triggered by any pushed tag matching `v*`; release tags use `v<major>.<minor>.<patch>` (for example, `v1.2.0`)
+- The part after `v` **must match exactly** the `version` in `build.gradle.kts` — the workflow fails otherwise
 - Follow [Semantic Versioning](https://semver.org/): breaking → major, feature → minor, fix → patch
 
 ### Release Notes
 
-Release notes are generated automatically from the commit history between the previous tag and the current tag. Merge commits are excluded. Each entry links to the full commit on GitHub.
+[`CHANGELOG.md`](CHANGELOG.md) is the single source of truth for release notes. The workflow runs `getChangelog` for the project version without the section header, comparison links, or summary and writes the result to `release-notes.md`. If that output is empty, it uses `Release v<version>` as a fallback.
 
-Since commit messages become the public release notes, write them clearly following the [Commit Convention](#commit-convention) below.
+Keep `[Unreleased]` current as changes land, then run `patchChangelog` after setting the release version so the workflow can find the matching version section. Commit messages remain important for review and repository history, but they are not used to generate release notes.
 
 ### JetBrains Marketplace Publishing
 
@@ -94,7 +117,9 @@ Publishing activates automatically when the following GitHub repository secrets 
 | `PUBLISH_TOKEN` | JetBrains Marketplace API token |
 | `CERTIFICATE_CHAIN` | Plugin signing certificate (`chain.crt` contents) |
 | `PRIVATE_KEY` | Unencrypted private key (`private.pem` contents) |
-| `PRIVATE_KEY_PASSWORD` | Private key password |
+| `PRIVATE_KEY_PASSWORD` | Password for an encrypted private key; passed to Gradle when configured |
+
+The workflow checks `PUBLISH_TOKEN`, `CERTIFICATE_CHAIN`, and `PRIVATE_KEY` before running `publishPlugin`. If any of those three values is empty, the GitHub Release is still created but Marketplace publishing is skipped. `PRIVATE_KEY_PASSWORD` is available to the signing configuration but is not part of the workflow condition, so it may be empty when the private key is unencrypted.
 
 To generate signing certificates:
 
@@ -106,15 +131,20 @@ openssl req -key private.pem -new -x509 -days 365 -out chain.crt
 
 ## Commit Convention
 
-Follow [Conventional Commits](https://www.conventionalcommits.org/) format.
+Follow [Conventional Commits](https://www.conventionalcommits.org/) and the repository rules in [`AGENTS.md`](AGENTS.md#commit-convention).
 
 ```
-type[(scope)]: concise subject
+type[(scope)]: concise subject (imperative mood, lowercase, no period)
 
-Body explaining WHY this change was made.
+Body paragraph explaining WHY this change was made and WHAT it accomplishes.
+Include context that is not obvious from the diff alone.
 ```
 
 **Allowed types:** `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `perf`, `style`, `build`, `asset`
+
+- Keep the subject at 72 characters or fewer, use imperative mood, start the text after the colon in lowercase, and omit a trailing period
+- Include a body for every non-trivial commit, separated from the subject by a blank line
+- Do not add AI agent attribution, co-author trailers, or tool-credit footers
 
 ## Pull Requests
 
