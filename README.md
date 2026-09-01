@@ -77,7 +77,7 @@ The main action and explicit path/code actions use the output format selected in
 
 **Custom template (`template`)**:
 - Start from the Path and Range, Claude Reference, or With Code Block preset, or enter your own template
-- Available variables: `{path}`, `{line}`, `{range}`, `{code}`, `{lang}`, and `{filename}`
+- Available variables populated by standard copy actions: `{path}`, `{line}`, `{range}`, `{code}`, and `{lang}`
 - The settings screen previews the result and flags unknown variables
 
 **With code content** (Claude Code and Path:Line append a fenced block; custom templates place it with `{code}`):
@@ -94,7 +94,7 @@ The separate **Copy GitHub/GitLab Permalink** action builds a commit-specific UR
 
 ### History, Notifications, and Status
 
-- Standard path/code copy actions save entries in project-specific history. `Ctrl+Alt+H` opens the configured number of recent entries, and choosing one copies its full content again.
+- Standard path/code copy actions prepend entries to project-specific history. `Ctrl+Alt+H` opens the stored entries, and choosing one copies its full content again.
 - Copy notifications are enabled by default and can be disabled. They are shown after standard path/code copies and Git permalink copies.
 - A standard copy replaces the gutter marker in the active editor and updates the status-bar widget with the first 40 characters. Click the widget to copy the full last value again.
 - Optional local usage analytics count copies and output-format usage in the IDE's application settings. Analytics are disabled by default and do not send data off the machine.

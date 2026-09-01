@@ -2,6 +2,7 @@ package com.github.hon454.copyselectioncontext
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.Properties
 import kotlin.io.path.extension
 import kotlin.io.path.name
 import kotlin.io.path.readText
@@ -16,6 +17,7 @@ class DocumentationSyncTest {
         "README.md",
         "README.ko.md",
         "README.zh-CN.md",
+        "README.zh-TW.md",
         "README.ja.md",
     )
 
@@ -64,7 +66,48 @@ class DocumentationSyncTest {
     }
 
     @Test
-    fun `architecture docs match the current toolchain and source files`() {
+    fun `architecture docs derive toolchain values from build sources of truth`() {
+        val buildScript = repositoryRoot.resolve("build.gradle.kts").readText()
+        val wrapperProperties = repositoryRoot.resolve("gradle/wrapper/gradle-wrapper.properties").readText()
+        val gradleProperties = Properties().apply {
+            Files.newBufferedReader(repositoryRoot.resolve("gradle.properties")).use { load(it) }
+        }
+
+        val kotlinVersion = capture(buildScript, "id\\(\"org\\.jetbrains\\.kotlin\\.jvm\"\\)\\s+version\\s+\"([^\"]+)\"")
+        val intellijPluginVersion = capture(buildScript, "id\\(\"org\\.jetbrains\\.intellij\\.platform\"\\)\\s+version\\s+\"([^\"]+)\"")
+        val intellijPlatformVersion = capture(buildScript, "intellijIdeaCommunity\\(\"([^\"]+)\"\\)")
+        val jvmVersion = capture(buildScript, "jvmToolchain\\((\\d+)\\)")
+        val minimumBuild = capture(buildScript, "sinceBuild\\.set\\(\"([^\"]+)\"\\)")
+        val junitVersion = capture(buildScript, "junit-jupiter-api:([^\"]+)\"")
+        val mockkVersion = capture(buildScript, "io\\.mockk:mockk:([^\"]+)\"")
+        val gradleVersion = capture(wrapperProperties, "gradle-([0-9.]+)-bin\\.zip")
+        val useBundledKotlinStdlib = gradleProperties.getProperty("kotlin.stdlib.default.dependency")
+            ?: error("gradle.properties must declare kotlin.stdlib.default.dependency")
+
+        val knowledgeBase = repositoryRoot.resolve("AGENTS.md").readText()
+        assertTableValue(knowledgeBase, "Kotlin", kotlinVersion)
+        assertTableValue(knowledgeBase, "Gradle", gradleVersion)
+        assertTableValue(knowledgeBase, "IntelliJ Platform Plugin", intellijPluginVersion)
+        assertTableValue(knowledgeBase, "JVM Toolchain", jvmVersion)
+        assertTableValue(knowledgeBase, "Min IDE Version", intellijPlatformVersion)
+
+        val architecture = repositoryRoot.resolve(".agents/architecture.md").readText()
+        assertTableValue(architecture, "Kotlin", kotlinVersion)
+        assertTableValue(architecture, "Gradle wrapper", gradleVersion)
+        assertTableValue(architecture, "IntelliJ Platform Gradle Plugin", intellijPluginVersion)
+        assertTableValue(architecture, "IntelliJ IDEA Community test platform", intellijPlatformVersion)
+        assertTableValue(architecture, "JVM toolchain and target", jvmVersion)
+        assertTableValue(architecture, "Minimum IDE build", "$minimumBuild ($intellijPlatformVersion)")
+        assertTableValue(architecture, "JUnit Jupiter", junitVersion)
+        assertTableValue(architecture, "MockK", mockkVersion)
+        assertTrue(
+            architecture.contains("`kotlin.stdlib.default.dependency=$useBundledKotlinStdlib`"),
+            "architecture must document the Kotlin stdlib dependency setting from gradle.properties",
+        )
+    }
+
+    @Test
+    fun `architecture docs describe current source files and implemented widget`() {
         val architecturePaths = listOf("AGENTS.md", ".agents/architecture.md", ".agents/patterns.md")
         architecturePaths.forEach { path ->
             val content = repositoryRoot.resolve(path).readText()
@@ -72,10 +115,6 @@ class DocumentationSyncTest {
         }
 
         val architecture = repositoryRoot.resolve(".agents/architecture.md").readText()
-        listOf("2.4.10", "2.18.1", "9.7.1", "2024.3", "JUnit Jupiter", "MockK").forEach { version ->
-            assertTrue(architecture.contains(version), "architecture must document $version")
-        }
-
         val sourceDirectory = repositoryRoot.resolve("src/main/kotlin/com/github/hon454/copyselectioncontext")
         Files.list(sourceDirectory).use { files ->
             files.filter { it.extension == "kt" }
@@ -84,6 +123,20 @@ class DocumentationSyncTest {
                     assertTrue(architecture.contains("`$filename`"), "architecture must list $filename")
                 }
         }
+    }
+
+    private fun capture(content: String, pattern: String): String = Regex(pattern)
+        .find(content)
+        ?.groupValues
+        ?.get(1)
+        ?: error("Could not resolve build value with pattern: $pattern")
+
+    private fun assertTableValue(document: String, label: String, value: String) {
+        val expectedRow = "| $label | $value |"
+        assertTrue(
+            document.lineSequence().any { it.trim() == expectedRow },
+            "documentation must contain the SOT-derived row: $expectedRow",
+        )
     }
 
     private fun markdownStructure(content: String): List<String> = content.lineSequence()
