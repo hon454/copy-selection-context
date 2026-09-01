@@ -20,19 +20,17 @@ abstract class CopySelectionBaseAction : AnAction() {
         val path = getPath(project, file)
         val caretCount = editor.caretModel.caretCount
 
-        val result = if (caretCount > 1) {
-            val blocks = mutableListOf<String>()
-            editor.caretModel.runForEachCaret { caret ->
-                val (startLine, endLine) = CopySelectionUtils.resolveLineNumbers(editor, caret)
-                val lineRange = CopySelectionUtils.toLineRange(startLine, endLine)
-                val block = buildContentForCaret(path, lineRange, startLine, endLine, file, editor, caret, project)
-                blocks.add(block)
-            }
-            CopySelectionUtils.joinCaretBlocks(blocks)
+        val copyResult = if (caretCount > 1) {
+            buildMultiCaretContent(path, file, editor)
         } else {
-            val lineRange = CopySelectionUtils.resolveLineRange(editor)
-            buildContent(path, lineRange, file, editor, project)
+            val (startLine, endLine) = resolveLineNumbers(editor)
+            val lineRange = CopySelectionUtils.toLineRange(startLine, endLine)
+            CaretCopyResult(
+                content = buildContent(path, lineRange, file, editor, project),
+                lineRanges = listOf(Pair(startLine, endLine)),
+            )
         }
+        val result = copyResult.content
 
         copyToClipboard(result)
 
@@ -41,8 +39,7 @@ abstract class CopySelectionBaseAction : AnAction() {
             CopySelectionAnalytics.getInstance()?.recordCopy(appSettings.outputFormat)
         }
 
-        val (gutterStartLine, gutterEndLine) = resolveLineNumbers(editor)
-        CopySelectionHighlighter.update(editor, gutterStartLine, gutterEndLine)
+        CopySelectionHighlighter.update(editor, copyResult.lineRanges)
 
         val historyService = project.getService(CopyHistoryService::class.java)
         val maxSize = CopySelectionSettings.getInstance().state.copyHistorySize
@@ -66,17 +63,26 @@ abstract class CopySelectionBaseAction : AnAction() {
         return formatWithSettings(path, startLine, endLine, file)
     }
 
-    protected open fun buildContentForCaret(
+    internal open fun buildContentForCaret(
         path: String,
-        lineRange: String,
         startLine: Int,
         endLine: Int,
         file: VirtualFile,
         editor: Editor,
         caret: Caret,
-        project: Project? = null
     ): String {
-        return buildContent(path, lineRange, file, editor, project)
+        return formatWithSettings(path, startLine, endLine)
+    }
+
+    internal fun buildMultiCaretContent(path: String, file: VirtualFile, editor: Editor): CaretCopyResult {
+        val blocks = mutableListOf<String>()
+        val lineRanges = mutableListOf<Pair<Int, Int>>()
+        editor.caretModel.runForEachCaret { caret ->
+            val (startLine, endLine) = CopySelectionUtils.resolveLineNumbers(editor, caret)
+            lineRanges.add(Pair(startLine, endLine))
+            blocks.add(buildContentForCaret(path, startLine, endLine, file, editor, caret))
+        }
+        return CaretCopyResult(CopySelectionUtils.joinCaretBlocks(blocks), lineRanges)
     }
 
     protected fun resolveLineNumbers(editor: Editor): Pair<Int, Int> {
@@ -108,6 +114,10 @@ abstract class CopySelectionBaseAction : AnAction() {
         return CopySelectionUtils.getCodeContent(editor)
     }
 
+    protected fun getCodeContent(editor: Editor, caret: Caret): String {
+        return CopySelectionUtils.getCodeContent(editor, caret)
+    }
+
     protected fun detectLanguage(file: VirtualFile): String {
         return CopySelectionUtils.detectLanguage(file)
     }
@@ -121,3 +131,8 @@ abstract class CopySelectionBaseAction : AnAction() {
         CopyPasteManager.getInstance().setContents(StringSelection(content))
     }
 }
+
+internal data class CaretCopyResult(
+    val content: String,
+    val lineRanges: List<Pair<Int, Int>>,
+)

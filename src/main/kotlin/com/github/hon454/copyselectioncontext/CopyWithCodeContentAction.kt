@@ -1,5 +1,6 @@
 package com.github.hon454.copyselectioncontext
 
+import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -16,5 +17,19 @@ class CopyWithCodeContentAction : CopySelectionBaseAction() {
         code = applyCodeTrimming(code)
         val language = detectLanguage(file)
         return formatWithSettings(path, startLine, endLine, file, code, language)
+    }
+
+    internal override fun buildContentForCaret(
+        path: String,
+        startLine: Int,
+        endLine: Int,
+        file: VirtualFile,
+        editor: Editor,
+        caret: Caret,
+    ): String {
+        var code = getCodeContent(editor, caret)
+        code = applyCodeTrimming(code)
+        val language = detectLanguage(file)
+        return formatWithSettings(path, startLine, endLine, code, language)
     }
 }

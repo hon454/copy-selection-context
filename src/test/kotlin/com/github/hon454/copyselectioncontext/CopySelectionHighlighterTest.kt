@@ -32,16 +32,44 @@ class CopySelectionHighlighterTest {
     }
 
     @Test
-    fun `previous highlighter is replaced within the same editor`() {
-        val previousHighlighter = mockHighlighter()
-        val replacementHighlighter = mockHighlighter()
-        val editor = mockEditor(previousHighlighter, replacementHighlighter)
+    fun `multi-caret update adds a gutter marker for every copied range`() {
+        val firstHighlighter = mockHighlighter()
+        val secondHighlighter = mockHighlighter()
+        val editor = mockEditor(firstHighlighter, secondHighlighter)
 
-        CopySelectionHighlighter.update(editor.editor, 1, 1)
+        CopySelectionHighlighter.update(editor.editor, listOf(Pair(1, 1), Pair(3, 4)))
+
+        verify(exactly = 1) {
+            editor.markupModel.addRangeHighlighter(
+                0,
+                9,
+                HighlighterLayer.ADDITIONAL_SYNTAX,
+                null,
+                HighlighterTargetArea.LINES_IN_RANGE,
+            )
+            editor.markupModel.addRangeHighlighter(
+                20,
+                39,
+                HighlighterLayer.ADDITIONAL_SYNTAX,
+                null,
+                HighlighterTargetArea.LINES_IN_RANGE,
+            )
+        }
+    }
+
+    @Test
+    fun `previous multi-caret highlighters are replaced within the same editor`() {
+        val firstPreviousHighlighter = mockHighlighter()
+        val secondPreviousHighlighter = mockHighlighter()
+        val replacementHighlighter = mockHighlighter()
+        val editor = mockEditor(firstPreviousHighlighter, secondPreviousHighlighter, replacementHighlighter)
+
+        CopySelectionHighlighter.update(editor.editor, listOf(Pair(1, 1), Pair(3, 4)))
         CopySelectionHighlighter.update(editor.editor, 1, 1)
 
         verify(exactly = 1) {
-            editor.markupModel.removeHighlighter(previousHighlighter)
+            editor.markupModel.removeHighlighter(firstPreviousHighlighter)
+            editor.markupModel.removeHighlighter(secondPreviousHighlighter)
         }
     }
 
@@ -49,26 +77,26 @@ class CopySelectionHighlighterTest {
         val editor = mockk<Editor>()
         val document = mockk<Document>()
         val markupModel = mockk<MarkupModel>()
-        var storedHighlighter: RangeHighlighter? = null
+        var storedHighlighters: List<RangeHighlighter>? = null
 
         every { editor.document } returns document
         every { editor.markupModel } returns markupModel
-        every { document.getLineStartOffset(0) } returns 0
-        every { document.getLineEndOffset(0) } returns 10
+        every { document.getLineStartOffset(any()) } answers { firstArg<Int>() * 10 }
+        every { document.getLineEndOffset(any()) } answers { firstArg<Int>() * 10 + 9 }
         every { markupModel.addRangeHighlighter(
-            0,
-            10,
+            any(),
+            any(),
             HighlighterLayer.ADDITIONAL_SYNTAX,
             null,
             HighlighterTargetArea.LINES_IN_RANGE,
         ) } returnsMany highlighters.toList()
-        every { editor.getUserData(any<Key<RangeHighlighter>>()) } answers {
-            storedHighlighter
+        every { editor.getUserData(any<Key<List<RangeHighlighter>>>()) } answers {
+            storedHighlighters
         }
         every {
-            editor.putUserData(any<Key<RangeHighlighter>>(), any<RangeHighlighter>())
+            editor.putUserData(any<Key<List<RangeHighlighter>>>(), any<List<RangeHighlighter>>())
         } answers {
-            storedHighlighter = secondArg()
+            storedHighlighters = secondArg()
         }
         every { markupModel.removeHighlighter(any()) } just Runs
 
