@@ -42,10 +42,11 @@ cmd //c "gradlew.bat publishPlugin"  # Publish to Marketplace (requires PUBLISH_
 
 ### Release Process
 
-1. Bump `version` in `build.gradle.kts` to match the tag
-2. Commit, tag (`v<major>.<minor>.<patch>`), push
-3. `release.yml` auto-creates GitHub Release with commit-based release notes
-4. JetBrains Marketplace publish activates when signing secrets are configured
+1. Update the `[Unreleased]` entries in `CHANGELOG.md`
+2. Bump `version` in `build.gradle.kts`, then run `cmd //c "gradlew.bat patchChangelog"`
+3. Commit the version and changelog, tag (`v<major>.<minor>.<patch>`), and push
+4. `release.yml` generates GitHub Release notes from the matching `CHANGELOG.md` section with `getChangelog`
+5. JetBrains Marketplace publishing runs only when `PUBLISH_TOKEN`, `CERTIFICATE_CHAIN`, and `PRIVATE_KEY` are all non-empty
 
 **Version rule**: Tag version must match `build.gradle.kts` `version` — workflow fails on mismatch.
 
