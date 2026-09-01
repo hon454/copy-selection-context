@@ -133,4 +133,24 @@ class CopySelectionSettingsTest {
 
         assertEquals("pathline", settings.state.outputFormat)
     }
+
+    @Test
+    fun `loadState preserves supported output format keys`() {
+        OutputFormatOption.entries.forEach { option ->
+            val settings = CopySelectionSettings()
+
+            settings.loadState(CopySelectionSettings.State(outputFormat = option.key))
+
+            assertEquals(option.key, settings.state.outputFormat)
+        }
+    }
+
+    @Test
+    fun `loadState replaces unknown persisted output format with default key`() {
+        val settings = CopySelectionSettings()
+
+        settings.loadState(CopySelectionSettings.State(outputFormat = "legacy-format"))
+
+        assertEquals("claude", settings.state.outputFormat)
+    }
 }

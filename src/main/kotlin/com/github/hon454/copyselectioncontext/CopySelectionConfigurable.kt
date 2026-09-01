@@ -13,7 +13,7 @@ import javax.swing.event.DocumentListener
 class CopySelectionConfigurable : Configurable {
     private val settings = CopySelectionSettings.getInstance()
     private var dialogPanel: DialogPanel? = null
-    private var outputFormatCombo: JComboBox<String>? = null
+    private var outputFormatCombo: JComboBox<OutputFormatOption>? = null
     private var presetCombo: JComboBox<String>? = null
     private var templateTextField: JTextField? = null
     private var previewLabel: JLabel? = null
@@ -32,10 +32,10 @@ class CopySelectionConfigurable : Configurable {
             }
             group(CopySelectionBundle.message("settings.group.output")) {
                 row(CopySelectionBundle.message("settings.format.output.label")) {
-                    comboBox(listOf("claude", "pathline", "template"))
+                    comboBox(OutputFormatOption.entries)
                         .bindItem(
-                            { state.outputFormat },
-                            { state.outputFormat = it ?: "claude" }
+                            { OutputFormatOption.fromKey(state.outputFormat) },
+                            { state.outputFormat = (it ?: OutputFormatOption.default).key }
                         )
                         .comment(CopySelectionBundle.message("settings.format.output.comment"))
                         .also { cell -> outputFormatCombo = cell.component }
@@ -147,7 +147,7 @@ class CopySelectionConfigurable : Configurable {
     }
 
     private fun updateTemplateControls() {
-        val isTemplate = (outputFormatCombo?.selectedItem as? String) == "template"
+        val isTemplate = outputFormatCombo?.selectedItem == OutputFormatOption.TEMPLATE
         presetCombo?.isEnabled = isTemplate
         templateTextField?.isEnabled = isTemplate
         previewLabel?.isEnabled = isTemplate
