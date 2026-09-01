@@ -15,6 +15,6 @@ class CopyWithCodeContentAction : CopySelectionBaseAction() {
         var code = getCodeContent(editor)
         code = applyCodeTrimming(code)
         val language = detectLanguage(file)
-        return formatWithSettings(path, startLine, endLine, code, language)
+        return formatWithSettings(path, startLine, endLine, file, code, language)
     }
 }
