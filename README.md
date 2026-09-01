@@ -21,6 +21,9 @@ Tired of manually typing file paths and line numbers when sharing code context w
 - **Copy history** — `Ctrl+Alt+H` to browse recent copy history
 - **GitHub/GitLab permalink** — Copy a Git permalink for the selected lines
 - **Copy feedback** — Mark the copied lines, show an optional notification, and retain the last copy in the status bar
+- **Multi-caret context** — Format every caret independently and separate its path/code block with a blank line
+- **Accurate selection ends** — Treat IntelliJ's `selectionEnd - 1` as the final included offset, avoiding an extra trailing line
+- **Localized settings** — Use localized output-format labels and matching English/Korean resource keys
 - **Smart line handling** — Copies current line number when no text is selected
 - **Context menu** — Access all actions from the editor right-click menu
 - **Cross-platform** — Works on Windows, macOS, and Linux
@@ -67,6 +70,8 @@ Right-click in the editor → **Copy Selection Context** submenu:
 
 The main action and explicit path/code actions use the output format selected in settings. Paths are normalized to forward slashes.
 
+Every caret produces its own 1-based inclusive range and optional code block, with blocks separated by a blank line. Since IntelliJ selection ends are exclusive, `selectionEnd - 1` determines the final included line; a selection ending at the next line's start does not include that line.
+
 **Claude Code (`claude`, default)**:
 - Single line: ` @src/main/kotlin/App.kt#L42 `
 - Multiple lines: ` @src/main/kotlin/App.kt#L250-253 `
@@ -77,7 +82,7 @@ The main action and explicit path/code actions use the output format selected in
 
 **Custom template (`template`)**:
 - Start from the Path and Range, Claude Reference, or With Code Block preset, or enter your own template
-- Available variables populated by standard copy actions: `{path}`, `{line}`, `{range}`, `{code}`, and `{lang}`
+- Available variables populated by standard copy actions: `{path}`, `{line}`, `{range}`, `{code}`, `{lang}`, and `{filename}`
 - The settings screen previews the result and flags unknown variables
 
 **With code content** (Claude Code and Path:Line append a fenced block; custom templates place it with `{code}`):
@@ -90,13 +95,13 @@ fun calculateTotal(items: List<Item>): Double {
 ```
 ````
 
-The separate **Copy GitHub/GitLab Permalink** action builds a commit-specific URL for the selected lines. If the repository remote or commit cannot be resolved, it falls back to an `@relative/path#L...` reference.
+The separate **Copy GitHub/GitLab Permalink** action reads normal-repository or linked-worktree metadata on a background thread and builds a commit-specific URL for each caret. Only the latest request can update the clipboard. If the repository remote or commit cannot be resolved, it reports an error and leaves the clipboard unchanged.
 
 ### History, Notifications, and Status
 
 - Standard path/code copy actions prepend entries to project-specific history. `Ctrl+Alt+H` opens the stored entries, and choosing one copies its full content again.
 - Copy notifications are enabled by default and can be disabled. They are shown after standard path/code copies and Git permalink copies.
-- A standard copy replaces the gutter marker in the active editor and updates the status-bar widget with the first 40 characters. Click the widget to copy the full last value again.
+- A standard copy replaces the gutter markers in the active editor and updates the status-bar widget with a single-line, Unicode-safe, markup-escaped preview capped at 40 characters including its prefix. Click the widget to copy the full last value again.
 - Optional local usage analytics count copies and output-format usage in the IDE's application settings. Analytics are disabled by default and do not send data off the machine.
 
 ### Settings
@@ -105,7 +110,7 @@ The separate **Copy GitHub/GitLab Permalink** action builds a commit-specific UR
 
 - **Path type** — Absolute (default) or Relative
 - **Output format** — Claude Code (default), Path:Line, or Custom Template
-- **Custom format template** — Choose a preset or edit a template with live preview and variable validation
+- **Custom format template** — Choose a preset or edit a six-row multiline template with a focusable six-row live preview, accessible labels, and variable validation
 - **Include code content** — Include selected code, or the current line when nothing is selected (off by default)
 - **Trim code whitespace** — Remove leading and trailing whitespace from included code (off by default)
 - **Show copy notifications** — Show a balloon after supported copy actions (on by default)
@@ -144,6 +149,8 @@ gradlew.bat test
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development and release guides.
+
+The test suite includes `CopySelectionActionFixtureTest` for real IntelliJ editor/action/clipboard and async permalink flows. CI runs the full tests, project and structure checks, `verifyPlugin` compatibility verification, plugin packaging, ZIP checks, and uploads diagnostics before publishing artifacts.
 
 ## Support
 

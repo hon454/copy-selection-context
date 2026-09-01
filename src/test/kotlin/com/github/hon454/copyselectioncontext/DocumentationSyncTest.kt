@@ -3,6 +3,7 @@ package com.github.hon454.copyselectioncontext
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
+import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.io.path.extension
 import kotlin.io.path.name
 import kotlin.io.path.readText
@@ -45,6 +46,7 @@ class DocumentationSyncTest {
             "`{code}`",
             "`{lang}`",
             "`{filename}`",
+            "`selectionEnd - 1`",
             "**Path type**",
             "**Output format**",
             "**Custom format template**",
@@ -55,6 +57,9 @@ class DocumentationSyncTest {
             "**Local usage analytics**",
             "Ctrl+Alt+H",
             "40",
+            "copySelectionHistory.xml",
+            "CopySelectionActionFixtureTest",
+            "`verifyPlugin`",
         )
 
         readmePaths.forEach { path ->
@@ -115,6 +120,22 @@ class DocumentationSyncTest {
         }
 
         val architecture = repositoryRoot.resolve(".agents/architecture.md").readText()
+        listOf(
+            "selectionEnd - 1",
+            "multiple carets",
+            "{filename}",
+            "pooled thread",
+            "linked worktrees",
+            "local, non-roaming workspace",
+            "CopyPreview",
+            "CopySelectionBundle",
+            "six-row multiline template editor",
+            "CopySelectionActionFixtureTest",
+            "three-IDE Plugin Verifier",
+        ).forEach { contract ->
+            assertTrue(architecture.contains(contract), "architecture must document $contract")
+        }
+
         val sourceDirectory = repositoryRoot.resolve("src/main/kotlin/com/github/hon454/copyselectioncontext")
         Files.list(sourceDirectory).use { files ->
             files.filter { it.extension == "kt" }
@@ -123,6 +144,59 @@ class DocumentationSyncTest {
                     assertTrue(architecture.contains("`$filename`"), "architecture must list $filename")
                 }
         }
+    }
+
+    @Test
+    fun `action inheritance guide matches registered action source`() {
+        val registeredActions = registeredActionClassNames()
+        val directParents = registeredActions.associateWith(::directParentOf)
+
+        assertEquals("AnAction", directParentOf("CopySelectionBaseAction"))
+
+        val sharedPipelineActions = directParents
+            .filterValues { it == "CopySelectionBaseAction" }
+            .keys
+        val directActions = directParents
+            .filterValues { it == "AnAction" }
+            .keys
+        assertEquals(registeredActions, sharedPipelineActions + directActions)
+
+        val patterns = repositoryRoot.resolve(".agents/patterns.md").readText()
+        val sharedPipelineSection = patterns.substringAfter("### Shared copy-pipeline actions")
+            .substringBefore("### Specialized direct actions")
+        val directActionSection = patterns.substringAfter("### Specialized direct actions")
+            .substringBefore("## Clipboard")
+
+        val documentedSharedActions = registeredActions.filter { sharedPipelineSection.contains("`$it`") }.toSet()
+        val documentedDirectActions = registeredActions.filter { directActionSection.contains("`$it`") }.toSet()
+        assertEquals(sharedPipelineActions, documentedSharedActions)
+        assertEquals(directActions, documentedDirectActions)
+    }
+
+    private fun registeredActionClassNames(): Set<String> {
+        val factory = DocumentBuilderFactory.newInstance().apply {
+            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+        }
+        val document = factory.newDocumentBuilder()
+            .parse(repositoryRoot.resolve("src/main/resources/META-INF/plugin.xml").toFile())
+        val actions = document.getElementsByTagName("action")
+
+        return buildSet {
+            for (index in 0 until actions.length) {
+                val qualifiedName = actions.item(index).attributes.getNamedItem("class").nodeValue
+                add(qualifiedName.substringAfterLast('.'))
+            }
+        }
+    }
+
+    private fun directParentOf(className: String): String {
+        val source = repositoryRoot
+            .resolve("src/main/kotlin/com/github/hon454/copyselectioncontext/$className.kt")
+            .readText()
+        val declaration = Regex("(?:abstract\\s+)?class\\s+${Regex.escape(className)}\\s*:\\s*([A-Za-z0-9_.]+)")
+            .find(source)
+            ?: error("Could not resolve direct parent for $className")
+        return declaration.groupValues[1].substringAfterLast('.')
     }
 
     private fun capture(content: String, pattern: String): String = Regex(pattern)

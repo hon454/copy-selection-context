@@ -21,6 +21,9 @@
 - **複製歷史記錄** — 按下 `Ctrl+Alt+H` 瀏覽最近的複製歷史記錄
 - **GitHub/GitLab 永久連結** — 複製所選行對應的 Git 永久連結
 - **複製回饋** — 標示已複製的行、顯示可選通知，並在狀態列保留最近一次複製內容
+- **多 caret 上下文** — 分別格式化每個 caret，並以空行分隔其路徑/程式碼區塊
+- **準確的選取結束位置** — 使用 IntelliJ 的 `selectionEnd - 1` 作為最後納入的 offset，避免多算尾隨行
+- **本地化設定** — 使用本地化輸出格式標籤，並保持英文/韓文資源鍵一致
 - **智慧行號處理** — 未選取文字時複製游標所在行的行號
 - **內容選單** — 可從編輯器右鍵選單存取所有操作
 - **跨平台** — 支援 Windows、macOS 和 Linux
@@ -67,6 +70,8 @@
 
 主要操作與個別路徑/程式碼操作會使用設定中選擇的輸出格式。路徑統一使用正斜線。
 
+每個 caret 都會產生自己的從 1 開始的包含範圍與可選程式碼區塊，各區塊之間以空行分隔。IntelliJ 的選取結束位置是 exclusive，因此由 `selectionEnd - 1` 決定最後納入的行；在下一行起點結束的選取不會包含該行。
+
 **Claude Code (`claude`，預設)**：
 - 單行：` @src/main/kotlin/App.kt#L42 `
 - 多行：` @src/main/kotlin/App.kt#L250-253 `
@@ -90,13 +95,13 @@ fun calculateTotal(items: List<Item>): Double {
 ```
 ````
 
-個別的 **Copy GitHub/GitLab Permalink** 操作會為所選行產生固定到提交的 URL。若無法解析儲存庫遠端位址或提交，操作會顯示錯誤並保持剪貼簿不變。
+個別的 **Copy GitHub/GitLab Permalink** 操作會在背景執行緒讀取一般儲存庫或 linked worktree 中繼資料，並為每個 caret 產生固定到提交的 URL。只有最新請求可以更新剪貼簿。若無法解析遠端位址或提交，操作會顯示錯誤並保持剪貼簿不變。
 
 ### 歷史記錄、通知與狀態
 
 - 標準路徑/程式碼複製操作會將項目加入專案專屬歷史記錄。按下 `Ctrl+Alt+H` 可開啟已儲存項目，選取後會再次複製完整內容。
 - 複製通知預設啟用，也可以關閉。標準路徑/程式碼複製與 Git 永久連結成功後會顯示通知。
-- 標準複製會替換作用中編輯器的邊欄標記，並在狀態列小工具顯示安全、單行且有長度限制的前 40 個字元。按一下小工具可再次複製最後一次的完整內容。
+- 標準複製會替換作用中編輯器的邊欄標記，並在狀態列小工具顯示含前綴最多 40 個字元的單行、Unicode-safe、markup-escaped 預覽。按一下小工具可再次複製最後一次的完整內容。
 - 可選的本機使用分析會在 IDE 應用程式設定中記錄複製次數與輸出格式使用量。預設關閉，且不會將資料傳送到裝置之外。
 
 ### 設定
@@ -105,7 +110,7 @@ fun calculateTotal(items: List<Item>): Double {
 
 - **Path type** — Absolute（預設）或 Relative
 - **Output format** — Claude Code（預設）、Path:Line 或 Custom Template
-- **Custom format template** — 選擇預設，或使用即時預覽與變數驗證編輯多行範本
+- **Custom format template** — 選擇預設，或使用具無障礙標籤與變數驗證的六行多行編輯器，以及可聚焦的六行即時預覽
 - **Include code content** — 包含所選程式碼；未選取時包含目前行（預設關閉）
 - **Trim code whitespace** — 移除所含程式碼首尾的空白（預設關閉）
 - **Show copy notifications** — 在支援的複製操作後顯示氣泡通知（預設開啟）
@@ -144,6 +149,8 @@ gradlew.bat test
 ```
 
 有關開發和發佈的詳細指南，請參閱 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+測試套件包含 `CopySelectionActionFixtureTest`，用於驗證真實 IntelliJ 編輯器/操作/剪貼簿與非同步永久連結流程。CI 會在發佈構件前執行完整測試、專案與結構檢查、`verifyPlugin` 相容性驗證、外掛程式打包、ZIP 檢查並上傳診斷資訊。
 
 ## 支援
 

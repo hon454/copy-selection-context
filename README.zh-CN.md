@@ -21,6 +21,9 @@
 - **复制历史** — 按下 `Ctrl+Alt+H` 浏览最近的复制历史
 - **GitHub/GitLab 永久链接** — 复制所选行对应的 Git 永久链接
 - **复制反馈** — 标记已复制的行、显示可选通知，并在状态栏保留最后一次复制内容
+- **多 caret 上下文** — 分别格式化每个 caret，并以空行分隔其路径/代码块
+- **准确的选择结束位置** — 使用 IntelliJ 的 `selectionEnd - 1` 作为最后包含的 offset，避免多算尾随行
+- **本地化设置** — 使用本地化输出格式标签，并保持英语/韩语资源键一致
 - **智能行号处理** — 未选择文本时复制光标所在行的行号
 - **上下文菜单** — 可从编辑器右键菜单访问所有操作
 - **跨平台** — 支持 Windows、macOS 和 Linux
@@ -67,6 +70,8 @@
 
 主要操作和单独的路径/代码操作使用设置中选择的输出格式。路径统一使用正斜杠。
 
+每个 caret 都会生成自己的从 1 开始的包含范围和可选代码块，各块之间以空行分隔。IntelliJ 的选择结束位置是 exclusive，因此由 `selectionEnd - 1` 决定最后包含的行；在下一行起点结束的选择不会包含该行。
+
 **Claude Code (`claude`，默认)**：
 - 单行：` @src/main/kotlin/App.kt#L42 `
 - 多行：` @src/main/kotlin/App.kt#L250-253 `
@@ -77,7 +82,7 @@
 
 **自定义模板 (`template`)**：
 - 可从 Path and Range、Claude Reference 或 With Code Block 预设开始，也可以自行输入模板
-- 标准复制操作会填充的变量：`{path}`、`{line}`、`{range}`、`{code}` 和 `{lang}`
+- 标准复制操作会填充的变量：`{path}`、`{line}`、`{range}`、`{code}`、`{lang}` 和 `{filename}`
 - 设置界面会预览结果并提示未知变量
 
 **包含代码内容**（Claude Code 和 Path:Line 会附加代码块；自定义模板通过 `{code}` 放置内容）：
@@ -90,13 +95,13 @@ fun calculateTotal(items: List<Item>): Double {
 ```
 ````
 
-单独的 **Copy GitHub/GitLab Permalink** 操作会为所选行生成固定到提交的 URL。如果无法解析仓库远程地址或提交，则回退为 `@relative/path#L...` 引用。
+单独的 **Copy GitHub/GitLab Permalink** 操作会在后台线程读取普通仓库或 linked worktree 元数据，并为每个 caret 生成固定到提交的 URL。只有最新请求可以更新剪贴板。如果无法解析远程地址或提交，它会报告错误并保持剪贴板不变。
 
 ### 历史、通知与状态
 
 - 标准路径/代码复制操作会将条目添加到项目专属历史的开头。按下 `Ctrl+Alt+H` 可打开已存储的条目，选择条目会再次复制其完整内容。
 - 复制通知默认启用，也可以关闭。标准路径/代码复制和 Git 永久链接复制后会显示通知。
-- 标准复制会替换活动编辑器中的边栏标记，并在状态栏小组件中显示前 40 个字符。单击小组件可再次复制最后一次的完整内容。
+- 标准复制会替换活动编辑器中的边栏标记，并在状态栏小组件中显示包含前缀在内最多 40 个字符的单行、Unicode-safe、markup-escaped 预览。单击小组件可再次复制最后一次的完整内容。
 - 可选的本地使用分析会在 IDE 应用设置中记录复制次数和输出格式使用量。默认关闭，且不会将数据发送到设备之外。
 
 ### 设置
@@ -105,7 +110,7 @@ fun calculateTotal(items: List<Item>): Double {
 
 - **Path type** — Absolute（默认）或 Relative
 - **Output format** — Claude Code（默认）、Path:Line 或 Custom Template
-- **Custom format template** — 选择预设，或使用实时预览和变量验证编辑模板
+- **Custom format template** — 选择预设，或使用带无障碍标签与变量验证的六行多行编辑器，以及可聚焦的六行实时预览
 - **Include code content** — 包含所选代码；未选择时包含当前行（默认关闭）
 - **Trim code whitespace** — 删除所含代码首尾的空白（默认关闭）
 - **Show copy notifications** — 在支持的复制操作后显示气泡通知（默认开启）
@@ -144,6 +149,8 @@ gradlew.bat test
 ```
 
 有关开发和发布的详细指南，请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+测试套件包含 `CopySelectionActionFixtureTest`，用于验证真实 IntelliJ 编辑器/操作/剪贴板和异步永久链接流程。CI 会在发布构件前运行完整测试、项目与结构检查、`verifyPlugin` 兼容性验证、插件打包、ZIP 检查并上传诊断信息。
 
 ## 支持
 
