@@ -80,16 +80,7 @@ abstract class CopySelectionBaseAction : AnAction() {
     }
 
     protected fun resolveLineNumbers(editor: Editor): Pair<Int, Int> {
-        val selectionModel = editor.selectionModel
-        val document = editor.document
-        return if (selectionModel.hasSelection()) {
-            val startLine = document.getLineNumber(selectionModel.selectionStart) + 1
-            val endLine = document.getLineNumber(selectionModel.selectionEnd) + 1
-            Pair(startLine, endLine)
-        } else {
-            val currentLine = editor.caretModel.logicalPosition.line + 1
-            Pair(currentLine, currentLine)
-        }
+        return CopySelectionUtils.resolveLineNumbers(editor)
     }
 
     protected fun formatWithSettings(path: String, startLine: Int, endLine: Int, code: String? = null, language: String = ""): String {
