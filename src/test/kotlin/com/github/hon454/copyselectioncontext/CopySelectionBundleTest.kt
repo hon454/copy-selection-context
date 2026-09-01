@@ -12,6 +12,12 @@ class CopySelectionBundleTest {
     }
 
     @Test
+    fun `permalink failure key resolves`() {
+        val msg = CopySelectionBundle.message("notification.permalink.failed")
+        assertTrue(msg.isNotBlank())
+    }
+
+    @Test
     fun `history popup title key resolves`() {
         val msg = CopySelectionBundle.message("history.popup.title")
         assertTrue(msg.isNotBlank())

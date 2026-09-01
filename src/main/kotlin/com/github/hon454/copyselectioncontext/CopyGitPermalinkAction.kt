@@ -3,12 +3,11 @@ package com.github.hon454.copyselectioncontext
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ide.CopyPasteManager
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.ProjectLevelVcsManager
-import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.openapi.vfs.VirtualFile
 import java.awt.datatransfer.StringSelection
+import java.nio.file.Path
 
 class CopyGitPermalinkAction : AnAction() {
 
@@ -18,11 +17,31 @@ class CopyGitPermalinkAction : AnAction() {
         val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
 
         val (startLine, endLine) = CopySelectionUtils.resolveLineNumbers(editor)
-        val permalink = tryBuildPermalink(project, file, startLine, endLine)
-            ?: fallbackPath(project, file, startLine, endLine)
+        val vcsManager = ProjectLevelVcsManager.getInstance(project)
+        if (vcsManager.getVcsFor(file) == null) {
+            CopySelectionNotifier.notifyPermalinkFailure(project)
+            return
+        }
+        val rootPath = vcsManager.getVcsRootFor(file)?.path
+        if (rootPath == null) {
+            CopySelectionNotifier.notifyPermalinkFailure(project)
+            return
+        }
+        val filePath = file.path
+        val application = ApplicationManager.getApplication()
 
-        CopyPasteManager.getInstance().setContents(StringSelection(permalink))
-        CopySelectionNotifier.notify(project, permalink)
+        application.executeOnPooledThread {
+            val permalink = tryBuildPermalink(rootPath, filePath, startLine, endLine)
+            application.invokeLater {
+                if (project.isDisposed) return@invokeLater
+                if (permalink == null) {
+                    CopySelectionNotifier.notifyPermalinkFailure(project)
+                } else {
+                    CopyPasteManager.getInstance().setContents(StringSelection(permalink))
+                    CopySelectionNotifier.notify(project, permalink)
+                }
+            }
+        }
     }
 
     override fun update(e: AnActionEvent) {
@@ -31,92 +50,26 @@ class CopyGitPermalinkAction : AnAction() {
     }
 
     private fun tryBuildPermalink(
-        project: Project,
-        file: VirtualFile,
+        rootPath: String,
+        filePath: String,
         startLine: Int,
         endLine: Int
     ): String? {
         return try {
-            val vcsManager = ProjectLevelVcsManager.getInstance(project)
-            vcsManager.getVcsFor(file) ?: return null
-            val root = vcsManager.getVcsRootFor(file) ?: return null
-            val relativePath = file.path
-                .removePrefix(root.path)
-                .trimStart('/', '\\')
-                .replace('\\', '/')
-
-            val gitDir = resolveGitDir(root) ?: return null
-            val configFile = gitDir.findFileByRelativePath("config") ?: return null
-            val remoteUrl = extractRemoteUrl(String(configFile.contentsToByteArray())) ?: return null
-
-            val sha = resolveHeadSha(gitDir) ?: return null
-            GitPermalinkGenerator.buildPermalinkFromRemote(remoteUrl, sha, relativePath, startLine, endLine)
+            val root = Path.of(rootPath).toAbsolutePath().normalize()
+            val file = Path.of(filePath).toAbsolutePath().normalize()
+            if (!file.startsWith(root)) return null
+            val relativePath = root.relativize(file).toString().replace('\\', '/')
+            val metadata = GitRepositoryMetadataResolver.resolve(root) ?: return null
+            GitPermalinkGenerator.buildPermalinkFromRemote(
+                metadata.remoteUrl,
+                metadata.commitSha,
+                relativePath,
+                startLine,
+                endLine
+            )
         } catch (_: Exception) {
             null
         }
-    }
-
-    private fun resolveGitDir(root: VirtualFile): VirtualFile? {
-        val dotGit = root.findChild(".git") ?: return null
-        if (dotGit.isDirectory) {
-            return dotGit
-        }
-
-        val marker = String(dotGit.contentsToByteArray())
-            .lineSequence()
-            .firstOrNull { it.trim().startsWith("gitdir:") }
-            ?.substringAfter("gitdir:")
-            ?.trim()
-            ?: return null
-
-        val resolvedPath = if (marker.startsWith("/") || Regex("""^[A-Za-z]:[/\\].*""").matches(marker)) {
-            marker
-        } else {
-            "${root.path}/$marker"
-        }
-        return LocalFileSystem.getInstance().refreshAndFindFileByPath(resolvedPath.replace('\\', '/'))
-    }
-
-    private fun resolveHeadSha(gitDir: VirtualFile): String? {
-        val headFile = gitDir.findFileByRelativePath("HEAD") ?: return null
-        val headContent = String(headFile.contentsToByteArray()).trim()
-        if (!headContent.startsWith("ref: ")) {
-            return headContent
-        }
-
-        val refPath = headContent.removePrefix("ref: ").trim()
-        val refFile = gitDir.findFileByRelativePath(refPath) ?: return null
-        return String(refFile.contentsToByteArray()).trim()
-    }
-
-    private fun extractRemoteUrl(gitConfig: String): String? {
-        val lines = gitConfig.lines()
-        var inRemoteOrigin = false
-        for (line in lines) {
-            val trimmed = line.trim()
-            if (trimmed == "[remote \"origin\"]") {
-                inRemoteOrigin = true
-                continue
-            }
-            if (inRemoteOrigin && trimmed.startsWith("[")) {
-                inRemoteOrigin = false
-            }
-            if (inRemoteOrigin && trimmed.startsWith("url =")) {
-                return trimmed.removePrefix("url =").trim()
-            }
-        }
-        return null
-    }
-
-    private fun fallbackPath(
-        project: Project,
-        file: VirtualFile,
-        startLine: Int,
-        endLine: Int
-    ): String {
-        val basePath = project.basePath ?: ""
-        val relativePath = file.path.removePrefix(basePath).trimStart('/', '\\').replace('\\', '/')
-        val lineFragment = if (startLine == endLine) "L$startLine" else "L$startLine-L$endLine"
-        return "@$relativePath#$lineFragment"
     }
 }

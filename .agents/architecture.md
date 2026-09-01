@@ -39,6 +39,12 @@ fun example() {
 
 - **CopyWithCodeContentAction.kt** (~104 lines): Path + line + markdown code block. Overrides `actionPerformed()` for custom format. Uses settings for path type. Includes `detectLanguage()` and `getCodeContent()`. Context menu only.
 
+- **CopyGitPermalinkAction.kt**: Captures editor and VCS context, resolves Git metadata on a pooled thread, then copies a GitHub/GitLab permalink on the UI thread. Reports an error without changing the clipboard when resolution fails.
+
+- **GitRepositoryMetadataResolver.kt**: NIO-based resolver for standard repositories and linked worktrees. Reads the common Git config, detached or symbolic HEAD, loose refs, packed refs, and the branch-tracking remote with deterministic fallbacks.
+
+- **GitPermalinkGenerator.kt**: Normalizes supported GitHub/GitLab HTTPS and SSH remote forms and percent-encodes repository-relative file paths.
+
 - **CopySelectionNotifier.kt** (~17 lines): Singleton. `NotificationGroupManager` BALLOON notifications with checkmark prefix. Group ID: `"CopySelectionContext"` (must match plugin.xml).
 
 - **CopySelectionStatusBarWidget.kt** (~9 lines): Stub (console only). Full impl needs `StatusBarWidget` + `TextPresentation` + `getAlignment(): Float` + Factory class.

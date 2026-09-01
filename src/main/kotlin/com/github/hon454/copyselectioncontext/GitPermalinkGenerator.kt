@@ -1,27 +1,31 @@
 package com.github.hon454.copyselectioncontext
 
+import java.net.URI
+
 object GitPermalinkGenerator {
 
     fun parseRemoteUrl(remoteUrl: String): Pair<String, String>? {
         val normalizedRemoteUrl = remoteUrl.trim()
 
-        val sshPattern = Regex("""git@(github\.com|gitlab\.com):([^/]+)/(.+?)(?:\.git)?$""")
+        val sshPattern = Regex("""git@(github\.com|gitlab\.com):(.+)$""", RegexOption.IGNORE_CASE)
         sshPattern.matchEntire(normalizedRemoteUrl)?.let { match ->
-            val host = match.groupValues[1]
-            val owner = match.groupValues[2]
-            val repo = match.groupValues[3]
-            return Pair("https://$host/$owner/$repo", host)
+            return canonicalRepository(match.groupValues[1], match.groupValues[2])
         }
 
-        val httpsPattern = Regex("""https?://(github\.com|gitlab\.com)/([^/]+)/(.+?)(?:\.git)?$""")
-        httpsPattern.matchEntire(normalizedRemoteUrl)?.let { match ->
-            val host = match.groupValues[1]
-            val owner = match.groupValues[2]
-            val repo = match.groupValues[3]
-            return Pair("https://$host/$owner/$repo", host)
+        val uri = runCatching { URI(normalizedRemoteUrl) }.getOrNull() ?: return null
+        val scheme = uri.scheme?.lowercase()
+        if (scheme !in setOf("http", "https", "ssh", "git", "git+ssh")) return null
+        val remoteHost = uri.host?.lowercase() ?: return null
+        if (scheme == "ssh" || scheme == "git+ssh") {
+            if (uri.userInfo != "git") return null
+        }
+        val host = when {
+            remoteHost == "github.com" || remoteHost == "gitlab.com" -> remoteHost
+            remoteHost == "ssh.github.com" && scheme == "ssh" && uri.port == 443 -> "github.com"
+            else -> return null
         }
 
-        return null
+        return canonicalRepository(host, uri.path)
     }
 
     fun buildPermalink(
@@ -38,7 +42,7 @@ object GitPermalinkGenerator {
             normalizedHost == "github.com" || normalizedHost == "gitlab.com" -> "L$startLine-L$endLine"
             else -> "L$startLine-L$endLine"
         }
-        return "$repoUrl/blob/$sha/$filePath#$lineFragment"
+        return "$repoUrl/blob/$sha/${encodeFilePath(filePath)}#$lineFragment"
     }
 
     fun buildPermalinkFromRemote(
@@ -51,4 +55,40 @@ object GitPermalinkGenerator {
         val (repoUrl, host) = parseRemoteUrl(remoteUrl) ?: return null
         return buildPermalink(repoUrl, host, sha, filePath, startLine, endLine)
     }
+
+    private fun canonicalRepository(host: String, rawPath: String): Pair<String, String>? {
+        val normalizedHost = host.lowercase()
+        val repositoryPath = rawPath
+            .trim()
+            .trim('/')
+            .removeSuffix(".git")
+            .takeIf { it.count { character -> character == '/' } >= 1 }
+            ?: return null
+        return Pair("https://$normalizedHost/$repositoryPath", normalizedHost)
+    }
+
+    private fun encodeFilePath(filePath: String): String = filePath
+        .replace('\\', '/')
+        .trimStart('/')
+        .split('/')
+        .joinToString("/") { segment -> encodePathSegment(segment) }
+
+    private fun encodePathSegment(segment: String): String = buildString {
+        segment.toByteArray(Charsets.UTF_8).forEach { byte ->
+            val value = byte.toInt() and 0xff
+            val isUnreserved = value in 'a'.code..'z'.code ||
+                value in 'A'.code..'Z'.code ||
+                value in '0'.code..'9'.code ||
+                value == '-'.code || value == '.'.code || value == '_'.code || value == '~'.code
+            if (isUnreserved) {
+                append(value.toChar())
+            } else {
+                append('%')
+                append(HEX[value ushr 4])
+                append(HEX[value and 0x0f])
+            }
+        }
+    }
+
+    private const val HEX = "0123456789ABCDEF"
 }

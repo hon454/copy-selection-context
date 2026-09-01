@@ -65,6 +65,9 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `CopySelectionStatusBarWidget.kt` | Status bar widget (stub) |
 | `CopySelectionSettings.kt` | Settings persistence (`@Service` + `@State`) |
 | `CopySelectionConfigurable.kt` | Settings UI (Tools menu) |
+| `CopyGitPermalinkAction.kt` | Async GitHub/GitLab permalink action |
+| `GitRepositoryMetadataResolver.kt` | Worktree-aware Git metadata and ref resolution |
+| `GitPermalinkGenerator.kt` | Remote URL normalization and encoded permalink generation |
 
 **Flow**: User trigger -> Action reads settings -> Extract editor context -> CopyPasteManager -> Notification
 

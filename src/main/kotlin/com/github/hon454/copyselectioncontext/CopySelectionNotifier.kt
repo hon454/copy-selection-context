@@ -17,4 +17,16 @@ object CopySelectionNotifier {
             )
             .notify(project)
     }
+
+    fun notifyPermalinkFailure(project: Project?) {
+        if (project == null) return
+
+        NotificationGroupManager.getInstance()
+            .getNotificationGroup("CopySelectionContext")
+            .createNotification(
+                CopySelectionBundle.message("notification.permalink.failed"),
+                NotificationType.ERROR
+            )
+            .notify(project)
+    }
 }
