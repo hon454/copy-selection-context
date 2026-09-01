@@ -19,9 +19,9 @@ import com.intellij.openapi.project.ProjectManager
 )
 class CopyHistoryService : PersistentStateComponent<CopyHistoryService.State> {
 
-    data class HistoryEntry(val content: String = "", val timestamp: Long = 0L)
+    data class HistoryEntry(var content: String = "", var timestamp: Long = 0L)
 
-    data class State(val entries: MutableList<HistoryEntry> = mutableListOf())
+    data class State(var entries: MutableList<HistoryEntry> = mutableListOf())
 
     private var myState = State()
 
