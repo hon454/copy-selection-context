@@ -33,6 +33,7 @@ class CopySelectionSettings : PersistentStateComponent<CopySelectionSettings.Sta
         if (state.outputFormat == LEGACY_GITHUB_FORMAT) {
             state.outputFormat = DEFAULT_OUTPUT_FORMAT
         }
+        state.outputFormat = OutputFormatOption.fromKey(state.outputFormat).key
         myState = state
     }
 
