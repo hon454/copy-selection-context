@@ -38,14 +38,7 @@ jobs:
           echo "tag=v$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Verify version matches build.gradle.kts
-        run: |
-          GRADLE_VERSION=$(grep -oP 'version\s*=\s*"\K[^"]+' build.gradle.kts)
-          TAG_VERSION="${{ steps.version.outputs.version }}"
-          if [ "$GRADLE_VERSION" != "$TAG_VERSION" ]; then
-            echo "::error::Version mismatch: tag=$TAG_VERSION, build.gradle.kts=$GRADLE_VERSION"
-            exit 1
-          fi
-          echo "Version verified: $TAG_VERSION"
+        run: bash scripts/verify-release-version.sh "${{ steps.version.outputs.tag }}"
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
@@ -62,6 +55,7 @@ jobs:
       - name: Generate release notes from changelog
         run: |
           ./gradlew getChangelog \
+            --project-version "${{ steps.version.outputs.version }}" \
             --console=plain \
             -q \
             --no-header \
