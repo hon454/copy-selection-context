@@ -4,6 +4,7 @@ import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
+import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 
 object CopySelectionUtils {
@@ -54,17 +55,8 @@ object CopySelectionUtils {
             PathType.ABSOLUTE -> file.path
             PathType.RELATIVE -> {
                 val projectBasePath = project.basePath ?: return file.path
-                val filePath = file.path
-                if (filePath.startsWith(projectBasePath)) {
-                    val relativePath = filePath.substring(projectBasePath.length)
-                    if (relativePath.startsWith("/") || relativePath.startsWith("\\")) {
-                        relativePath.substring(1)
-                    } else {
-                        relativePath
-                    }
-                } else {
-                    filePath
-                }
+                val projectBaseDir = file.fileSystem.findFileByPath(projectBasePath) ?: return file.path
+                VfsUtilCore.getRelativePath(file, projectBaseDir) ?: file.path
             }
         }
     }

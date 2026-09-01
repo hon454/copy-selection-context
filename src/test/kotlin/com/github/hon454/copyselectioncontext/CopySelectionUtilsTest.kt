@@ -11,6 +11,7 @@ import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileSystem
 import io.mockk.every
 import io.mockk.mockk
 import kotlin.test.Test
@@ -18,6 +19,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class CopySelectionUtilsTest {
+    private val virtualFileSystem = mockk<VirtualFileSystem>()
+
     @Test
     fun `resolveLineRanges returns single block for single caret`() {
         val editor = mockk<Editor>()
@@ -93,9 +96,11 @@ class CopySelectionUtilsTest {
     @Test
     fun `resolvePath returns relative path when inside project`() {
         val project = mockk<Project>()
-        val file = mockk<VirtualFile>()
+        val projectDir = mockPath("C:/repo", "repo")
+        val sourceDir = mockPath("C:/repo/src", "src", projectDir)
+        val file = mockPath("C:/repo/src/App.kt", "App.kt", sourceDir)
         every { project.basePath } returns "C:/repo"
-        every { file.path } returns "C:/repo/src/App.kt"
+        every { virtualFileSystem.findFileByPath("C:/repo") } returns projectDir
 
         val result = CopySelectionUtils.resolvePath(project, file, PathType.RELATIVE)
 
@@ -104,12 +109,11 @@ class CopySelectionUtilsTest {
 
     @Test
     fun `resolvePath falls back to absolute when outside project`() {
-        val project = mockk<Project>()
-        val file = mockk<VirtualFile>()
-        every { project.basePath } returns "C:/repo"
-        every { file.path } returns "D:/other/App.kt"
+        val projectDir = mockPath("C:/repo", "repo")
+        val otherDir = mockPath("D:/other", "other")
+        val file = mockPath("D:/other/App.kt", "App.kt", otherDir)
 
-        val result = CopySelectionUtils.resolvePath(project, file, PathType.RELATIVE)
+        val result = resolveRelativePath(projectDir, file)
 
         assertEquals("D:/other/App.kt", result)
     }
@@ -235,26 +239,57 @@ class CopySelectionUtilsTest {
 
     @Test
     fun `resolvePath handles Korean characters in path`() {
-        val project = mockk<Project>()
-        val file = mockk<VirtualFile>()
-        every { project.basePath } returns "C:/repo"
-        every { file.path } returns "C:/repo/한글/App.kt"
+        val projectDir = mockPath("C:/repo", "repo")
+        val unicodeDir = mockPath("C:/repo/한글", "한글", projectDir)
+        val file = mockPath("C:/repo/한글/App.kt", "App.kt", unicodeDir)
 
-        val result = CopySelectionUtils.resolvePath(project, file, PathType.RELATIVE)
+        val result = resolveRelativePath(projectDir, file)
 
         assertEquals("한글/App.kt", result)
     }
 
     @Test
     fun `resolvePath handles special characters in path`() {
-        val project = mockk<Project>()
-        val file = mockk<VirtualFile>()
-        every { project.basePath } returns "C:/repo"
-        every { file.path } returns "C:/repo/src-v2.0/App@test.kt"
+        val projectDir = mockPath("C:/repo", "repo")
+        val sourceDir = mockPath("C:/repo/src-v2.0", "src-v2.0", projectDir)
+        val file = mockPath("C:/repo/src-v2.0/App@test.kt", "App@test.kt", sourceDir)
 
-        val result = CopySelectionUtils.resolvePath(project, file, PathType.RELATIVE)
+        val result = resolveRelativePath(projectDir, file)
 
         assertEquals("src-v2.0/App@test.kt", result)
+    }
+
+    @Test
+    fun `resolvePath rejects a sibling whose name shares the project prefix`() {
+        val projectDir = mockPath("/repo/app", "app")
+        val siblingDir = mockPath("/repo/application", "application")
+        val file = mockPath("/repo/application/File.kt", "File.kt", siblingDir)
+
+        val result = resolveRelativePath(projectDir, file)
+
+        assertEquals("/repo/application/File.kt", result)
+    }
+
+    @Test
+    fun `resolvePath uses VFS ancestry for Windows separators and case rules`() {
+        val projectDir = mockPath("C:\\Repo", "Repo")
+        val sourceDir = mockPath("c:\\repo\\src", "src", projectDir)
+        val file = mockPath("c:\\repo\\src\\App.kt", "App.kt", sourceDir)
+
+        val result = resolveRelativePath(projectDir, file)
+
+        assertEquals("src/App.kt", result)
+    }
+
+    @Test
+    fun `resolvePath preserves an absolute Windows path on another drive`() {
+        val projectDir = mockPath("C:\\repo", "repo")
+        val otherDir = mockPath("D:\\other", "other")
+        val file = mockPath("D:\\other\\App.kt", "App.kt", otherDir)
+
+        val result = resolveRelativePath(projectDir, file)
+
+        assertEquals("D:\\other\\App.kt", result)
     }
 
     @Test
@@ -568,5 +603,23 @@ class CopySelectionUtilsTest {
         every { fileType.name } returns fileTypeName
         every { file.extension } returns extension
         return file
+    }
+
+    private fun mockPath(path: String, name: String, parent: VirtualFile? = null): VirtualFile {
+        val file = mockk<VirtualFile>()
+        every { file.path } returns path
+        every { file.name } returns name
+        every { file.nameSequence } returns name
+        every { file.parent } returns parent
+        every { file.fileSystem } returns virtualFileSystem
+        return file
+    }
+
+    private fun resolveRelativePath(projectDir: VirtualFile, file: VirtualFile): String {
+        val project = mockk<Project>()
+        val projectPath = projectDir.path
+        every { project.basePath } returns projectPath
+        every { virtualFileSystem.findFileByPath(projectPath) } returns projectDir
+        return CopySelectionUtils.resolvePath(project, file, PathType.RELATIVE)
     }
 }
