@@ -45,9 +45,17 @@ abstract class CopySelectionBaseAction : AnAction() {
         val maxSize = CopySelectionSettings.getInstance().state.copyHistorySize
         historyService?.addEntry(result, maxSize)
 
-        CopySelectionNotifier.notify(project, result)
+        showNotification(project, result)
+        updateStatusBar(project, result)
+    }
+
+    protected open fun showNotification(project: Project, content: String) {
+        CopySelectionNotifier.notify(project, content)
+    }
+
+    protected open fun updateStatusBar(project: Project, content: String) {
         val statusBar = WindowManager.getInstance().getStatusBar(project)
-        (statusBar?.getWidget(CopySelectionStatusBarWidget.ID) as? CopySelectionStatusBarWidget)?.update(result)
+        (statusBar?.getWidget(CopySelectionStatusBarWidget.ID) as? CopySelectionStatusBarWidget)?.update(content)
     }
     
     override fun update(e: AnActionEvent) {

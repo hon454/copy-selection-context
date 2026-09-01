@@ -5,7 +5,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 
-class CopySelectionContextAction : CopySelectionBaseAction() {
+open class CopySelectionContextAction : CopySelectionBaseAction() {
     override fun getPath(project: Project, file: VirtualFile): String {
         return CopySelectionUtils.resolvePath(project, file, CopySelectionSettings.getInstance().state.defaultPathType)
     }
