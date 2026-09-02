@@ -67,11 +67,11 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `CopyGitPermalinkAction.kt` / `GitRepositoryMetadataResolver.kt` / `GitPermalinkGenerator.kt` | Async, worktree-safe GitHub/GitLab permalink generation |
 | `CopyHistoryService.kt` / `CopyHistoryPopup.kt` | Local non-roaming project history, migration, re-copy, and clear-all |
 | `CopyPreview.kt` | Bounded, single-line, Unicode-safe, markup-escaped previews |
-| `CopySelectionAnalytics.kt` | Opt-in, local-only usage counters |
+| `CopySelectionAnalytics.kt` | Thread-safe opt-in, local-only usage counters and immutable UI snapshots |
 | `CopySelectionNotifier.kt` | Toast notifications (BALLOON) |
 | `CopySelectionStatusBarWidget.kt` / `CopySelectionStatusBarWidgetFactory.kt` | Last-copy status display and click-to-copy behavior |
 | `CopySelectionSettings.kt` | Settings persistence (`@Service` + `@State`) |
-| `CopySelectionConfigurable.kt` | Settings UI with multiline template editor, preview, and validation |
+| `CopySelectionConfigurable.kt` | Settings UI with multiline template editor, preview, validation, and analytics view/reset controls |
 
 **Flow**: User trigger -> Action reads settings -> Extract editor context -> Format output -> CopyPasteManager -> optional local analytics -> gutter marker -> project history -> optional notification -> status bar update
 
