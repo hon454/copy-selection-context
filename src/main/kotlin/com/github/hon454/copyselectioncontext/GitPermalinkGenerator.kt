@@ -4,28 +4,35 @@ import java.net.URI
 
 object GitPermalinkGenerator {
 
-    fun parseRemoteUrl(remoteUrl: String): Pair<String, String>? {
+    internal fun parseRemoteUrl(remoteUrl: String): GitPermalinkResult<GitRemoteRepository> {
         val normalizedRemoteUrl = remoteUrl.trim()
 
         val sshPattern = Regex("""git@(github\.com|gitlab\.com):(.+)$""", RegexOption.IGNORE_CASE)
         sshPattern.matchEntire(normalizedRemoteUrl)?.let { match ->
             return canonicalRepository(match.groupValues[1], match.groupValues[2])
+                ?.let { GitPermalinkResult.Success(it) }
+                ?: unsupportedRemote(normalizedRemoteUrl)
         }
 
-        val uri = runCatching { URI(normalizedRemoteUrl) }.getOrNull() ?: return null
+        val uri = runCatching { URI(normalizedRemoteUrl) }.getOrNull()
+            ?: return unsupportedRemote(normalizedRemoteUrl)
         val scheme = uri.scheme?.lowercase()
-        if (scheme !in setOf("http", "https", "ssh", "git", "git+ssh")) return null
-        val remoteHost = uri.host?.lowercase() ?: return null
+        if (scheme !in setOf("http", "https", "ssh", "git", "git+ssh")) {
+            return unsupportedRemote(normalizedRemoteUrl)
+        }
+        val remoteHost = uri.host?.lowercase() ?: return unsupportedRemote(normalizedRemoteUrl)
         if (scheme == "ssh" || scheme == "git+ssh") {
-            if (uri.userInfo != "git") return null
+            if (uri.userInfo != "git") return unsupportedRemote(normalizedRemoteUrl)
         }
         val host = when {
             remoteHost == "github.com" || remoteHost == "gitlab.com" -> remoteHost
             remoteHost == "ssh.github.com" && scheme == "ssh" && uri.port == 443 -> "github.com"
-            else -> return null
+            else -> return unsupportedRemote(normalizedRemoteUrl)
         }
 
         return canonicalRepository(host, uri.path)
+            ?.let { GitPermalinkResult.Success(it) }
+            ?: unsupportedRemote(normalizedRemoteUrl)
     }
 
     fun buildPermalink(
@@ -45,18 +52,27 @@ object GitPermalinkGenerator {
         return "$repoUrl/blob/$sha/${encodeFilePath(filePath)}#$lineFragment"
     }
 
-    fun buildPermalinkFromRemote(
+    internal fun buildPermalinkFromRemote(
         remoteUrl: String,
         sha: String,
         filePath: String,
         startLine: Int,
         endLine: Int
-    ): String? {
-        val (repoUrl, host) = parseRemoteUrl(remoteUrl) ?: return null
-        return buildPermalink(repoUrl, host, sha, filePath, startLine, endLine)
+    ): GitPermalinkResult<String> = when (val remote = parseRemoteUrl(remoteUrl)) {
+        is GitPermalinkResult.Failure -> remote
+        is GitPermalinkResult.Success -> GitPermalinkResult.Success(
+            buildPermalink(
+                remote.value.repositoryUrl,
+                remote.value.host,
+                sha,
+                filePath,
+                startLine,
+                endLine,
+            ),
+        )
     }
 
-    private fun canonicalRepository(host: String, rawPath: String): Pair<String, String>? {
+    private fun canonicalRepository(host: String, rawPath: String): GitRemoteRepository? {
         val normalizedHost = host.lowercase()
         if (rawPath != rawPath.trim()) return null
         val repositoryPath = rawPath.removePrefix("/").removeSuffix(".git")
@@ -71,7 +87,28 @@ object GitPermalinkGenerator {
         }
         if (!validNamespace) return null
 
-        return Pair("https://$normalizedHost/$repositoryPath", normalizedHost)
+        return GitRemoteRepository("https://$normalizedHost/$repositoryPath", normalizedHost)
+    }
+
+    private fun unsupportedRemote(remoteUrl: String): GitPermalinkResult.Failure =
+        GitPermalinkResult.Failure(
+            reason = GitPermalinkFailureReason.UNSUPPORTED_REMOTE_HOST,
+            diagnostic = GitPermalinkDiagnostic(
+                operation = GitPermalinkOperation.PARSE_REMOTE,
+                remoteHost = safeRemoteHost(remoteUrl),
+            ),
+        )
+
+    private fun safeRemoteHost(remoteUrl: String): String? {
+        val normalizedRemoteUrl = remoteUrl.trim()
+        val scpHost = Regex("""^[^@\s]+@([A-Za-z0-9.-]+):""")
+            .find(normalizedRemoteUrl)
+            ?.groupValues
+            ?.get(1)
+        if (scpHost != null) return scpHost.lowercase()
+        return runCatching { URI(normalizedRemoteUrl).host }
+            .getOrNull()
+            ?.lowercase()
     }
 
     private fun encodeFilePath(filePath: String): String = filePath
@@ -99,3 +136,8 @@ object GitPermalinkGenerator {
 
     private const val HEX = "0123456789ABCDEF"
 }
+
+internal data class GitRemoteRepository(
+    val repositoryUrl: String,
+    val host: String,
+)

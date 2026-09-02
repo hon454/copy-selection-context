@@ -140,7 +140,7 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
             "https://github.com/owner/repo/blob/abc123/src/permalink.txt#L2\n\n" +
                 "https://github.com/owner/repo/blob/abc123/src/permalink.txt#L4"
 
-        val resolvedAction = StubCopyGitPermalinkAction(resolvedPermalink)
+        val resolvedAction = StubCopyGitPermalinkAction(GitPermalinkResult.Success(resolvedPermalink))
         perform(resolvedAction)
 
         assertEquals(clipboardSentinel, clipboardText())
@@ -158,20 +158,40 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
 
         assertEquals(resolvedPermalink, clipboardText())
         assertEquals(listOf(resolvedPermalink), resolvedAction.successMessages)
-        assertEquals(0, resolvedAction.failureCount)
+        assertTrue(resolvedAction.failureReasons.isEmpty())
 
         myFixture.configureByText("failed-permalink.txt", "first line\nsecond<caret> line")
         val failureSentinel = "clipboard-before-failure"
         CopyPasteManager.getInstance().setContents(StringSelection(failureSentinel))
-        val failedAction = StubCopyGitPermalinkAction(null)
+        val failedAction = StubCopyGitPermalinkAction(
+            GitPermalinkResult.Failure(
+                reason = GitPermalinkFailureReason.UNRESOLVED_GIT_METADATA,
+                diagnostic = GitPermalinkDiagnostic(GitPermalinkOperation.RESOLVE_GIT_METADATA),
+            )
+        )
 
         perform(failedAction)
         failedAction.runBackgroundAction()
         failedAction.runUiAction()
 
         assertEquals(failureSentinel, clipboardText())
-        assertEquals(1, failedAction.failureCount)
+        assertEquals(listOf(GitPermalinkFailureReason.UNRESOLVED_GIT_METADATA), failedAction.failureReasons)
+        assertEquals(1, failedAction.loggedFailures.size)
         assertTrue(failedAction.successMessages.isEmpty())
+
+        val missingRootSentinel = "clipboard-before-missing-root"
+        CopyPasteManager.getInstance().setContents(StringSelection(missingRootSentinel))
+        val missingRootAction = StubCopyGitPermalinkAction(
+            result = GitPermalinkResult.Success("unused"),
+            rootPath = null,
+        )
+
+        perform(missingRootAction)
+
+        assertEquals(missingRootSentinel, clipboardText())
+        assertTrue(missingRootAction.backgroundActions.isEmpty())
+        assertEquals(listOf(GitPermalinkFailureReason.MISSING_VCS_ROOT), missingRootAction.failureReasons)
+        assertEquals(1, missingRootAction.loggedFailures.size)
     }
 
     fun testActionReturnsWithoutSideEffectsWhenRequiredDataKeysAreUnavailable() {
@@ -257,16 +277,18 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
     }
 
     private class StubCopyGitPermalinkAction(
-        private val permalink: String?,
+        private val result: GitPermalinkResult<String>,
+        private val rootPath: String? = "/fixture-repo",
     ) : CopyGitPermalinkAction() {
         val backgroundActions = mutableListOf<() -> Unit>()
         val uiActions = mutableListOf<() -> Unit>()
         val successMessages = mutableListOf<String>()
-        var failureCount = 0
+        val failureReasons = mutableListOf<GitPermalinkFailureReason>()
+        val loggedFailures = mutableListOf<GitPermalinkResult.Failure>()
         var requestedFilePath: String? = null
         var requestedLineRanges: List<Pair<Int, Int>>? = null
 
-        override fun resolveGitRootPath(project: Project, file: VirtualFile): String = "/fixture-repo"
+        override fun resolveGitRootPath(project: Project, file: VirtualFile): String? = rootPath
 
         override fun executeInBackground(action: () -> Unit) {
             backgroundActions.add(action)
@@ -280,14 +302,18 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
             rootPath: String,
             filePath: String,
             lineRanges: List<Pair<Int, Int>>,
-        ): String? {
+        ): GitPermalinkResult<String> {
             requestedFilePath = filePath
             requestedLineRanges = lineRanges
-            return permalink
+            return result
         }
 
-        override fun showPermalinkFailure(project: Project) {
-            failureCount += 1
+        override fun showPermalinkFailure(project: Project, reason: GitPermalinkFailureReason) {
+            failureReasons.add(reason)
+        }
+
+        override fun logPermalinkFailure(failure: GitPermalinkResult.Failure) {
+            loggedFailures.add(failure)
         }
 
         override fun showPermalinkSuccess(project: Project, permalink: String) {

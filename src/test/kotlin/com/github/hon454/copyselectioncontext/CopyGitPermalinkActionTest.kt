@@ -10,7 +10,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
+import kotlin.test.assertIs
 
 class CopyGitPermalinkActionTest {
     private val action = CopyGitPermalinkAction()
@@ -87,12 +87,28 @@ class CopyGitPermalinkActionTest {
     }
 
     @Test
-    fun `multi-caret permalink content fails when any range cannot be resolved`() {
-        val result = action.buildPermalinkContent(listOf(Pair(2, 3), Pair(5, 5))) { startLine, _ ->
-            if (startLine == 2) "first-permalink" else null
-        }
+    fun `out of root file returns an explicit failure without exposing paths`() {
+        val rootPath = "/repository"
+        val filePath = "/different/private/source.kt"
 
-        assertNull(result)
+        val failure = assertIs<GitPermalinkResult.Failure>(
+            action.tryBuildPermalink(rootPath, filePath, listOf(Pair(1, 1)))
+        )
+
+        assertEquals(GitPermalinkFailureReason.OUT_OF_ROOT_FILE, failure.reason)
+        kotlin.test.assertFalse(failure.safeLogMessage().contains(filePath))
+    }
+
+    @Test
+    fun `unexpected path failures are typed and omit raw path content`() {
+        val invalidPath = "\u0000private-code"
+
+        val failure = assertIs<GitPermalinkResult.Failure>(
+            action.tryBuildPermalink(invalidPath, "/repository/source.kt", listOf(Pair(1, 1)))
+        )
+
+        assertEquals(GitPermalinkFailureReason.UNEXPECTED_FAILURE, failure.reason)
+        kotlin.test.assertFalse(failure.safeLogMessage().contains("private-code"))
     }
 
     private fun selectedCaret(selectionStart: Int, selectionEnd: Int): Caret = mockk<Caret>().also { caret ->

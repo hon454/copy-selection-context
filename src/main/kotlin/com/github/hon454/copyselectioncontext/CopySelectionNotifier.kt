@@ -18,13 +18,13 @@ object CopySelectionNotifier {
             .notify(project)
     }
 
-    fun notifyPermalinkFailure(project: Project?) {
+    fun notifyPermalinkFailure(project: Project?, reason: GitPermalinkFailureReason) {
         if (project == null) return
 
         NotificationGroupManager.getInstance()
             .getNotificationGroup("CopySelectionContext")
             .createNotification(
-                CopySelectionBundle.message("notification.permalink.failed"),
+                permalinkFailureText(reason),
                 NotificationType.ERROR
             )
             .notify(project)
@@ -32,4 +32,15 @@ object CopySelectionNotifier {
 
     internal fun notificationText(message: String): String =
         CopySelectionBundle.message("notification.copied", CopyPreview.notification(message))
+
+    internal fun permalinkFailureText(reason: GitPermalinkFailureReason): String = CopySelectionBundle.message(
+        when (reason) {
+            GitPermalinkFailureReason.MISSING_VCS_ROOT -> "notification.permalink.failed.missing.vcs.root"
+            GitPermalinkFailureReason.UNRESOLVED_GIT_METADATA -> "notification.permalink.failed.git.metadata"
+            GitPermalinkFailureReason.UNSUPPORTED_REMOTE_HOST -> "notification.permalink.failed.remote.host"
+            GitPermalinkFailureReason.OUT_OF_ROOT_FILE -> "notification.permalink.failed.out.of.root"
+            GitPermalinkFailureReason.IO_FAILURE -> "notification.permalink.failed.io"
+            GitPermalinkFailureReason.UNEXPECTED_FAILURE -> "notification.permalink.failed.unexpected"
+        }
+    )
 }

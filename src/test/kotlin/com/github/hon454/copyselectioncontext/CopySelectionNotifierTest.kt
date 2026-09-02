@@ -7,6 +7,7 @@ import io.mockk.unmockkObject
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -57,5 +58,16 @@ class CopySelectionNotifierTest {
         assertFalse(notification.any { it == '\n' || it == '\r' })
         assertFalse(notification.contains("<script>"))
         assertTrue(notification.contains("&lt;script&gt;"))
+    }
+
+    @Test
+    fun `each permalink failure reason resolves distinct actionable guidance`() {
+        val messages = GitPermalinkFailureReason.entries.associateWith(CopySelectionNotifier::permalinkFailureText)
+
+        assertEquals(GitPermalinkFailureReason.entries.size, messages.values.toSet().size)
+        messages.values.forEach { message ->
+            assertTrue(message.isNotBlank())
+            assertFalse(message.contains("notification.permalink.failed"))
+        }
     }
 }

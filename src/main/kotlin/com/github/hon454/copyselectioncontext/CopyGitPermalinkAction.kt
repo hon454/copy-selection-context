@@ -4,12 +4,14 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.ProjectLevelVcsManager
 import com.intellij.openapi.vfs.VirtualFile
 import java.awt.datatransfer.StringSelection
+import java.io.IOException
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicLong
 
@@ -25,21 +27,28 @@ open class CopyGitPermalinkAction : AnAction() {
         val lineRanges = resolveLineRanges(editor)
         val rootPath = resolveGitRootPath(project, file)
         if (rootPath == null) {
-            showPermalinkFailure(project)
+            handlePermalinkFailure(
+                project,
+                GitPermalinkResult.Failure(
+                    reason = GitPermalinkFailureReason.MISSING_VCS_ROOT,
+                    diagnostic = GitPermalinkDiagnostic(GitPermalinkOperation.LOCATE_VCS_ROOT),
+                ),
+            )
             return
         }
         val filePath = file.path
 
         executeInBackground {
-            val permalink = tryBuildPermalink(rootPath, filePath, lineRanges)
+            val result = tryBuildPermalink(rootPath, filePath, lineRanges)
             invokeOnUiThread {
                 if (project.isDisposed) return@invokeOnUiThread
                 requests.runIfCurrent(requestId) {
-                    if (permalink == null) {
-                        showPermalinkFailure(project)
-                    } else {
-                        CopyPasteManager.getInstance().setContents(StringSelection(permalink))
-                        showPermalinkSuccess(project, permalink)
+                    when (result) {
+                        is GitPermalinkResult.Failure -> handlePermalinkFailure(project, result)
+                        is GitPermalinkResult.Success -> {
+                            CopyPasteManager.getInstance().setContents(StringSelection(result.value))
+                            showPermalinkSuccess(project, result.value)
+                        }
                     }
                 }
             }
@@ -65,8 +74,8 @@ open class CopyGitPermalinkAction : AnAction() {
         ApplicationManager.getApplication().invokeLater(action)
     }
 
-    protected open fun showPermalinkFailure(project: Project) {
-        CopySelectionNotifier.notifyPermalinkFailure(project)
+    protected open fun showPermalinkFailure(project: Project, reason: GitPermalinkFailureReason) {
+        CopySelectionNotifier.notifyPermalinkFailure(project, reason)
     }
 
     protected open fun showPermalinkSuccess(project: Project, permalink: String) {
@@ -85,37 +94,79 @@ open class CopyGitPermalinkAction : AnAction() {
 
     internal fun buildPermalinkContent(
         lineRanges: List<Pair<Int, Int>>,
-        buildBlock: (startLine: Int, endLine: Int) -> String?,
-    ): String? {
+        buildBlock: (startLine: Int, endLine: Int) -> String,
+    ): String {
         val blocks = lineRanges.map { (startLine, endLine) ->
-            buildBlock(startLine, endLine) ?: return null
+            buildBlock(startLine, endLine)
         }
         return CopySelectionUtils.joinCaretBlocks(blocks)
     }
 
-    protected open fun tryBuildPermalink(
+    internal open fun tryBuildPermalink(
         rootPath: String,
         filePath: String,
         lineRanges: List<Pair<Int, Int>>
-    ): String? {
+    ): GitPermalinkResult<String> {
         return try {
             val root = Path.of(rootPath).toAbsolutePath().normalize()
             val file = Path.of(filePath).toAbsolutePath().normalize()
-            if (!file.startsWith(root)) return null
-            val relativePath = root.relativize(file).toString().replace('\\', '/')
-            val metadata = GitRepositoryMetadataResolver.resolve(root) ?: return null
-            buildPermalinkContent(lineRanges) { startLine, endLine ->
-                GitPermalinkGenerator.buildPermalinkFromRemote(
-                    metadata.remoteUrl,
-                    metadata.commitSha,
-                    relativePath,
-                    startLine,
-                    endLine
+            if (!file.startsWith(root)) {
+                return GitPermalinkResult.Failure(
+                    reason = GitPermalinkFailureReason.OUT_OF_ROOT_FILE,
+                    diagnostic = GitPermalinkDiagnostic(GitPermalinkOperation.RELATIVIZE_FILE),
                 )
             }
-        } catch (_: Exception) {
-            null
+            val relativePath = root.relativize(file).toString().replace('\\', '/')
+            val metadata = when (val result = GitRepositoryMetadataResolver.resolve(root)) {
+                is GitPermalinkResult.Failure -> return result
+                is GitPermalinkResult.Success -> result.value
+            }
+            val remote = when (val result = GitPermalinkGenerator.parseRemoteUrl(metadata.remoteUrl)) {
+                is GitPermalinkResult.Failure -> return result
+                is GitPermalinkResult.Success -> result.value
+            }
+            GitPermalinkResult.Success(
+                buildPermalinkContent(lineRanges) { startLine, endLine ->
+                    GitPermalinkGenerator.buildPermalink(
+                        remote.repositoryUrl,
+                        remote.host,
+                        metadata.commitSha,
+                        relativePath,
+                        startLine,
+                        endLine,
+                    )
+                },
+            )
+        } catch (exception: IOException) {
+            GitPermalinkResult.Failure(
+                reason = GitPermalinkFailureReason.IO_FAILURE,
+                diagnostic = GitPermalinkDiagnostic(
+                    operation = GitPermalinkOperation.BUILD_PERMALINK,
+                    exceptionType = exception.javaClass.name,
+                ),
+            )
+        } catch (exception: Exception) {
+            GitPermalinkResult.Failure(
+                reason = GitPermalinkFailureReason.UNEXPECTED_FAILURE,
+                diagnostic = GitPermalinkDiagnostic(
+                    operation = GitPermalinkOperation.BUILD_PERMALINK,
+                    exceptionType = exception.javaClass.name,
+                ),
+            )
         }
+    }
+
+    private fun handlePermalinkFailure(project: Project, failure: GitPermalinkResult.Failure) {
+        logPermalinkFailure(failure)
+        showPermalinkFailure(project, failure.reason)
+    }
+
+    protected open fun logPermalinkFailure(failure: GitPermalinkResult.Failure) {
+        LOG.warn(failure.safeLogMessage())
+    }
+
+    private companion object {
+        val LOG = Logger.getInstance(CopyGitPermalinkAction::class.java)
     }
 }
 
