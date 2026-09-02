@@ -62,6 +62,8 @@ class DocumentationSyncTest {
             "copySelectionHistory.xml",
             "CopySelectionActionFixtureTest",
             "`verifyPlugin`",
+            "`SHA256SUMS`",
+            "gh attestation verify",
         )
 
         readmePaths.forEach { path ->

@@ -32,6 +32,45 @@ class CiWorkflowTest {
     }
 
     @Test
+    fun `release checksum and attestation gate exact artifact publication`() {
+        val workflow = readWorkflow("release.yml")
+
+        assertInOrder(
+            workflow,
+            "name: Build plugin",
+            "name: Verify plugin ZIP exists",
+            "name: Generate and verify release checksum",
+            "name: Generate release ZIP attestation",
+            "name: Verify release ZIP attestation",
+            "name: Upload validation reports",
+            "name: Create GitHub Release",
+            "name: Publish to JetBrains Marketplace",
+        )
+        assertTrue(
+            workflow.contains("if [ \"${'$'}{#plugin_zips[@]}\" -ne 1 ]"),
+            "release.yml must fail unless buildPlugin produces exactly one ZIP",
+        )
+        assertTrue(
+            workflow.contains("subject-path: ${'$'}{{ steps.release-artifact.outputs.path }}"),
+            "the attestation must identify the exact ZIP selected for publication",
+        )
+        assertTrue(
+            workflow.contains("--bundle \"${'$'}{{ steps.attestation.outputs.bundle-path }}\"") &&
+                workflow.contains("--source-digest \"${'$'}{{ github.sha }}\"") &&
+                workflow.contains("--source-ref \"${'$'}{{ github.ref }}\""),
+            "release.yml must verify the generated attestation against the triggering commit and tag",
+        )
+        assertTrue(
+            workflow.contains("${'$'}{{ steps.release-artifact.outputs.path }}\n            SHA256SUMS"),
+            "the release must upload the attested ZIP and its checksum file",
+        )
+        assertFalse(
+            workflow.contains("files: build/distributions/*.zip"),
+            "release publication must not re-expand a ZIP glob after attestation",
+        )
+    }
+
+    @Test
     fun `release generates notes only after version and Gradle setup`() {
         val workflow = readWorkflow("release.yml")
 
@@ -179,14 +218,14 @@ class CiWorkflowTest {
     @Test
     fun `workflows declare only required token permissions`() {
         assertEquals(
-            "contents: read",
+            listOf("contents: read"),
             workflowPermissions(readWorkflow("build.yml")),
             "build.yml must keep the default GITHUB_TOKEN read-only",
         )
         assertEquals(
-            "contents: write",
+            listOf("contents: write", "id-token: write", "attestations: write"),
             workflowPermissions(readWorkflow("release.yml")),
-            "release.yml needs only contents write access to create the GitHub release",
+            "release.yml needs release publication and artifact attestation permissions only",
         )
     }
 
@@ -353,7 +392,7 @@ class CiWorkflowTest {
         val value: Node,
     )
 
-    private fun workflowPermissions(workflow: String): String {
+    private fun workflowPermissions(workflow: String): List<String> {
         val lines = workflow.lines()
         val permissionsIndex = lines.indexOfFirst { it == "permissions:" }
         assertTrue(permissionsIndex >= 0, "Workflow must declare permissions explicitly")
@@ -363,8 +402,7 @@ class CiWorkflowTest {
                 .drop(permissionsIndex + 1)
                 .takeWhile { it.startsWith("  ") && it.isNotBlank() }
                 .map { it.trim() }
-        assertEquals(1, permissionLines.size, "Workflow must grant exactly one explicit token permission")
-        return permissionLines.single()
+        return permissionLines
     }
 
     private fun assertInOrder(

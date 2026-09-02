@@ -92,8 +92,9 @@ Releases are automated by [`.github/workflows/release.yml`](.github/workflows/re
    - Verifies the tag version matches `build.gradle.kts`
    - Generates release notes from the matching version section in `CHANGELOG.md`
    - Builds the plugin
+   - Selects exactly one plugin ZIP, writes and verifies `SHA256SUMS`, and generates and verifies GitHub build-provenance attestation for that exact ZIP
    - Creates a non-draft, non-prerelease GitHub Release named after the tag
-   - Attaches the plugin ZIP to the release
+   - Attaches the attested plugin ZIP and `SHA256SUMS` to the release
    - Publishes to JetBrains Marketplace only when `PUBLISH_TOKEN`, `CERTIFICATE_CHAIN`, and `PRIVATE_KEY` are all non-empty
 
 ### Version Rules
@@ -107,6 +108,14 @@ Releases are automated by [`.github/workflows/release.yml`](.github/workflows/re
 [`CHANGELOG.md`](CHANGELOG.md) is the single source of truth for release notes. The workflow invokes `scripts/generate-release-notes.sh`, which initializes the Gradle wrapper before separately capturing `getChangelog` output for the project version without the section header, comparison links, or summary. Only that captured output is written to `release-notes.md`; if it is empty, the script uses `Release v<version>` as a fallback.
 
 Keep `[Unreleased]` current as changes land, then run `patchChangelog` after setting the release version so the workflow can find the matching version section. Commit messages remain important for review and repository history, but they are not used to generate release notes.
+
+### Release Artifact Provenance
+
+The plugin ZIP attached to a GitHub Release by [`.github/workflows/release.yml`](.github/workflows/release.yml) is the canonical release artifact. The workflow grants only `contents: write` for release creation, `id-token: write` for the GitHub OIDC identity, and `attestations: write` for provenance storage. Checksum generation, checksum verification, attestation generation, and offline verification of the returned attestation bundle all run before release creation, so any failure prevents publication.
+
+Cross-environment byte-for-byte reproducibility is not currently supported. Gradle 9 makes archive order and timestamps reproducible by default, and two clean builds in one environment produce identical ZIPs. However, IntelliJ Platform Gradle Plugin 2.18.1's [`GenerateManifestTask`](https://github.com/JetBrains/intellij-platform-gradle-plugin/blob/2.18.1/src/main/kotlin/org/jetbrains/intellij/platform/gradle/tasks/GenerateManifestTask.kt) unconditionally records `Build-JVM` and `Build-OS` from the build host and exposes no supported setting to normalize or omit them. Editing the generated manifest would rely on internal task behavior and would change the input to signing and Marketplace publication, so the repository preserves those fields until JetBrains provides a supported contract. See Gradle's [byte-for-byte reproducibility guidance](https://docs.gradle.org/current/userguide/best_practices_security.html#build_output_should_be_byte_for_byte_reproducible) and GitHub's [artifact attestation guidance](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations).
+
+Release users verify the checksum and provenance with the platform commands documented in all localized README files. The release-time attestation check additionally binds the ZIP to the exact triggering commit, tag ref, repository, and `.github/workflows/release.yml` signer workflow.
 
 ### JetBrains Marketplace Publishing
 

@@ -53,6 +53,18 @@ class ReleaseDocumentationTest {
     }
 
     @Test
+    fun `release guidance records canonical artifact and reproducibility limits`() {
+        assertContains(contributing, "canonical release artifact")
+        assertContains(contributing, "Cross-environment byte-for-byte reproducibility is not currently supported")
+        assertContains(contributing, "Build-JVM")
+        assertContains(contributing, "Build-OS")
+        assertContains(contributing, "SHA256SUMS")
+        assertContains(contributing, "attestations: write")
+        assertContains(releaseWorkflow, "bash scripts/generate-release-checksum.sh")
+        assertContains(releaseWorkflow, "gh attestation verify")
+    }
+
+    @Test
     fun `contributing commit types stay aligned with agent guidance`() {
         assertEquals(commitTypes(agents), commitTypes(contributing))
         assertContains(contributing, "72 characters or fewer")

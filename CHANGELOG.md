@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Bound project copy history by documented per-entry and total UTF-8 content budgets while preserving oversized clipboard results (#42)
 - Show local-only copy totals, output-format usage, and language usage in Settings with a confirmed reset action (#41)
+- Publish SHA-256 checksums and GitHub build provenance for canonical release ZIPs (#45)
 
 ### Fixed
 - Record the detected file language exactly once per successful standard copy action, including multi-caret copies (#41)

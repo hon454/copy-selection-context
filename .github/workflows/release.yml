@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -76,13 +78,39 @@ jobs:
         run: ./gradlew buildPlugin --stacktrace --console=plain
 
       - name: Verify plugin ZIP exists
+        id: release-artifact
         run: |
-          if [ ! -d "build/distributions" ] || [ -z "$(find build/distributions/ -name '*.zip' 2>/dev/null)" ]; then
-            echo "::error::No plugin ZIP found in build/distributions/"
+          mapfile -t plugin_zips < <(find build/distributions -maxdepth 1 -type f -name '*.zip' -print)
+          if [ "${#plugin_zips[@]}" -ne 1 ]; then
+            echo "::error::Expected exactly one plugin ZIP in build/distributions/, found ${#plugin_zips[@]}"
             exit 1
           fi
-          echo "Plugin ZIP found:"
-          ls -la build/distributions/*.zip
+          echo "path=${plugin_zips[0]}" >> "$GITHUB_OUTPUT"
+          echo "Plugin ZIP found: ${plugin_zips[0]}"
+
+      - name: Generate and verify release checksum
+        run: >-
+          bash scripts/generate-release-checksum.sh
+          "${{ steps.release-artifact.outputs.path }}"
+          SHA256SUMS
+
+      - name: Generate release ZIP attestation
+        id: attestation
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ steps.release-artifact.outputs.path }}
+
+      - name: Verify release ZIP attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh attestation verify
+          "${{ steps.release-artifact.outputs.path }}"
+          --bundle "${{ steps.attestation.outputs.bundle-path }}"
+          --repo "${{ github.repository }}"
+          --signer-workflow "${{ github.repository }}/.github/workflows/release.yml"
+          --source-digest "${{ github.sha }}"
+          --source-ref "${{ github.ref }}"
 
       - name: Upload validation reports
         if: always()
@@ -103,7 +131,9 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.tag }}
           body_path: release-notes.md
-          files: build/distributions/*.zip
+          files: |
+            ${{ steps.release-artifact.outputs.path }}
+            SHA256SUMS
           fail_on_unmatched_files: true
           draft: false
           prerelease: false
