@@ -23,6 +23,7 @@
 - **複製歷史記錄** — 按下 `Ctrl+Alt+H` 瀏覽最近的複製歷史記錄
 - **GitHub/GitLab 永久連結** — 複製所選行對應的 Git 永久連結
 - **複製回饋** — 標示已複製的行、顯示可選通知，並在狀態列保留最近一次複製內容
+- **尊重使用者的評論入口** — 充分使用後，每個版本最多顯示一次誠實評論請求，並提供被動 Marketplace 連結
 - **多 caret 上下文** — 分別格式化每個 caret，並以空行分隔其路徑/程式碼區塊
 - **準確的選取結束位置** — 使用 IntelliJ 的 `selectionEnd - 1` 作為最後納入的 offset，避免多算尾隨行
 - **本地化設定** — 使用本地化輸出格式標籤，並保持英文/韓文資源鍵一致
@@ -132,6 +133,8 @@ fun calculateTotal(items: List<Item>): Double {
 
 - 標準路徑/程式碼複製操作會將項目加入專案專屬歷史記錄。按下 `Ctrl+Alt+H` 可開啟已儲存項目，選取後會再次複製完整內容。
 - 複製通知預設啟用，也可以關閉。標準路徑/程式碼複製與 Git 永久連結成功後會顯示通知。
+- 在一個 IDE 工作階段中成功執行 10 次標準複製後，若通知已啟用，可為目前外掛版本顯示一次非模態的誠實評論請求。**Review** 會開啟官方 [Marketplace 評論頁面](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews)，**Later** 會略過目前版本後續請求，**Don't ask again** 會永久停用提示。通知關閉時，只提供設定中的被動連結。
+- 精確的工作階段次數不會持久化。僅在本機非漫遊的 `copySelectionReview.xml` 中儲存 `lastPromptedVersion`、永久停用選擇及是否開啟過 Marketplace 頁面；不涉及複製內容、檔案資料、分析、評論結果、遙測或自動網路請求。
 - 標準複製會替換作用中編輯器的邊欄標記，並在狀態列小工具顯示含前綴最多 40 個字元的單行、Unicode-safe、markup-escaped 預覽。按一下小工具可再次複製最後一次的完整內容。
 - 可選的本機使用分析會依輸出格式與偵測到的檔案語言統計成功的標準複製操作。可在設定中查看所有計數器的不可變快照，並於確認後重設。此功能預設關閉，資料只儲存在本機 IDE 應用程式設定中，絕不會傳輸。
 
@@ -145,6 +148,7 @@ fun calculateTotal(items: List<Item>): Double {
 - **Include code content** — 包含所選程式碼；未選取時包含目前行（預設關閉）
 - **Trim code whitespace** — 移除所含程式碼首尾的空白（預設關閉）
 - **Show copy notifications** — 在支援的複製操作後顯示氣泡通知（預設開啟）
+- **Review on Marketplace** — 手動開啟官方評論頁面，不會強制顯示提示
 - **Copy history size** — 每個專案保留 0–100 筆記錄（預設：10）；設為 `0` 會停用並清空歷史記錄
 - **Local usage analytics** — 查看並重設僅儲存在本機的選用總計、輸出格式與語言計數器（預設關閉；絕不傳輸）
 
@@ -154,7 +158,7 @@ fun calculateTotal(items: List<Item>): Double {
 
 ![Copy Selection Context 設定畫面](docs/images/settings-copy-selection-context.png)
 
-可在同一個畫面中設定路徑類型、輸出與多行範本、程式碼處理、通知、歷史記錄和本機分析。
+可在同一個畫面中設定路徑類型、輸出與多行範本、程式碼處理、通知、評論入口、歷史記錄和本機分析。
 
 ## 相容的 IDE
 

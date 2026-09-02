@@ -15,6 +15,8 @@ class CopySelectionConfigurable internal constructor(
     private val settings: CopySelectionSettings,
     private val trimOpenProjectHistory: (Int) -> Unit = CopyHistoryService::trimOpenProjects,
     private val analytics: CopySelectionAnalytics = CopySelectionAnalytics.getInstance(),
+    private val openMarketplaceReviewPage: () -> Unit =
+        CopySelectionReviewService.getInstance()::openMarketplaceReviewPage,
     private val confirmAnalyticsReset: () -> Boolean = {
         Messages.showYesNoDialog(
             CopySelectionBundle.message("settings.analytics.reset.confirm.message"),
@@ -126,6 +128,11 @@ class CopySelectionConfigurable internal constructor(
                 row {
                     checkBox(CopySelectionBundle.message("settings.notification.enable"))
                         .bindSelected(state::enableNotification)
+                }
+                row {
+                    link(CopySelectionBundle.message("settings.review.marketplace")) {
+                        openMarketplaceReviewPage()
+                    }
                 }
             }
             group(CopySelectionBundle.message("settings.history.size")) {

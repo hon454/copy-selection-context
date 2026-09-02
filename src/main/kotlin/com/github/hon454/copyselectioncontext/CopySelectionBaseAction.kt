@@ -50,10 +50,15 @@ abstract class CopySelectionBaseAction : AnAction() {
 
         showNotification(project, result)
         updateStatusBar(project, result)
+        recordSuccessfulCopy(project)
     }
 
     protected open fun showNotification(project: Project, content: String) {
         CopySelectionNotifier.notify(project, content)
+    }
+
+    protected open fun recordSuccessfulCopy(project: Project) {
+        CopySelectionReviewService.getInstance().recordSuccessfulCopy(project)
     }
 
     protected open fun updateStatusBar(project: Project, content: String) {

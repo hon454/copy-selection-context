@@ -23,6 +23,7 @@ Tired of manually typing file paths and line numbers when sharing code context w
 - **Copy history** — `Ctrl+Alt+H` to browse recent copy history
 - **GitHub/GitLab permalink** — Copy a Git permalink for the selected lines
 - **Copy feedback** — Mark the copied lines, show an optional notification, and retain the last copy in the status bar
+- **Respectful review path** — After demonstrated use, offer one honest-review prompt per version plus a passive Marketplace link
 - **Multi-caret context** — Format every caret independently and separate its path/code block with a blank line
 - **Accurate selection ends** — Treat IntelliJ's `selectionEnd - 1` as the final included offset, avoiding an extra trailing line
 - **Localized settings** — Use localized output-format labels and matching English/Korean resource keys
@@ -132,6 +133,8 @@ The separate **Copy GitHub/GitLab Permalink** action reads normal-repository or 
 
 - Standard path/code copy actions prepend entries to project-specific history. `Ctrl+Alt+H` opens the stored entries, and choosing one copies its full content again.
 - Copy notifications are enabled by default and can be disabled. They are shown after standard path/code copies and Git permalink copies.
+- After 10 successful standard copy actions in one IDE session, enabled notifications may show one non-modal honest-review request for that plugin version. **Review** opens the official [Marketplace review page](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews), **Later** skips the rest of the current version, and **Don't ask again** permanently suppresses prompts. When notifications are disabled, only the passive settings link is available.
+- The exact session count is never persisted. Only `lastPromptedVersion`, permanent suppression choices, and whether the Marketplace page was opened are kept in local, non-roaming `copySelectionReview.xml`; no copied content, file data, analytics, review outcome, telemetry, or automatic network request is involved.
 - A standard copy replaces the gutter markers in the active editor and updates the status-bar widget with a single-line, Unicode-safe, markup-escaped preview capped at 40 characters including its prefix. Click the widget to copy the full last value again.
 - Optional local usage analytics count successful standard copy actions by output format and detected file language. Settings shows an immutable snapshot of every counter and provides a confirmed reset. Analytics are disabled by default, stored only in local IDE application settings, and never transmitted.
 
@@ -145,6 +148,7 @@ The separate **Copy GitHub/GitLab Permalink** action reads normal-repository or 
 - **Include code content** — Include selected code, or the current line when nothing is selected (off by default)
 - **Trim code whitespace** — Remove leading and trailing whitespace from included code (off by default)
 - **Show copy notifications** — Show a balloon after supported copy actions (on by default)
+- **Review on Marketplace** — Open the official review page manually without forcing a prompt
 - **Copy history size** — Keep 0–100 entries per project (default: 10); set `0` to disable and clear history
 - **Local usage analytics** — Inspect and reset opt-in total, output-format, and language counters stored only on this machine (off by default; never transmitted)
 
@@ -154,7 +158,7 @@ Copy history may contain copied code. It is stored only in the IDE's local, non-
 
 ![Copy Selection Context settings screen](docs/images/settings-copy-selection-context.png)
 
-Configure path type, output and templates, code handling, notifications, history, and local analytics from one place.
+Configure path type, output and templates, code handling, notifications, review access, history, and local analytics from one place.
 
 ## Compatible IDEs
 

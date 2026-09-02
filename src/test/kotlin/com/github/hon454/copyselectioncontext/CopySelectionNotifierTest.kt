@@ -70,4 +70,15 @@ class CopySelectionNotifierTest {
             assertFalse(message.contains("notification.permalink.failed"))
         }
     }
+
+    @Test
+    fun `review prompt asks for an honest review with three localized actions`() {
+        val labels = ReviewPromptAction.entries.map(CopySelectionReviewNotifier::actionText)
+
+        assertTrue(CopySelectionReviewNotifier.promptTitle().isNotBlank())
+        assertTrue(CopySelectionReviewNotifier.promptContent().isNotBlank())
+        assertEquals(3, labels.size)
+        assertEquals(3, labels.toSet().size)
+        labels.forEach { assertTrue(it.isNotBlank()) }
+    }
 }

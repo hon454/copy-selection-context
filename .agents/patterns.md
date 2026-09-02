@@ -31,7 +31,7 @@ val editor = e.getData(CommonDataKeys.EDITOR) ?: return
 val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
 ```
 
-The base class pipeline covers path and content formatting, clipboard writes, optional analytics, gutter highlighting, project history, notifications, and status-bar updates.
+The base class pipeline covers path and content formatting, clipboard writes, optional analytics, gutter highlighting, project history, notifications, status-bar updates, and one successful-copy signal to the session-only review policy regardless of caret count.
 
 ## Clipboard
 
@@ -59,6 +59,8 @@ NotificationGroupManager.getInstance()
 @State(name = "CopySelectionSettings", storages = [Storage("CopySelectionPlugin.xml")])
 class CopySelectionSettings : PersistentStateComponent<CopySelectionSettings.State>
 ```
+
+Review-prompt decisions use a separate application service with `RoamingType.DISABLED`. Keep the session counter outside its persisted `State`; store only the last prompted plugin version and permanent suppression signals. Mark the version before notifying so closing the balloon or choosing `Later` cannot repeat the prompt in that version.
 
 ## Selection Range and Current-Line Fallback
 
