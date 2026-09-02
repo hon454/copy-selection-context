@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.text.MessageFormat
 import java.util.Properties
 
 class CopySelectionBundleTest {
@@ -48,6 +49,39 @@ class CopySelectionBundleTest {
                     localized.getProperty(key),
                     "$localeName message '$key' must not fall back to English",
                 )
+            }
+        }
+    }
+
+    @Test
+    fun `localized MessageFormat patterns preserve arguments and apostrophe escapes`() {
+        val base = loadBundle("messages/CopySelectionBundle.properties")
+
+        ALL_BUNDLES.forEach { (localeName, resourcePath) ->
+            val localized = loadBundle(resourcePath)
+            base.stringPropertyNames().forEach { key ->
+                val baseArgumentIndexes = messageArgumentIndexes(base.getProperty(key))
+                val localizedPattern = localized.getProperty(key)
+                val localizedArgumentIndexes = messageArgumentIndexes(localizedPattern)
+
+                assertEquals(
+                    baseArgumentIndexes,
+                    localizedArgumentIndexes,
+                    "$localeName message '$key' must preserve MessageFormat arguments",
+                )
+                if (localizedArgumentIndexes.isNotEmpty() || localizedPattern.contains('\'')) {
+                    val argumentCount = (localizedArgumentIndexes.maxOrNull() ?: -1) + 1
+                    val arguments = Array(argumentCount) { index -> "ARGUMENT_$index" }
+                    val formatted = MessageFormat.format(localizedPattern, *arguments)
+                    val expected = MESSAGE_ARGUMENT.replace(localizedPattern.replace("''", "'")) { match ->
+                        arguments[match.groupValues[1].toInt()]
+                    }
+                    assertEquals(
+                        expected,
+                        formatted,
+                        "$localeName message '$key' must preserve visible apostrophes and format its arguments",
+                    )
+                }
             }
         }
     }
@@ -234,6 +268,8 @@ class CopySelectionBundleTest {
             "settings.template.variables.comment",
         )
 
+        val MESSAGE_ARGUMENT = Regex("""\{(\d+)(?:,[^{}]+)?}""")
+
         val PERMALINK_FAILURE_KEYS = listOf(
             "notification.permalink.failed.missing.vcs.root",
             "notification.permalink.failed.git.metadata",
@@ -243,4 +279,7 @@ class CopySelectionBundleTest {
             "notification.permalink.failed.unexpected",
         )
     }
+
+    private fun messageArgumentIndexes(pattern: String): Set<Int> =
+        MESSAGE_ARGUMENT.findAll(pattern).mapTo(mutableSetOf()) { it.groupValues[1].toInt() }
 }
