@@ -12,6 +12,8 @@
 
 AI 코딩 어시스턴트(Claude, ChatGPT 등)에게 코드 컨텍스트를 전달할 때, 파일 경로와 라인 번호를 일일이 타이핑하고 계신가요? **Copy Selection Context**는 한 번의 단축키로 `@path#Lline` 형식의 컨텍스트를 클립보드에 복사합니다.
 
+[![Get from JetBrains Marketplace](https://img.shields.io/badge/Get%20from-JetBrains%20Marketplace-000000?style=for-the-badge&logo=jetbrains&logoColor=white)](https://plugins.jetbrains.com/plugin/30262-copy-selection-context)
+
 ## 기능
 
 - **원클릭 복사** — `Ctrl+Alt+C` 하나로 파일 경로 + 라인 번호 복사
