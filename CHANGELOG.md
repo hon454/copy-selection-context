@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-09-02
+
+### Changed
+- Upgrade the GitHub release action from v2.6.2 to v3.0.3, adopting its Node 24 runtime and release reliability fixes (#59)
+
 ## [1.2.0] - 2026-09-02
 
 ### Added
@@ -128,7 +133,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Toast notifications
 - IntelliJ Platform 2024.3+ compatibility
 
-[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/hon454/copy-selection-context/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/hon454/copy-selection-context/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/hon454/copy-selection-context/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/hon454/copy-selection-context/compare/v1.0.4...v1.1.0
