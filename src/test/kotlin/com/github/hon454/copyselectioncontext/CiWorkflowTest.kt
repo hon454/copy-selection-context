@@ -1,10 +1,17 @@
 package com.github.hon454.copyselectioncontext
 
+import org.snakeyaml.engine.v2.api.LoadSettings
+import org.snakeyaml.engine.v2.api.lowlevel.Compose
+import org.snakeyaml.engine.v2.nodes.MappingNode
+import org.snakeyaml.engine.v2.nodes.Node
+import org.snakeyaml.engine.v2.nodes.ScalarNode
+import org.snakeyaml.engine.v2.nodes.SequenceNode
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class CiWorkflowTest {
@@ -65,34 +72,108 @@ class CiWorkflowTest {
             }
         assertTrue(workflowPaths.isNotEmpty(), "No GitHub Actions workflows found")
 
-        val externalActionPattern = Regex("""^\s*(?:-\s*)?uses:\s*([^\s#]+)(?:\s+#\s*(\S+))?\s*${'$'}""")
-        val immutableReferencePattern = Regex("""^[^/@\s]+/[^@\s]+@[0-9a-f]{40}${'$'}""")
-        val versionCommentPattern = Regex("""^v\d+(?:\.\d+){0,2}(?:[-+][0-9A-Za-z.-]+)?${'$'}""")
-        var externalActionCount = 0
-
-        workflowPaths.forEach { path ->
-            Files.readAllLines(path).forEachIndexed { index, line ->
-                val match = externalActionPattern.matchEntire(line) ?: return@forEachIndexed
-                val reference = match.groupValues[1]
-                if (reference.startsWith("./") || reference.startsWith("docker://")) {
-                    return@forEachIndexed
-                }
-
-                externalActionCount += 1
-                val location = "${path}:${index + 1}"
-                assertTrue(
-                    immutableReferencePattern.matches(reference),
-                    "$location must pin external action '$reference' to a full 40-character commit SHA",
-                )
-                val versionComment = match.groupValues[2]
-                assertTrue(
-                    versionCommentPattern.matches(versionComment),
-                    "$location must include a readable version comment such as '# v1.2.3'",
+        val externalActionCount =
+            workflowPaths.sumOf { path ->
+                assertWorkflowActionReferencesAreImmutable(
+                    workflow = Files.readString(path),
+                    source = path.toString(),
                 )
             }
-        }
 
         assertTrue(externalActionCount > 0, "No external actions found to validate")
+    }
+
+    @Test
+    fun `mutable action references fail closed across YAML key styles`() {
+        val mutableWorkflows =
+            listOf(
+                workflowWithStep("- uses: actions/checkout@v7"),
+                workflowWithStep("- 'uses': actions/checkout@v7 # v7.0.1"),
+                workflowWithStep("- uses: actions/checkout@v7 # v7.0.1 upstream release"),
+                workflowWithStep("- { name: Checkout code, uses: actions/checkout@v7 } # v7.0.1"),
+                """
+                name: Reusable workflow pin check
+                on: push
+                jobs:
+                  reuse:
+                    'uses': owner/repository/.github/workflows/reusable.yml@main # v1.2.3
+                """.trimIndent(),
+            )
+
+        mutableWorkflows.forEachIndexed { index, workflow ->
+            assertFailsWith<AssertionError>("Mutable workflow variant ${index + 1} must fail") {
+                assertWorkflowActionReferencesAreImmutable(workflow, "inline-workflow-${index + 1}")
+            }
+        }
+    }
+
+    @Test
+    fun `pinned actions require readable version comments`() {
+        val pinnedReference = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
+        val invalidComments =
+            listOf(
+                workflowWithStep("- uses: $pinnedReference"),
+                workflowWithStep("- uses: $pinnedReference # upstream release"),
+                workflowWithStep("- uses: $pinnedReference # v7.0.1upstream"),
+            )
+
+        invalidComments.forEachIndexed { index, workflow ->
+            assertFailsWith<AssertionError>("Missing or invalid version comment ${index + 1} must fail") {
+                assertWorkflowActionReferencesAreImmutable(workflow, "inline-workflow-${index + 1}")
+            }
+        }
+    }
+
+    @Test
+    fun `version comments may include descriptive text after the version`() {
+        val workflow =
+            workflowWithStep(
+                "- { 'uses': actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 } " +
+                    "# v7.0.1 upstream release",
+            )
+
+        assertEquals(1, assertWorkflowActionReferencesAreImmutable(workflow, "inline-workflow"))
+    }
+
+    @Test
+    fun `local and Docker uses values are not GitHub repository references`() {
+        val workflow =
+            """
+            name: Non-repository references
+            on: push
+            jobs:
+              test:
+                runs-on: ubuntu-latest
+                steps:
+                  - { uses: ./actions/local }
+                  - 'uses': docker://alpine:3.22
+            """.trimIndent()
+
+        assertEquals(0, assertWorkflowActionReferencesAreImmutable(workflow, "inline-workflow"))
+    }
+
+    @Test
+    fun `uses keys in workflow data are not action references`() {
+        val workflow =
+            """
+            name: Uses data keys
+            on: push
+            env:
+              uses: actions/checkout@v7
+            jobs:
+              test:
+                runs-on: ubuntu-latest
+                env: { uses: actions/checkout@v7 }
+                steps:
+                  - name: Environment data
+                    run: echo ok
+                    env:
+                      'uses': actions/checkout@v7
+                  - uses: ./actions/local
+                    with: { uses: actions/checkout@v7 }
+            """.trimIndent()
+
+        assertEquals(0, assertWorkflowActionReferencesAreImmutable(workflow, "inline-workflow"))
     }
 
     @Test
@@ -179,6 +260,98 @@ class CiWorkflowTest {
         assertTrue(Files.isRegularFile(path), "Workflow not found: $path")
         return Files.readString(path)
     }
+
+    private fun assertWorkflowActionReferencesAreImmutable(
+        workflow: String,
+        source: String,
+    ): Int {
+        val immutableReferencePattern = Regex("""^[^/@\s]+/[^@\s]+@[0-9a-f]{40}${'$'}""")
+        val versionCommentPattern = Regex("""^v\d+(?:\.\d+){0,2}(?:[-+][0-9A-Za-z.-]+)?${'$'}""")
+        val settings =
+            LoadSettings
+                .builder()
+                .setLabel(source)
+                .setAllowDuplicateKeys(false)
+                .setParseComments(true)
+                .setUseMarks(true)
+                .build()
+        val usesEntries =
+            Compose(settings)
+                .composeAllFromString(workflow)
+                .flatMap(::collectActionReferenceEntries)
+        var externalActionCount = 0
+
+        usesEntries.forEach { entry ->
+            val line = entry.key.startMark.map { it.line + 1 }.orElse(1)
+            val location = "$source:$line"
+            val scalarValue = entry.value as? ScalarNode
+            assertTrue(scalarValue != null, "$location must use a scalar action reference")
+            val reference = scalarValue.value.trim()
+            if (reference.startsWith("./") || reference.startsWith("docker://")) {
+                return@forEach
+            }
+
+            externalActionCount += 1
+            assertTrue(
+                immutableReferencePattern.matches(reference),
+                "$location must pin external action '$reference' to a full 40-character commit SHA",
+            )
+            val endIndex = scalarValue.endMark.map { it.index }.orElse(-1)
+            assertTrue(endIndex in 0..workflow.length, "$location must retain the action source location")
+            val sourceSuffix = workflow.substring(endIndex).lineSequence().firstOrNull().orEmpty()
+            val versionComment = sourceSuffix.substringAfter('#', missingDelimiterValue = "").trim()
+            val versionToken = versionComment.split(Regex("""\s+"""), limit = 2).firstOrNull().orEmpty()
+            assertTrue(
+                versionCommentPattern.matches(versionToken),
+                "$location must include a readable version comment such as '# v1.2.3'",
+            )
+        }
+
+        return externalActionCount
+    }
+
+    private fun collectActionReferenceEntries(document: Node): List<UsesEntry> {
+        val root = document as? MappingNode ?: return emptyList()
+        val jobs = root.valueForKey("jobs") as? MappingNode ?: return emptyList()
+
+        return jobs.value.flatMap { jobTuple ->
+            val job = jobTuple.valueNode as? MappingNode ?: return@flatMap emptyList()
+            val reusableWorkflow = job.entriesForKey("uses")
+            val stepActions =
+                (job.valueForKey("steps") as? SequenceNode)
+                    ?.value
+                    .orEmpty()
+                    .filterIsInstance<MappingNode>()
+                    .flatMap { step -> step.entriesForKey("uses") }
+            reusableWorkflow + stepActions
+        }
+    }
+
+    private fun MappingNode.entriesForKey(key: String): List<UsesEntry> =
+        value.mapNotNull { tuple ->
+            val scalarKey = tuple.keyNode as? ScalarNode
+            scalarKey
+                ?.takeIf { it.value == key }
+                ?.let { UsesEntry(it, tuple.valueNode) }
+        }
+
+    private fun MappingNode.valueForKey(key: String): Node? = entriesForKey(key).singleOrNull()?.value
+
+    private fun workflowWithStep(step: String): String =
+        """
+        name: Action pin check
+        on: push
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            steps:
+              $step
+        """.trimIndent()
+
+    private data class UsesEntry(
+        val key: ScalarNode,
+        val value: Node,
+    )
 
     private fun workflowPermissions(workflow: String): String {
         val lines = workflow.lines()
