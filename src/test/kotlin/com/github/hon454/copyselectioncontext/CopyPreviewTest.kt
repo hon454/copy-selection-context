@@ -40,6 +40,15 @@ class CopyPreviewTest {
     }
 
     @Test
+    fun `unicode grapheme clusters are not split during truncation`() {
+        val combiningPreview = CopyPreview.history("a".repeat(78) + "e\u0301z")
+        val emojiPreview = CopyPreview.history("a".repeat(76) + "👩‍💻z")
+
+        assertEquals("a".repeat(78) + "…", combiningPreview)
+        assertEquals("a".repeat(76) + "…", emojiPreview)
+    }
+
+    @Test
     fun `markup-like content is escaped without partial entities`() {
         val preview = CopyPreview.create("src/App.kt:7\n<script title=\"x\">& 'value'</script>", 120)
 
