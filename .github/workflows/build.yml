@@ -36,7 +36,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Run test suite
-        run: ./gradlew test --stacktrace --console=plain
+        run: ./gradlew allTests --continue --stacktrace --console=plain
 
       - name: Verify plugin project and structure
         run: >-
@@ -67,8 +67,10 @@ jobs:
         with:
           name: validation-reports
           path: |
-            build/reports/tests/
-            build/test-results/
+            build/reports/tests/test/
+            build/test-results/test/
+            build/reports/tests/platformTest/
+            build/test-results/platformTest/
             build/reports/pluginVerifier/
             build/reports/problems/
           if-no-files-found: warn

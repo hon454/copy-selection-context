@@ -283,6 +283,7 @@ class CiWorkflowTest {
         publicationStep: String,
     ) {
         val workflow = readWorkflow(workflowName)
+        val buildScript = Files.readString(Path.of("build.gradle.kts"))
 
         assertInOrder(
             workflow,
@@ -294,8 +295,8 @@ class CiWorkflowTest {
             "name: $publicationStep",
         )
         assertTrue(
-            workflow.contains("run: ./gradlew test --stacktrace --console=plain"),
-            "$workflowName must run the complete test task with diagnostic output",
+            workflow.contains("run: ./gradlew allTests --continue --stacktrace --console=plain"),
+            "$workflowName must run both test tasks even when one fails",
         )
         assertTrue(
             workflow.contains("verifyPluginProjectConfiguration") &&
@@ -309,9 +310,22 @@ class CiWorkflowTest {
         )
         assertTrue(
             workflow.contains("build/reports/pluginVerifier/") &&
-                workflow.contains("build/reports/tests/") &&
-                workflow.contains("build/test-results/"),
-            "$workflowName must upload plugin verification and test diagnostics",
+                listOf(
+                    "build/reports/tests/test/",
+                    "build/test-results/test/",
+                    "build/reports/tests/platformTest/",
+                    "build/test-results/platformTest/",
+                ).all(workflow::contains),
+            "$workflowName must upload plugin verification and every test task report",
+        )
+        assertTrue(
+            buildScript.contains("intellijPlatformTesting.testIde.register(\"platformTest\")") &&
+                buildScript.contains("CopyHistoryPersistenceTest") &&
+                buildScript.contains("CopySelectionActionFixtureTest") &&
+                buildScript.contains("forkEvery = 0") &&
+                buildScript.contains("forkEvery = 1") &&
+                buildScript.contains("register(\"allTests\")"),
+            "Gradle must reuse pure-test workers, isolate platform-state classes, and aggregate both tasks",
         )
         assertTrue(
             workflow.contains("uses: gradle/actions/setup-gradle@"),

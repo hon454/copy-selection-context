@@ -89,6 +89,23 @@ changelog {
     repositoryUrl = "https://github.com/hon454/copy-selection-context"
 }
 
+val platformStateTestClasses = listOf(
+    "com.github.hon454.copyselectioncontext.CopyHistoryPersistenceTest",
+    "com.github.hon454.copyselectioncontext.CopySelectionActionFixtureTest",
+)
+
+intellijPlatformTesting.testIde.register("platformTest") {
+    task {
+        description = "Runs IntelliJ Platform application and editor-fixture tests in isolated JVMs."
+        useJUnitPlatform()
+        filter {
+            platformStateTestClasses.forEach(::includeTestsMatching)
+        }
+        // These classes retain engine-scoped application or fixture state.
+        forkEvery = 1
+    }
+}
+
 tasks {
     withType<JavaCompile> {
         sourceCompatibility = "21"
@@ -97,9 +114,17 @@ tasks {
 
     test {
         useJUnitPlatform()
-        // IntelliJ's JUnit 3 fixtures and JUnit 5 TestApplication fixtures retain
-        // engine-scoped application state, so keep each test class in its own JVM.
-        forkEvery = 1
+        filter {
+            platformStateTestClasses.forEach(::excludeTestsMatching)
+        }
+        // Pure unit tests share the worker instead of paying one JVM startup per class.
+        forkEvery = 0
+    }
+
+    register("allTests") {
+        description = "Runs reusable unit tests and isolated IntelliJ Platform tests."
+        group = "verification"
+        dependsOn(test, "platformTest")
     }
 
     buildSearchableOptions {
