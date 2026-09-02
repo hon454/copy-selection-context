@@ -120,4 +120,95 @@ class CopyHistoryServiceTest {
 
         assertEquals(content, service.getEntries().single().content)
     }
+
+    @Test
+    fun `entry byte budget accepts the exact boundary and rejects content above it`() {
+        val service = CopyHistoryService()
+        val belowBoundary = "a".repeat(CopyHistoryService.MAX_ENTRY_CONTENT_BYTES - 1)
+        val atBoundary = "b".repeat(CopyHistoryService.MAX_ENTRY_CONTENT_BYTES)
+        val aboveBoundary = "c".repeat(CopyHistoryService.MAX_ENTRY_CONTENT_BYTES + 1)
+
+        service.addEntry(belowBoundary, maxSize = 10)
+        service.addEntry(atBoundary, maxSize = 10)
+        service.addEntry(aboveBoundary, maxSize = 10)
+
+        assertEquals(listOf(atBoundary, belowBoundary), service.getEntries().map { it.content })
+    }
+
+    @Test
+    fun `entry byte budget uses UTF-8 bytes for Korean and emoji content`() {
+        val prefix = "한😀"
+        assertEquals(7, prefix.toByteArray(Charsets.UTF_8).size)
+        val atBoundary = prefix + "a".repeat(CopyHistoryService.MAX_ENTRY_CONTENT_BYTES - 7)
+        val aboveBoundary = atBoundary + "한"
+        val service = CopyHistoryService()
+
+        service.addEntry(atBoundary, maxSize = 10)
+        service.addEntry(aboveBoundary, maxSize = 10)
+
+        assertEquals(listOf(atBoundary), service.getEntries().map { it.content })
+    }
+
+    @Test
+    fun `total byte budget evicts the oldest entries deterministically`() {
+        val service = CopyHistoryService()
+        val entries = (1..9).map { index ->
+            index.toString() + "x".repeat(CopyHistoryService.MAX_ENTRY_CONTENT_BYTES - 1)
+        }
+
+        entries.forEach { service.addEntry(it, maxSize = 20) }
+
+        assertEquals(entries.takeLast(8).reversed(), service.getEntries().map { it.content })
+        assertEquals(
+            CopyHistoryService.MAX_TOTAL_CONTENT_BYTES,
+            service.getEntries().sumOf { it.content.toByteArray(Charsets.UTF_8).size },
+        )
+    }
+
+    @Test
+    fun `loadState discards oversized entries and enforces configured entry count`() {
+        val retained = (1..9).map { index ->
+            CopyHistoryService.HistoryEntry(
+                content = index.toString() + "x".repeat(CopyHistoryService.MAX_ENTRY_CONTENT_BYTES - 1),
+                timestamp = index.toLong(),
+            )
+        }
+        val oversized = CopyHistoryService.HistoryEntry(
+            content = "z".repeat(CopyHistoryService.MAX_ENTRY_CONTENT_BYTES + 1),
+            timestamp = 10L,
+        )
+        val service = CopyHistoryService { 6 }
+
+        service.loadState(CopyHistoryService.State((listOf(oversized) + retained).toMutableList()))
+
+        assertEquals(retained.take(6), service.getEntries())
+    }
+
+    @Test
+    fun `loadState clears existing entries when configured history size is zero`() {
+        val service = CopyHistoryService { 0 }
+
+        service.loadState(
+            CopyHistoryService.State(
+                mutableListOf(CopyHistoryService.HistoryEntry(content = "must-not-persist")),
+            ),
+        )
+
+        assertTrue(service.getEntries().isEmpty())
+    }
+
+    @Test
+    fun `loadState evicts oldest entries beyond the total byte budget`() {
+        val entries = (1..9).map { index ->
+            CopyHistoryService.HistoryEntry(
+                content = index.toString() + "x".repeat(CopyHistoryService.MAX_ENTRY_CONTENT_BYTES - 1),
+                timestamp = index.toLong(),
+            )
+        }
+        val service = CopyHistoryService { 20 }
+
+        service.loadState(CopyHistoryService.State(entries.toMutableList()))
+
+        assertEquals(entries.take(8), service.getEntries())
+    }
 }

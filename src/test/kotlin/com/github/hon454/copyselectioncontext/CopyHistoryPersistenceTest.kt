@@ -45,7 +45,7 @@ class CopyHistoryPersistenceTest {
     @BeforeEach
     fun setUpStoreFixture() {
         val projectRoot = projectRootFixture.get()
-        writeLegacyHistory(projectRoot, LEGACY_MARKER)
+        writeLegacyHistory(projectRoot, listOf(LEGACY_MARKER, OVERSIZED_LEGACY_CONTENT))
 
         fixtureDisposable = Disposer.newDisposable("copy-history-store-fixture")
         fixtureProject = StoreBackedMockProject(fixtureDisposable)
@@ -104,6 +104,7 @@ class CopyHistoryPersistenceTest {
         val workspaceStorage = workspaceStorage(projectRoot)
         assertTrue(workspaceStorage.exists())
         assertTrue(workspaceStorage.readText().contains(LEGACY_MARKER))
+        assertFalse(workspaceStorage.readText().contains(OVERSIZED_LEGACY_CONTENT))
         assertFalse(legacyStorage.exists())
 
         service.clear()
@@ -182,12 +183,14 @@ class CopyHistoryPersistenceTest {
         project.registerService(serviceClass, service)
     }
 
-    private fun writeLegacyHistory(projectRoot: Path, content: String): Path {
+    private fun writeLegacyHistory(projectRoot: Path, contents: List<String>): Path {
         val component = Element("component").apply {
             setAttribute("name", COMPONENT_NAME)
             XmlSerializer.serializeInto(
                 CopyHistoryService.State(
-                    mutableListOf(CopyHistoryService.HistoryEntry(content = content, timestamp = 42L))
+                    contents.mapIndexed { index, content ->
+                        CopyHistoryService.HistoryEntry(content = content, timestamp = index.toLong())
+                    }.toMutableList()
                 ),
                 this,
             )
@@ -236,6 +239,8 @@ class CopyHistoryPersistenceTest {
     companion object {
         private const val COMPONENT_NAME = "CopySelectionHistory"
         private const val LEGACY_MARKER = "legacy-history-marker"
+        private val OVERSIZED_LEGACY_CONTENT =
+            "oversized-" + "x".repeat(CopyHistoryService.MAX_ENTRY_CONTENT_BYTES)
         private val PLUGIN_ID = PluginId.getId("com.github.hon454.copy-selection-context")
     }
 }
