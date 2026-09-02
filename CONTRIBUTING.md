@@ -104,7 +104,7 @@ Releases are automated by [`.github/workflows/release.yml`](.github/workflows/re
 
 ### Release Notes
 
-[`CHANGELOG.md`](CHANGELOG.md) is the single source of truth for release notes. The workflow runs `getChangelog` for the project version without the section header, comparison links, or summary and writes the result to `release-notes.md`. If that output is empty, it uses `Release v<version>` as a fallback.
+[`CHANGELOG.md`](CHANGELOG.md) is the single source of truth for release notes. The workflow invokes `scripts/generate-release-notes.sh`, which initializes the Gradle wrapper before separately capturing `getChangelog` output for the project version without the section header, comparison links, or summary. Only that captured output is written to `release-notes.md`; if it is empty, the script uses `Release v<version>` as a fallback.
 
 Keep `[Unreleased]` current as changes land, then run `patchChangelog` after setting the release version so the workflow can find the matching version section. Commit messages remain important for review and repository history, but they are not used to generate release notes.
 

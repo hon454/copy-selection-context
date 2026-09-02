@@ -3,6 +3,7 @@ package com.github.hon454.copyselectioncontext
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class CiWorkflowTest {
@@ -19,6 +20,33 @@ class CiWorkflowTest {
         assertValidationPipeline(
             workflowName = "release.yml",
             publicationStep = "Create GitHub Release",
+        )
+    }
+
+    @Test
+    fun `release generates notes only after version and Gradle setup`() {
+        val workflow = readWorkflow("release.yml")
+
+        assertInOrder(
+            workflow,
+            "name: Verify version matches build.gradle.kts",
+            "name: Set up JDK 21",
+            "name: Setup Gradle",
+            "name: Ensure gradlew is executable",
+            "name: Generate release notes from changelog",
+            "name: Run test suite",
+        )
+        val generationCommand =
+            "bash scripts/generate-release-notes.sh \\\n" +
+                "            \"${'$'}{{ steps.version.outputs.version }}\" \\\n" +
+                "            \"${'$'}{{ steps.version.outputs.tag }}\""
+        assertTrue(
+            workflow.contains(generationCommand),
+            "release.yml must delegate deterministic note generation to the tested script",
+        )
+        assertFalse(
+            workflow.contains("--no-summary > release-notes.md"),
+            "release.yml must not redirect a cold Gradle wrapper invocation into the release body",
         )
     }
 
