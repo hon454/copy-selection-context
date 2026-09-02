@@ -23,6 +23,7 @@
 - **复制历史** — 按下 `Ctrl+Alt+H` 浏览最近的复制历史
 - **GitHub/GitLab 永久链接** — 复制所选行对应的 Git 永久链接
 - **复制反馈** — 标记已复制的行、显示可选通知，并在状态栏保留最后一次复制内容
+- **尊重用户的评价入口** — 在充分使用后，每个版本最多显示一次诚实评价请求，并提供被动 Marketplace 链接
 - **多 caret 上下文** — 分别格式化每个 caret，并以空行分隔其路径/代码块
 - **准确的选择结束位置** — 使用 IntelliJ 的 `selectionEnd - 1` 作为最后包含的 offset，避免多算尾随行
 - **本地化设置** — 使用本地化输出格式标签，并保持英语/韩语资源键一致
@@ -132,6 +133,8 @@ fun calculateTotal(items: List<Item>): Double {
 
 - 标准路径/代码复制操作会将条目添加到项目专属历史的开头。按下 `Ctrl+Alt+H` 可打开已存储的条目，选择条目会再次复制其完整内容。
 - 复制通知默认启用，也可以关闭。标准路径/代码复制和 Git 永久链接复制后会显示通知。
+- 只有在已启用通知且受支持的 UI 环境中执行的标准复制才会增加评价计数器；通知关闭、测试、headless 和不受支持的环境都不会改变计数器或提示状态。在一个 IDE 会话中的第 10 次有效复制可为当前插件版本显示一次非模态的诚实评价请求。**Review on Marketplace** 会打开官方 [Marketplace 评价页面](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews)，**Later** 会跳过当前版本后续请求，**Don't ask again** 会永久禁止提示。通知关闭时，只提供设置中的被动链接。
+- 精确的会话次数不会持久化。仅在本地非漫游的 `copySelectionReview.xml` 中保存 `lastPromptedVersion`、永久禁止选择及是否打开过 Marketplace 页面；不会涉及复制内容、文件数据、分析、评价结果、遥测或自动网络请求。
 - 标准复制会替换活动编辑器中的边栏标记，并在状态栏小组件中显示包含前缀在内最多 40 个字符的单行、Unicode-safe、markup-escaped 预览。单击小组件可再次复制最后一次的完整内容。
 - 可选的本地使用分析会按输出格式和检测到的文件语言统计成功的标准复制操作。可在设置中查看所有计数器的不可变快照，并在确认后重置。此功能默认关闭，数据只存储在本地 IDE 应用设置中，绝不会传输。
 
@@ -145,6 +148,7 @@ fun calculateTotal(items: List<Item>): Double {
 - **Include code content** — 包含所选代码；未选择时包含当前行（默认关闭）
 - **Trim code whitespace** — 删除所含代码首尾的空白（默认关闭）
 - **Show copy notifications** — 在支持的复制操作后显示气泡通知（默认开启）
+- **Review on Marketplace** — 手动打开官方评价页面，不会强制显示提示
 - **Copy history size** — 每个项目保留 0–100 条记录（默认：10）；设为 `0` 会禁用并清空历史
 - **Local usage analytics** — 查看和重置仅存储在本机的可选总计、输出格式和语言计数器（默认关闭；绝不传输）
 
@@ -154,7 +158,7 @@ fun calculateTotal(items: List<Item>): Double {
 
 ![Copy Selection Context 设置界面](docs/images/settings-copy-selection-context.png)
 
-可在一个界面中配置路径类型、输出与模板、代码处理、通知、历史记录和本地分析。
+可在一个界面中配置路径类型、输出与模板、代码处理、通知、评价入口、历史记录和本地分析。
 
 ## 兼容的 IDE
 

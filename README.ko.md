@@ -23,6 +23,7 @@ AI 코딩 어시스턴트(Claude, ChatGPT 등)에게 코드 컨텍스트를 전�
 - **복사 이력** — `Ctrl+Alt+H`로 최근 복사 이력 조회
 - **GitHub/GitLab 퍼머링크** — 선택한 라인의 Git 퍼머링크를 바로 복사
 - **복사 피드백** — 복사한 라인 표시, 선택적 알림, 상태 표시줄의 마지막 복사 내용 제공
+- **배려 있는 리뷰 경로** — 충분히 사용한 뒤 버전당 한 번의 솔직한 리뷰 요청과 수동 Marketplace 링크 제공
 - **다중 caret 컨텍스트** — 각 caret을 독립적으로 형식화하고 경로/코드 블록 사이를 빈 줄로 구분
 - **정확한 선택 끝 처리** — IntelliJ의 `selectionEnd - 1`을 마지막 포함 offset으로 사용해 불필요한 다음 줄 제외
 - **로컬라이즈된 설정** — 출력 형식 이름을 번역하고 영어/한국어 리소스 키 구성을 동일하게 유지
@@ -132,6 +133,8 @@ fun calculateTotal(items: List<Item>): Double {
 
 - 일반 경로/코드 복사 액션은 프로젝트별 이력 앞에 항목을 추가합니다. `Ctrl+Alt+H`를 누르면 저장된 항목을 볼 수 있고, 항목을 선택하면 전체 내용을 다시 복사합니다.
 - 복사 알림은 기본으로 켜져 있으며 끌 수 있습니다. 일반 경로/코드 복사와 Git 퍼머링크 복사 후에 표시됩니다.
+- 알림이 켜진 지원 UI 환경에서 실행한 일반 복사만 리뷰 카운터를 증가시키며, 알림 비활성·테스트·headless·미지원 환경에서는 카운터와 프롬프트 상태가 모두 변경되지 않습니다. 한 IDE 세션의 10번째 유효 복사에서 해당 플러그인 버전에 한 번만 비모달 솔직한 리뷰 요청을 표시할 수 있습니다. **Review on Marketplace**는 공식 [Marketplace 리뷰 페이지](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews)를 열고, **Later**는 현재 버전의 남은 요청을 건너뛰며, **Don't ask again**은 요청을 영구적으로 억제합니다. 알림을 끄면 설정의 수동 링크만 사용할 수 있습니다.
+- 정확한 세션 횟수는 저장하지 않습니다. 로컬 비로밍 `copySelectionReview.xml`에는 `lastPromptedVersion`, 영구 억제 선택, Marketplace 페이지를 열었는지만 보관하며 복사 내용, 파일 데이터, 분석, 리뷰 결과, 텔레메트리 또는 자동 네트워크 요청은 전혀 관여하지 않습니다.
 - 일반 복사는 활성 에디터의 거터 표시를 교체하고 상태 표시줄 위젯에 prefix를 포함해 최대 40자인 단일 라인, Unicode-safe, markup-escaped 미리보기를 표시합니다. 위젯을 클릭하면 마지막 전체 값을 다시 복사합니다.
 - 선택적 로컬 사용 분석은 성공한 일반 복사 액션을 출력 형식과 감지된 파일 언어별로 집계합니다. 설정에서 모든 카운터의 불변 스냅샷을 확인하고 확인 절차 후 초기화할 수 있습니다. 기본으로 꺼져 있고 로컬 IDE 애플리케이션 설정에만 저장되며 절대 전송되지 않습니다.
 
@@ -145,6 +148,7 @@ fun calculateTotal(items: List<Item>): Double {
 - **Include code content** — 선택한 코드 또는 선택이 없을 때 현재 라인을 포함 (기본: 끔)
 - **Trim code whitespace** — 포함한 코드 앞뒤의 공백 제거 (기본: 끔)
 - **Show copy notifications** — 지원하는 복사 액션 후 풍선 알림 표시 (기본: 켬)
+- **Review on Marketplace** — 프롬프트를 강제로 표시하지 않고 공식 리뷰 페이지를 수동으로 열기
 - **Copy history size** — 프로젝트별 항목 0~100개 보관 (기본: 10), `0`이면 이력을 비활성화하고 삭제
 - **Local usage analytics** — 이 기기에만 저장되는 선택적 전체, 출력 형식 및 언어 카운터 확인·초기화 (기본: 끔, 절대 전송하지 않음)
 
@@ -154,7 +158,7 @@ fun calculateTotal(items: List<Item>): Double {
 
 ![Copy Selection Context 설정 화면](docs/images/settings-copy-selection-context.png)
 
-하나의 화면에서 경로 타입, 출력과 템플릿, 코드 처리, 알림, 이력, 로컬 분석을 함께 조정할 수 있습니다.
+하나의 화면에서 경로 타입, 출력과 템플릿, 코드 처리, 알림, 리뷰 접근, 이력, 로컬 분석을 함께 조정할 수 있습니다.
 
 ## 호환 IDE
 

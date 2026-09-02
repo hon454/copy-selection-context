@@ -58,7 +58,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | File | Role |
 |------|------|
 | `CopySelectionContextAction.kt` | Main unified action (`Ctrl+Alt+C` shortcut) |
-| `CopySelectionBaseAction.kt` | Shared copy pipeline: formatting, clipboard, analytics, highlighting, history, notifications, and status updates |
+| `CopySelectionBaseAction.kt` | Shared copy pipeline: formatting, clipboard, analytics, highlighting, history, notifications, status, and review-prompt accounting |
 | `OutputFormatter.kt` / `TemplateFormatter.kt` | Built-in Claude Code and Path:Line formats plus custom templates |
 | `CopySelectionUtils.kt` | Path, line range, selected code, multi-caret, and language helpers |
 | `CopySelectionHighlighter.kt` | Editor-scoped gutter highlighter lifecycle |
@@ -70,11 +70,12 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `CopyPreview.kt` | Bounded, single-line, Unicode-safe, markup-escaped previews |
 | `CopySelectionAnalytics.kt` | Thread-safe opt-in, local-only usage counters and immutable UI snapshots |
 | `CopySelectionNotifier.kt` | Toast notifications (BALLOON) |
+| `CopySelectionReviewService.kt` / `CopySelectionReviewNotifier.kt` | Session-threshold Marketplace review prompt, local suppression state, and balloon actions |
 | `CopySelectionStatusBarWidget.kt` / `CopySelectionStatusBarWidgetFactory.kt` | Last-copy status display and click-to-copy behavior |
 | `CopySelectionSettings.kt` | Settings persistence (`@Service` + `@State`) |
-| `CopySelectionConfigurable.kt` | Settings UI with multiline template editor, preview, validation, and analytics view/reset controls |
+| `CopySelectionConfigurable.kt` | Settings UI with multiline template editor, preview, validation, passive review link, and analytics view/reset controls |
 
-**Flow**: User trigger -> Action reads settings -> Extract editor context -> Format output -> CopyPasteManager -> optional local analytics -> gutter marker -> project history -> optional notification -> status bar update
+**Flow**: User trigger -> Action reads settings -> Extract editor context -> Format output -> CopyPasteManager -> optional local analytics -> gutter marker -> project history -> optional notification -> status bar update -> session-only review eligibility
 
 ## Conventions
 

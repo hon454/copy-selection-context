@@ -1,6 +1,7 @@
 package com.github.hon454.copyselectioncontext
 
 import com.intellij.openapi.options.ConfigurationException
+import com.intellij.ui.components.ActionLink
 import java.awt.Component
 import java.awt.Container
 import javax.swing.JButton
@@ -144,8 +145,22 @@ class CopySelectionConfigurableTest {
         assertEquals(CopySelectionAnalytics.Snapshot(0, emptyMap(), emptyMap()), reloaded.snapshot())
     }
 
+    @Test
+    fun `settings exposes a passive Marketplace review link`() = onEdt {
+        var openCount = 0
+        val fixture = createFixture(openMarketplaceReviewPage = { openCount++ })
+
+        assertEquals(CopySelectionBundle.message("settings.review.marketplace"), fixture.reviewLink.text)
+        assertEquals(0, openCount)
+
+        fixture.reviewLink.doClick()
+
+        assertEquals(1, openCount)
+    }
+
     private fun createFixture(
         analytics: CopySelectionAnalytics = CopySelectionAnalytics(),
+        openMarketplaceReviewPage: () -> Unit = {},
         confirmAnalyticsReset: () -> Boolean = { false },
     ): Fixture {
         val settings = CopySelectionSettings()
@@ -153,12 +168,14 @@ class CopySelectionConfigurableTest {
             settings = settings,
             trimOpenProjectHistory = {},
             analytics = analytics,
+            openMarketplaceReviewPage = openMarketplaceReviewPage,
             confirmAnalyticsReset = confirmAnalyticsReset,
         )
         val component = configurable.createComponent()
         val comboBoxes = descendantsOfType<JComboBox<*>>(component)
         val textAreas = descendantsOfType<JTextArea>(component)
         val buttons = descendantsOfType<JButton>(component)
+        val reviewLinks = descendantsOfType<ActionLink>(component)
 
         val outputFormat = comboBoxes.firstOrNull { combo -> combo.items().contains(OutputFormatOption.TEMPLATE) }
         val preset = comboBoxes.firstOrNull { combo -> combo.items().contains(TemplatePreset.WITH_CODE_BLOCK) }
@@ -172,6 +189,9 @@ class CopySelectionConfigurableTest {
         val analyticsReset = buttons.firstOrNull {
             it.text == CopySelectionBundle.message("settings.analytics.reset")
         }
+        val reviewLink = reviewLinks.firstOrNull {
+            it.text == CopySelectionBundle.message("settings.review.marketplace")
+        }
 
         return Fixture(
             configurable = configurable,
@@ -182,6 +202,7 @@ class CopySelectionConfigurableTest {
             preview = assertNotNull(preview),
             analyticsSummary = assertNotNull(analyticsSummary),
             analyticsReset = assertNotNull(analyticsReset),
+            reviewLink = assertNotNull(reviewLink),
         )
     }
 
@@ -217,5 +238,6 @@ class CopySelectionConfigurableTest {
         val preview: JTextArea,
         val analyticsSummary: JTextArea,
         val analyticsReset: JButton,
+        val reviewLink: ActionLink,
     )
 }

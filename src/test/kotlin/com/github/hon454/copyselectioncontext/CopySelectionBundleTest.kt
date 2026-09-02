@@ -114,6 +114,7 @@ class CopySelectionBundleTest {
             "settings.path.relative",
             "settings.path.absolute",
             "settings.notification.enable",
+            "settings.review.marketplace",
             "settings.trimming.enable",
             "settings.history.size",
             "settings.history.size.comment",
@@ -121,6 +122,38 @@ class CopySelectionBundleTest {
         ).forEach { key ->
             assertTrue(CopySelectionBundle.message(key).isNotBlank(), "Key '$key' should resolve to non-blank string")
         }
+    }
+
+    @Test
+    fun `review prompt bundles keep exact English controls and Korean parity`() {
+        val base = loadBundle("messages/CopySelectionBundle.properties")
+        val korean = loadBundle("messages/CopySelectionBundle_ko.properties")
+        val keys = listOf(
+            "review.prompt.title",
+            "review.prompt.content",
+            "review.prompt.action.review",
+            "review.prompt.action.later",
+            "review.prompt.action.never",
+            "settings.review.marketplace",
+        )
+
+        keys.forEach { key ->
+            assertTrue(base.getProperty(key).isNotBlank(), "Base message '$key' should be non-blank")
+            assertTrue(korean.getProperty(key).isNotBlank(), "Korean message '$key' should be non-blank")
+        }
+        assertEquals("Review on Marketplace", base.getProperty("review.prompt.action.review"))
+        assertEquals("Later", base.getProperty("review.prompt.action.later"))
+        assertEquals("Don''t ask again", base.getProperty("review.prompt.action.never"))
+        assertEquals("Review on Marketplace", base.getProperty("settings.review.marketplace"))
+        assertEquals(
+            base.getProperty("settings.review.marketplace"),
+            base.getProperty("review.prompt.action.review"),
+        )
+        assertEquals(
+            korean.getProperty("settings.review.marketplace"),
+            korean.getProperty("review.prompt.action.review"),
+        )
+        assertTrue(base.getProperty("review.prompt.content").contains("honest", ignoreCase = true))
     }
 
     private fun loadBundleKeys(resourcePath: String): Set<String> {

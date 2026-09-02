@@ -51,6 +51,7 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         assertEquals(listOf(expected), historyContents())
         assertEquals(listOf(expected), action.notificationMessages)
         assertEquals(listOf(expected), action.statusBarMessages)
+        assertEquals(1, action.successfulCopyRecords)
         assertEquals(1, myFixture.editor.markupModel.allHighlighters.size)
         assertTrue(
             myFixture.editor.markupModel.allHighlighters.single().gutterIconRenderer is
@@ -79,11 +80,13 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         )
         secondCaret.setSelection(document.getLineStartOffset(2), document.getLineEndOffset(2))
 
-        perform(CopySelectionContextAction())
+        val action = RecordingCopySelectionContextAction()
+        perform(action)
 
         val path = relativePath()
         assertEquals("$path:1\n\n$path:3", clipboardText())
         assertEquals(listOf("$path:1\n\n$path:3"), historyContents())
+        assertEquals(1, action.successfulCopyRecords)
     }
 
     fun testEnabledAnalyticsRecordsSingleCaretFormatAndLanguageOnce() {
@@ -131,9 +134,11 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         val before = analytics.snapshot()
         settings().analyticsEnabled = false
 
-        perform(CopySelectionContextAction())
+        val action = RecordingCopySelectionContextAction()
+        perform(action)
 
         assertEquals(before, analytics.snapshot())
+        assertEquals(1, action.successfulCopyRecords)
     }
 
     fun testMainActionIncludesTrimmedCodeWithCustomTemplate() {
@@ -335,6 +340,11 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
     private class RecordingCopySelectionContextAction : CopySelectionContextAction() {
         val notificationMessages = mutableListOf<String>()
         val statusBarMessages = mutableListOf<String>()
+        var successfulCopyRecords = 0
+
+        override fun recordSuccessfulCopy(project: Project) {
+            successfulCopyRecords++
+        }
 
         override fun showNotification(project: Project, content: String) {
             notificationMessages.add(content)
