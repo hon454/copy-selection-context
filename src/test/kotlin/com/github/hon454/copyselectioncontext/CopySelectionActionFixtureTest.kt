@@ -101,6 +101,21 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         )
     }
 
+    fun testOversizedResultStillCopiesWithoutEnteringHistory() {
+        val oversizedContent = "x".repeat(CopyHistoryService.MAX_ENTRY_CONTENT_BYTES + 1)
+        myFixture.configureByText("oversized.txt", "<selection>$oversizedContent</selection>")
+        settings().apply {
+            includeCodeContent = true
+            outputFormat = "template"
+            customFormatTemplate = "{code}"
+        }
+
+        perform(CopySelectionContextAction())
+
+        assertEquals(oversizedContent, clipboardText())
+        assertTrue(historyContents().isEmpty())
+    }
+
     fun testExplicitActionsExecuteAgainstFixtureEditor() {
         myFixture.configureByText("explicit.txt", "alpha\n<selection>beta\ngamma</selection>\ndelta")
         val relativePath = relativePath()

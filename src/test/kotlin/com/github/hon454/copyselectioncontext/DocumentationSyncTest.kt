@@ -57,6 +57,8 @@ class DocumentationSyncTest {
             "**Local usage analytics**",
             "Ctrl+Alt+H",
             "40",
+            "256 KiB",
+            "2 MiB",
             "copySelectionHistory.xml",
             "CopySelectionActionFixtureTest",
             "`verifyPlugin`",

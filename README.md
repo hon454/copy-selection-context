@@ -119,7 +119,7 @@ The separate **Copy GitHub/GitLab Permalink** action reads normal-repository or 
 - **Copy history size** — Keep 0–100 entries per project (default: 10); set `0` to disable and clear history
 - **Local usage analytics** — Store opt-in copy counters only on this machine (off by default)
 
-Copy history may contain copied code. It is stored only in the IDE's local, non-roaming workspace data and is not written to shareable project settings. Use **Clear all history** at the bottom of the history popup to remove every entry. When the maximum size is reduced, older entries are removed immediately; history previously stored in `copySelectionHistory.xml` is migrated to local workspace storage and the legacy file is cleaned up by the IDE.
+Copy history may contain copied code. It is stored only in the IDE's local, non-roaming workspace data and is not written to shareable project settings. Each stored entry is limited to 256 KiB of UTF-8 content, and total history per project is limited to 2 MiB. Results over 256 KiB are still copied in full but are not added to history. When either the configured entry count or total byte budget is exceeded, the oldest entries are removed immediately. Use **Clear all history** at the bottom of the history popup to remove every entry. Existing history, including data migrated from `copySelectionHistory.xml`, is normalized to the same limits when loaded; the legacy file is then cleaned up by the IDE.
 
 #### Settings Screen
 

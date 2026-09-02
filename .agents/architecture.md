@@ -23,7 +23,7 @@
 4. `OutputFormatterFactory` selects the configured Claude Code, Path:Line, or custom template formatter. `CopySelectionContextAction` includes code only when enabled; `CopyWithCodeContentAction` always includes it.
 5. `CopyPasteManager` writes the complete formatted result to the clipboard.
 6. When analytics are enabled, `CopySelectionAnalytics` increments local application-level counters.
-7. `CopySelectionHighlighter` replaces the previous gutter markers for the active editor ranges, and the project-level `CopyHistoryService` prepends the result using the configured history-size limit.
+7. `CopySelectionHighlighter` replaces the previous gutter markers for the active editor ranges, and the project-level `CopyHistoryService` prepends the result using the configured entry-count limit plus UTF-8 content budgets of 256 KiB per entry and 2 MiB per project. Oversized results remain on the clipboard but are not persisted.
 8. `CopySelectionNotifier` shows a bounded, single-line, markup-escaped preview when notifications are enabled.
 9. `CopySelectionStatusBarWidget` stores the full result, displays a safe preview capped at 40 characters including its prefix, and copies the full value again when clicked.
 
@@ -61,7 +61,7 @@ Paths use forward slashes in formatted output. Without a selection, the current 
 | `customFormatTemplate` | empty | Stores the multiline template used by the `template` output format |
 | `analyticsEnabled` | `false` | Enables local-only application usage counters |
 
-`CopyHistoryService` persists history per project in the IDE's local, non-roaming workspace storage. Copied code is never written to shareable project settings. Reducing the limit trims the oldest entries immediately; clearing or setting zero persists an empty history. The deprecated `copySelectionHistory.xml` storage entry migrates to workspace storage and is cleaned up. `CopySelectionAnalytics` separately persists opt-in counters at application scope in `copySelectionAnalytics.xml` and does not transmit them.
+`CopyHistoryService` persists history per project in the IDE's local, non-roaming workspace storage. Copied code is never written to shareable project settings. Each entry is limited to 256 KiB of UTF-8 content and total project history to 2 MiB; oversized results are still copied but skipped by history. Reducing the count limit trims the oldest entries immediately, and load-time normalization applies the count and byte limits to existing or legacy state. Clearing or setting zero persists an empty history. The deprecated `copySelectionHistory.xml` storage entry migrates to workspace storage and is cleaned up. `CopySelectionAnalytics` separately persists opt-in counters at application scope in `copySelectionAnalytics.xml` and does not transmit them.
 
 User-facing action, history, notification, status, and settings strings are resolved through `CopySelectionBundle`. English is the default resource bundle and Korean overrides the same key set; output-format options resolve their display names through message keys rather than enum literals.
 

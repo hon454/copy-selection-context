@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Bound project copy history by documented per-entry and total UTF-8 content budgets while preserving oversized clipboard results (#42)
+
 ## [1.1.1] - 2026-09-02
 
 ### Changed
