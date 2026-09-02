@@ -9,7 +9,7 @@ class CopySelectionGutterIconRendererTest {
     @Test
     fun `renderer has tooltip text`() {
         val renderer = CopySelectionGutterIconRenderer()
-        assertEquals("Copied to clipboard", renderer.tooltipText)
+        assertEquals(CopySelectionBundle.message("gutter.tooltip.copied"), renderer.tooltipText)
     }
 
     @Test

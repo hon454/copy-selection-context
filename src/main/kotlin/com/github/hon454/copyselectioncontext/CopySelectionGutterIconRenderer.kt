@@ -6,7 +6,7 @@ import javax.swing.Icon
 
 class CopySelectionGutterIconRenderer : GutterIconRenderer() {
     override fun getIcon(): Icon = IconLoader.getIcon("/icons/copyContext.svg", CopySelectionGutterIconRenderer::class.java)
-    override fun getTooltipText(): String = "Copied to clipboard"
+    override fun getTooltipText(): String = CopySelectionBundle.message("gutter.tooltip.copied")
     override fun equals(other: Any?): Boolean = other is CopySelectionGutterIconRenderer
     override fun hashCode(): Int = javaClass.hashCode()
     override fun getAlignment(): Alignment = Alignment.LEFT

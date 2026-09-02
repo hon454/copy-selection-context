@@ -44,7 +44,7 @@ Successful resolution copies one commit-pinned URL per caret, separated by a bla
 - **Custom template (`template`)**: substitutes `{path}`, `{line}`, `{range}`, `{code}`, `{lang}`, and `{filename}`. `FormatContext.filename` is populated from `VirtualFile.name` for standard copy actions.
 - **Git permalink action**: produces a commit-pinned `github.com` or `gitlab.com` URL such as `https://github.com/.../blob/<sha>/path#L15-L23`.
 
-Paths use forward slashes in formatted output. Without a selection, the current line and its content are used. The settings UI provides a six-row multiline template editor and six-row read-only, focusable live preview, Path and Range / Claude Reference / With Code Block presets, accessible labels, and unknown-variable validation on input and apply.
+Paths use forward slashes in formatted output. Without a selection, the current line and its content are used. The settings UI provides a six-row multiline template editor and six-row read-only, focusable live preview, localized Path and Range / Claude Reference / With Code Block preset labels, accessible labels, and unknown-variable validation on input and apply. Preset keys and template bodies remain stable internal values independent of localized labels.
 
 ## Settings and Local State
 
@@ -63,7 +63,7 @@ Paths use forward slashes in formatted output. Without a selection, the current 
 
 `CopyHistoryService` persists history per project in the IDE's local, non-roaming workspace storage. Copied code is never written to shareable project settings. Each entry is limited to 256 KiB of UTF-8 content and total project history to 2 MiB; oversized results are still copied but skipped by history. Reducing the count limit trims the oldest entries immediately, and load-time normalization applies the count and byte limits to existing or legacy state. Clearing or setting zero persists an empty history. The deprecated `copySelectionHistory.xml` storage entry migrates to workspace storage and is cleaned up. `CopySelectionAnalytics` separately persists opt-in counters at application scope in `copySelectionAnalytics.xml` and does not transmit them. Counter mutation, reset, persistence snapshots, and immutable UI snapshots are synchronized. Settings displays total, format, and language usage and offers a confirmation-gated reset that persists an empty state.
 
-User-facing action, history, notification, status, and settings strings are resolved through `CopySelectionBundle`. English is the default resource bundle and Korean overrides the same key set; output-format options resolve their display names through message keys rather than enum literals.
+User-facing action, history, notification, status, gutter, and settings strings are resolved through `CopySelectionBundle`. English is the default resource bundle and Korean overrides the same key set; output-format options and template presets resolve their display names through message keys rather than persisted keys or template contents.
 
 ## Source Files
 
@@ -101,7 +101,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 
 ## Plugin Registration
 
-`src/main/resources/META-INF/plugin.xml` registers the `CopySelectionContext` BALLOON notification group, application settings configurable, project history and application analytics services, status-bar widget factory, web help provider, primary copy action, history action, three explicit path/code actions, and Git permalink action under `EditorPopupMenu`. The only platform dependency is `com.intellij.modules.platform`.
+`src/main/resources/META-INF/plugin.xml` declares `messages.CopySelectionBundle`, registers the `CopySelectionContext` BALLOON notification group, application settings configurable, project history and application analytics services, status-bar widget factory, web help provider, primary copy action, history action, three explicit path/code actions, and Git permalink action under `EditorPopupMenu`. Action and group presentations omit descriptor text and descriptions so IntelliJ resolves exact `action.<id>.*` and `group.<id>.*` bundle keys. The only platform dependency is `com.intellij.modules.platform`.
 
 ## Verification Architecture
 

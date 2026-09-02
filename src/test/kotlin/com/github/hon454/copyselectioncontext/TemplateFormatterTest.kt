@@ -162,17 +162,33 @@ class TemplateFormatterTest {
 
     @Test
     fun `TemplateFormatter PRESETS first entry is Path and Range`() {
-        assertEquals("Path and Range" to TemplateFormatter.PRESET_PATH_AND_RANGE, TemplateFormatter.PRESETS[0])
+        assertEquals(TemplatePreset.PATH_AND_RANGE, TemplateFormatter.PRESETS[0])
+        assertEquals(TemplateFormatter.PRESET_PATH_AND_RANGE, TemplateFormatter.PRESETS[0].template)
     }
 
     @Test
     fun `TemplateFormatter PRESETS second entry is Claude Reference`() {
-        assertEquals("Claude Reference" to TemplateFormatter.PRESET_CLAUDE_REFERENCE, TemplateFormatter.PRESETS[1])
+        assertEquals(TemplatePreset.CLAUDE_REFERENCE, TemplateFormatter.PRESETS[1])
+        assertEquals(TemplateFormatter.PRESET_CLAUDE_REFERENCE, TemplateFormatter.PRESETS[1].template)
     }
 
     @Test
     fun `TemplateFormatter PRESETS third entry is With Code Block`() {
-        assertEquals("With Code Block" to TemplateFormatter.PRESET_WITH_CODE_BLOCK, TemplateFormatter.PRESETS[2])
+        assertEquals(TemplatePreset.WITH_CODE_BLOCK, TemplateFormatter.PRESETS[2])
+        assertEquals(TemplateFormatter.PRESET_WITH_CODE_BLOCK, TemplateFormatter.PRESETS[2].template)
+    }
+
+    @Test
+    fun `template preset keys and templates are stable`() {
+        assertEquals("custom", TemplatePreset.CUSTOM.key)
+        assertEquals("path-and-range", TemplatePreset.PATH_AND_RANGE.key)
+        assertEquals("claude-reference", TemplatePreset.CLAUDE_REFERENCE.key)
+        assertEquals("with-code-block", TemplatePreset.WITH_CODE_BLOCK.key)
+
+        assertEquals(null, TemplatePreset.CUSTOM.template)
+        assertEquals("{path}:{range}", TemplatePreset.PATH_AND_RANGE.template)
+        assertEquals(" @{path}#L{range} ", TemplatePreset.CLAUDE_REFERENCE.template)
+        assertEquals("{path}:{range}\n```{lang}\n{code}\n```", TemplatePreset.WITH_CODE_BLOCK.template)
     }
 
     @Test

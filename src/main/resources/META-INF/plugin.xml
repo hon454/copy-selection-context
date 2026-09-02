@@ -37,6 +37,7 @@ Source and issue tracker: <a href="https://github.com/hon454/copy-selection-cont
     ]]></description>
     
     <depends>com.intellij.modules.platform</depends>
+    <resource-bundle>messages.CopySelectionBundle</resource-bundle>
     
     <extensions defaultExtensionNs="com.intellij">
         <!-- Notification Group -->
@@ -60,16 +61,12 @@ Source and issue tracker: <a href="https://github.com/hon454/copy-selection-cont
     <actions>
         <!-- Submenu group for all Copy Selection Context actions -->
         <group id="CopySelectionContextGroup"
-               text="Copy Selection Context"
-               description="Copy file path and selection context"
                popup="true"
                icon="/icons/copyContext.svg">
 
             <!-- Main Action: Copy Selection Context (settings-driven) -->
             <action id="CopySelectionContext.Copy"
                     class="com.github.hon454.copyselectioncontext.CopySelectionContextAction"
-                    text="Copy Selection Context"
-                    description="Copy file path and line numbers to clipboard (behavior configured in Settings)"
                     icon="/icons/copyContext.svg">
                 <keyboard-shortcut keymap="$default" first-keystroke="control alt C"/>
                 <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt C" replace-all="true"/>
@@ -79,35 +76,25 @@ Source and issue tracker: <a href="https://github.com/hon454/copy-selection-cont
             <separator/>
 
             <action id="CopySelectionContext.ShowHistory"
-                    class="com.github.hon454.copyselectioncontext.ShowCopyHistoryAction"
-                    text="Show Copy History"
-                    description="Show copy history popup">
+                    class="com.github.hon454.copyselectioncontext.ShowCopyHistoryAction">
                 <keyboard-shortcut keymap="$default" first-keystroke="control alt H"/>
             </action>
 
             <!-- Explicit Actions (context menu only, no shortcuts) -->
             <action id="CopySelectionContext.CopyRelativePath"
                     class="com.github.hon454.copyselectioncontext.CopyRelativePathAction"
-                    text="Copy Relative Path with Line Numbers"
-                    description="Copy file path (relative to project root) and line numbers to clipboard"
                     icon="/icons/copyRelative.svg"/>
 
             <action id="CopySelectionContext.CopyAbsolutePath"
                     class="com.github.hon454.copyselectioncontext.CopyAbsolutePathAction"
-                    text="Copy Absolute Path with Line Numbers"
-                    description="Copy absolute file path and line numbers to clipboard"
                     icon="/icons/copyAbsolute.svg"/>
 
             <action id="CopySelectionContext.CopyWithCodeContent"
                     class="com.github.hon454.copyselectioncontext.CopyWithCodeContentAction"
-                    text="Copy with Code Content"
-                    description="Copy file path, line numbers, and code content in markdown format"
                     icon="/icons/copyWithCode.svg"/>
 
             <action id="CopySelectionContext.CopyGitPermalink"
-                    class="com.github.hon454.copyselectioncontext.CopyGitPermalinkAction"
-                    text="Copy GitHub/GitLab Permalink"
-                    description="Copy GitHub or GitLab permalink for the selected lines"/>
+                    class="com.github.hon454.copyselectioncontext.CopyGitPermalinkAction"/>
 
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </group>
