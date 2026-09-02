@@ -26,16 +26,9 @@ class ClaudeCodeFormatter : OutputFormatter {
         return if (context.code.isNullOrBlank()) {
             " @$normalizedPath#L${context.lineRange} "
         } else {
-            val fence = buildFence(context.code)
+            val fence = MarkdownCodeFence.forCode(context.code)
             " @$normalizedPath#L${context.lineRange} \n$fence${context.language}\n${context.code}\n$fence"
         }
-    }
-
-    private fun buildFence(code: String): String {
-        val maxBackticks = code.lines().maxOfOrNull { line ->
-            line.takeWhile { it == '`' }.length
-        } ?: 0
-        return "`".repeat(maxOf(3, maxBackticks + 1))
     }
 }
 
@@ -48,12 +41,14 @@ class PathLineFormatter : OutputFormatter {
         return if (context.code.isNullOrBlank()) {
             "$normalizedPath:${context.lineRange}"
         } else {
-            val fence = buildFence(context.code)
+            val fence = MarkdownCodeFence.forCode(context.code)
             "$normalizedPath:${context.lineRange}\n$fence${context.language}\n${context.code}\n$fence"
         }
     }
+}
 
-    private fun buildFence(code: String): String {
+internal object MarkdownCodeFence {
+    fun forCode(code: String): String {
         val maxBackticks = code.lines().maxOfOrNull { line ->
             line.takeWhile { it == '`' }.length
         } ?: 0

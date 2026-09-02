@@ -1,15 +1,12 @@
 package com.github.hon454.copyselectioncontext
 
 import com.intellij.openapi.editor.CaretModel
-import com.intellij.openapi.editor.Caret
-import com.intellij.openapi.editor.CaretAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.SelectionModel
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileSystem
 import io.mockk.every
@@ -21,58 +18,6 @@ import kotlin.test.assertTrue
 
 class CopySelectionUtilsTest {
     private val virtualFileSystem = mockk<VirtualFileSystem>()
-
-    @Test
-    fun `resolveLineRanges returns single block for single caret`() {
-        val editor = mockk<Editor>()
-        val selectionModel = mockk<SelectionModel>()
-        val caretModel = mockk<CaretModel>()
-        val document = mockk<Document>()
-
-        every { editor.selectionModel } returns selectionModel
-        every { editor.caretModel } returns caretModel
-        every { editor.document } returns document
-        every { caretModel.caretCount } returns 1
-        every { selectionModel.hasSelection() } returns false
-        every { caretModel.logicalPosition } returns LogicalPosition(9, 0)
-
-        val result = CopySelectionUtils.resolveLineRanges(editor)
-
-        assertEquals(listOf("10"), result)
-    }
-
-    @Test
-    fun `resolveLineRanges returns multiple blocks joined by double newlines for two carets`() {
-        val editor = mockk<Editor>()
-        val caretModel = mockk<CaretModel>()
-        val document = mockk<Document>()
-        val caret1 = mockk<Caret>()
-        val caret2 = mockk<Caret>()
-
-        every { editor.caretModel } returns caretModel
-        every { editor.document } returns document
-        every { caretModel.caretCount } returns 2
-
-        every { caret1.hasSelection() } returns true
-        every { caret1.selectionStart } returns 0
-        every { caret1.selectionEnd } returns 10
-        every { document.getLineNumber(0) } returns 0
-        every { document.getLineNumber(9) } returns 1
-
-        every { caret2.hasSelection() } returns false
-        every { caret2.logicalPosition } returns LogicalPosition(3, 0)
-
-        every { caretModel.runForEachCaret(any<CaretAction>()) } answers {
-            val action = firstArg<CaretAction>()
-            action.perform(caret1)
-            action.perform(caret2)
-        }
-
-        val result = CopySelectionUtils.resolveLineRanges(editor)
-
-        assertEquals(listOf("1-2", "4"), result)
-        assertEquals("1-2\n\n4", CopySelectionUtils.joinCaretBlocks(result))
-    }
 
     @Test
     fun `joinCaretBlocks joins blocks with double newlines`() {
@@ -118,7 +63,7 @@ class CopySelectionUtilsTest {
     }
 
     @Test
-    fun `resolveLineRange returns selection range`() {
+    fun `resolveLineNumbers returns selection range`() {
         val editor = mockk<Editor>()
         val selectionModel = mockk<SelectionModel>()
         val document = mockk<Document>()
@@ -131,9 +76,9 @@ class CopySelectionUtilsTest {
         every { document.getLineNumber(10) } returns 1
         every { document.getLineNumber(19) } returns 3
 
-        val result = CopySelectionUtils.resolveLineRange(editor)
+        val result = CopySelectionUtils.resolveLineNumbers(editor)
 
-        assertEquals("2-4", result)
+        assertEquals(Pair(2, 4), result)
     }
 
     @Test
@@ -213,7 +158,7 @@ class CopySelectionUtilsTest {
     }
 
     @Test
-    fun `resolveLineRange returns current line when no selection`() {
+    fun `resolveLineNumbers returns current line when no selection`() {
         val editor = mockk<Editor>()
         val selectionModel = mockk<SelectionModel>()
         val caretModel = mockk<CaretModel>()
@@ -225,47 +170,9 @@ class CopySelectionUtilsTest {
         every { selectionModel.hasSelection() } returns false
         every { caretModel.logicalPosition } returns LogicalPosition(9, 0)
 
-        val result = CopySelectionUtils.resolveLineRange(editor)
+        val result = CopySelectionUtils.resolveLineNumbers(editor)
 
-        assertEquals("10", result)
-    }
-
-    @Test
-    fun `getCodeContent returns selected text`() {
-        val editor = mockk<Editor>()
-        val selectionModel = mockk<SelectionModel>()
-
-        every { editor.selectionModel } returns selectionModel
-        every { selectionModel.hasSelection() } returns true
-        every { selectionModel.selectedText } returns "val x = 1"
-
-        val result = CopySelectionUtils.getCodeContent(editor)
-
-        assertEquals("val x = 1", result)
-    }
-
-    @Test
-    fun `getCodeContent returns current line text when no selection`() {
-        val editor = mockk<Editor>()
-        val selectionModel = mockk<SelectionModel>()
-        val caretModel = mockk<CaretModel>()
-        val document = mockk<Document>()
-
-        every { editor.selectionModel } returns selectionModel
-        every { editor.caretModel } returns caretModel
-        every { editor.document } returns document
-        every { selectionModel.hasSelection() } returns false
-        every { caretModel.logicalPosition } returns LogicalPosition(2, 0)
-        every { document.getLineStartOffset(2) } returns 5
-        every { document.getLineEndOffset(2) } returns 12
-        every { document.getText(any()) } answers {
-            val range = firstArg<TextRange>()
-            if (range.startOffset == 5 && range.endOffset == 12) "line text" else ""
-        }
-
-        val result = CopySelectionUtils.getCodeContent(editor)
-
-        assertEquals("line text", result)
+        assertEquals(Pair(10, 10), result)
     }
 
     @Test
@@ -288,14 +195,14 @@ class CopySelectionUtilsTest {
 
     @Test
     fun `formatOutput renders plain output`() {
-        val result = CopySelectionUtils.formatOutput("C:\\repo\\src\\App.kt", "3-5")
+        val result = ClaudeCodeFormatter().format(FormatContext("C:\\repo\\src\\App.kt", 3, 5))
 
         assertEquals(" @C:/repo/src/App.kt#L3-5 ", result)
     }
 
     @Test
     fun `formatOutput renders markdown output`() {
-        val result = CopySelectionUtils.formatOutput("src/App.kt", "7", "println(1)", "kotlin")
+        val result = ClaudeCodeFormatter().format(FormatContext("src/App.kt", 7, 7, "println(1)", "kotlin"))
 
         assertEquals(" @src/App.kt#L7 \n```kotlin\nprintln(1)\n```", result)
     }
@@ -368,7 +275,7 @@ class CopySelectionUtilsTest {
     }
 
     @Test
-    fun `resolveLineRange returns single line number when startLine equals endLine`() {
+    fun `resolveLineNumbers returns equal line numbers for one selected line`() {
         val editor = mockk<Editor>()
         val selectionModel = mockk<SelectionModel>()
         val document = mockk<Document>()
@@ -381,23 +288,9 @@ class CopySelectionUtilsTest {
         every { document.getLineNumber(10) } returns 5
         every { document.getLineNumber(14) } returns 5
 
-        val result = CopySelectionUtils.resolveLineRange(editor)
+        val result = CopySelectionUtils.resolveLineNumbers(editor)
 
-        assertEquals("6", result)
-    }
-
-    @Test
-    fun `getCodeContent returns empty string when selectedText is null`() {
-        val editor = mockk<Editor>()
-        val selectionModel = mockk<SelectionModel>()
-
-        every { editor.selectionModel } returns selectionModel
-        every { selectionModel.hasSelection() } returns true
-        every { selectionModel.selectedText } returns null
-
-        val result = CopySelectionUtils.getCodeContent(editor)
-
-        assertEquals("", result)
+        assertEquals(Pair(6, 6), result)
     }
 
     @Test
@@ -412,7 +305,7 @@ class CopySelectionUtilsTest {
     @Test
     fun `formatOutput handles code with triple backticks`() {
         val code = "val markdown = \"\"\"\n```\ncode block\n```\n\"\"\""
-        val result = CopySelectionUtils.formatOutput("src/App.kt", "10-15", code, "kotlin")
+        val result = ClaudeCodeFormatter().format(FormatContext("src/App.kt", 10, 15, code, "kotlin"))
 
         // Should use 4+ backticks to avoid breaking markdown
         assertTrue(result.contains("````kotlin"))
@@ -421,14 +314,14 @@ class CopySelectionUtilsTest {
 
     @Test
     fun `formatOutput handles path with hash character`() {
-        val result = CopySelectionUtils.formatOutput("src/App#v2.kt", "5", null, null)
+        val result = ClaudeCodeFormatter().format(FormatContext("src/App#v2.kt", 5, 5))
 
         assertEquals(" @src/App#v2.kt#L5 ", result)
     }
 
     @Test
     fun `formatOutput does not render code block with empty code string`() {
-        val result = CopySelectionUtils.formatOutput("src/App.kt", "3", "", "kotlin")
+        val result = ClaudeCodeFormatter().format(FormatContext("src/App.kt", 3, 3, "", "kotlin"))
 
         // Empty code should not produce code block
         assertEquals(" @src/App.kt#L3 ", result)
@@ -441,21 +334,6 @@ class CopySelectionUtilsTest {
         val result = CopySelectionUtils.detectLanguage(file)
 
         assertEquals("kotlin", result)
-    }
-
-    @Test
-    fun `getCodeContent handles multiline selected text with special characters`() {
-        val editor = mockk<Editor>()
-        val selectionModel = mockk<SelectionModel>()
-        val multilineText = "fun test() {\n    println(\"한글\")\n}"
-
-        every { editor.selectionModel } returns selectionModel
-        every { selectionModel.hasSelection() } returns true
-        every { selectionModel.selectedText } returns multilineText
-
-        val result = CopySelectionUtils.getCodeContent(editor)
-
-        assertEquals(multilineText, result)
     }
 
     @Test
@@ -603,41 +481,9 @@ class CopySelectionUtilsTest {
     }
 
     @Test
-    fun `getCodeContent with trimming enabled removes leading and trailing whitespace`() {
-        val editor = mockk<Editor>()
-        val selectionModel = mockk<SelectionModel>()
-        val settings = mockk<CopySelectionSettings>()
-        val state = mockk<CopySelectionSettings.State>()
-
-        every { editor.selectionModel } returns selectionModel
-        every { selectionModel.hasSelection() } returns true
-        every { selectionModel.selectedText } returns "  val x = 1  "
-
-        val code = CopySelectionUtils.getCodeContent(editor)
-        val trimmed = if (true) code.trim() else code  // Simulate trimming=true
-
-        assertEquals("val x = 1", trimmed)
-    }
-
-    @Test
-    fun `getCodeContent with trimming disabled preserves whitespace`() {
-        val editor = mockk<Editor>()
-        val selectionModel = mockk<SelectionModel>()
-
-        every { editor.selectionModel } returns selectionModel
-        every { selectionModel.hasSelection() } returns true
-        every { selectionModel.selectedText } returns "  val x = 1  "
-
-        val code = CopySelectionUtils.getCodeContent(editor)
-        val notTrimmed = if (false) code.trim() else code  // Simulate trimming=false
-
-        assertEquals("  val x = 1  ", notTrimmed)
-    }
-
-    @Test
     fun `formatOutput with trimmed code removes whitespace from code block`() {
         val trimmedCode = "val x = 1"
-        val result = CopySelectionUtils.formatOutput("src/App.kt", "5", trimmedCode, "kotlin")
+        val result = ClaudeCodeFormatter().format(FormatContext("src/App.kt", 5, 5, trimmedCode, "kotlin"))
 
         assertEquals(" @src/App.kt#L5 \n```kotlin\nval x = 1\n```", result)
     }
@@ -645,25 +491,17 @@ class CopySelectionUtilsTest {
     @Test
     fun `formatOutput with untrimmed code preserves whitespace in code block`() {
         val untrimmedCode = "  val x = 1  "
-        val result = CopySelectionUtils.formatOutput("src/App.kt", "5", untrimmedCode, "kotlin")
+        val result = ClaudeCodeFormatter().format(FormatContext("src/App.kt", 5, 5, untrimmedCode, "kotlin"))
 
         assertEquals(" @src/App.kt#L5 \n```kotlin\n  val x = 1  \n```", result)
     }
 
     @Test
     fun `trimming only affects code content, not path or line range`() {
-        val editor = mockk<Editor>()
-        val selectionModel = mockk<SelectionModel>()
-
-        every { editor.selectionModel } returns selectionModel
-        every { selectionModel.hasSelection() } returns true
-        every { selectionModel.selectedText } returns "  code  "
-
-        val code = CopySelectionUtils.getCodeContent(editor)
-        val trimmedCode = code.trim()
+        val trimmedCode = "  code  ".trim()
 
         // Path and line range should not be affected
-        val result = CopySelectionUtils.formatOutput("src/  App  .kt", "5", trimmedCode, "kotlin")
+        val result = ClaudeCodeFormatter().format(FormatContext("src/  App  .kt", 5, 5, trimmedCode, "kotlin"))
 
         // Path should preserve its whitespace, only code is trimmed
         assertTrue(result.contains("src/  App  .kt"))

@@ -8,6 +8,32 @@ import kotlin.test.assertTrue
 
 class OutputFormatterTest {
     @Test
+    fun `shared fence builder lengthens only for leading backtick runs`() {
+        assertEquals("```", MarkdownCodeFence.forCode("val ticks = ```"))
+        assertEquals("`````", MarkdownCodeFence.forCode("````\ncontent"))
+    }
+
+    @Test
+    fun `built-in formatter outputs remain byte-for-byte stable`() {
+        val context = FormatContext(
+            path = "src\\App.kt",
+            startLine = 10,
+            endLine = 12,
+            code = "val x = 1",
+            language = "kotlin",
+        )
+
+        assertEquals(
+            " @src/App.kt#L10-12 \n```kotlin\nval x = 1\n```",
+            ClaudeCodeFormatter().format(context),
+        )
+        assertEquals(
+            "src/App.kt:10-12\n```kotlin\nval x = 1\n```",
+            PathLineFormatter().format(context),
+        )
+    }
+
+    @Test
     fun `ClaudeCodeFormatter formats single line`() {
         val formatter = ClaudeCodeFormatter()
         val context = FormatContext(path = "src/App.kt", startLine = 42, endLine = 42)
