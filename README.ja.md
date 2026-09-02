@@ -12,6 +12,8 @@
 
 ClaudeやChatGPTなどのAIコーディングアシスタントにコードのコンテキストを共有するとき、ファイルパスや行番号を手入力していませんか？ **Copy Selection Context**なら、1つのショートカットで`@path#Lline`形式のコンテキストをクリップボードにコピーできます。
 
+[![Get from JetBrains Marketplace](https://img.shields.io/badge/Get%20from-JetBrains%20Marketplace-000000?style=for-the-badge&logo=jetbrains&logoColor=white)](https://plugins.jetbrains.com/plugin/30262-copy-selection-context)
+
 ## 機能
 
 - **ショートカットでコピー** — `Ctrl+Alt+C`でファイルパスと行番号をすぐにコピー

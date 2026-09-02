@@ -12,6 +12,8 @@
 
 Tired of manually typing file paths and line numbers when sharing code context with AI coding assistants like Claude or ChatGPT? **Copy Selection Context** copies `@path#Lline` formatted context to your clipboard with a single shortcut.
 
+[![Get from JetBrains Marketplace](https://img.shields.io/badge/Get%20from-JetBrains%20Marketplace-000000?style=for-the-badge&logo=jetbrains&logoColor=white)](https://plugins.jetbrains.com/plugin/30262-copy-selection-context)
+
 ## Features
 
 - **One-shortcut copy** — `Ctrl+Alt+C` copies file path + line numbers instantly

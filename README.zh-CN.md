@@ -12,6 +12,8 @@
 
 向 Claude、ChatGPT 等 AI 编程助手提供代码上下文时，还在手动输入文件路径和行号吗？**Copy Selection Context** 只需一个快捷键，即可将 `@path#Lline` 格式的上下文复制到剪贴板。
 
+[![Get from JetBrains Marketplace](https://img.shields.io/badge/Get%20from-JetBrains%20Marketplace-000000?style=for-the-badge&logo=jetbrains&logoColor=white)](https://plugins.jetbrains.com/plugin/30262-copy-selection-context)
+
 ## 功能
 
 - **快捷键复制** — 按下 `Ctrl+Alt+C`，立即复制文件路径和行号
