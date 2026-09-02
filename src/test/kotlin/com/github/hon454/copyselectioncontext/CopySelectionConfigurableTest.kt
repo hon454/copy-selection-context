@@ -62,6 +62,29 @@ class CopySelectionConfigurableTest {
     }
 
     @Test
+    fun `blank template preview matches runtime fallback`() = onEdt {
+        val context = FormatContext(
+            path = "src/main/kotlin/Example.kt",
+            startLine = 42,
+            endLine = 53,
+            code = "fun hello() = println(\"world\")",
+            language = "kotlin",
+            filename = "Example.kt"
+        )
+
+        listOf("", " \n\t").forEach { template ->
+            val settings = CopySelectionSettings.State(
+                outputFormat = "template",
+                customFormatTemplate = template
+            )
+            val runtimeOutput = OutputFormatterFactory.getFormatterForSettings(settings).format(context)
+
+            assertEquals(runtimeOutput, CopySelectionConfigurable.renderTemplatePreview(template))
+            assertEquals("src/main/kotlin/Example.kt:42-53", runtimeOutput)
+        }
+    }
+
+    @Test
     fun `template editor and preview are bounded and accessible`() = onEdt {
         val fixture = createFixture()
 

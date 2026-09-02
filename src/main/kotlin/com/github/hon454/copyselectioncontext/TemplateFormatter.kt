@@ -5,13 +5,17 @@ class TemplateFormatter(private val template: String) : OutputFormatter {
     override val displayName = "Custom Template"
 
     override fun format(context: FormatContext): String {
-        return template
-            .replace("{path}", context.path.replace("\\", "/"))
-            .replace("{line}", context.startLine.toString())
-            .replace("{range}", context.lineRange)
-            .replace("{code}", context.code ?: "")
-            .replace("{lang}", context.language)
-            .replace("{filename}", context.filename)
+        val replacements = mapOf(
+            "path" to context.path.replace("\\", "/"),
+            "line" to context.startLine.toString(),
+            "range" to context.lineRange,
+            "code" to (context.code ?: ""),
+            "lang" to context.language,
+            "filename" to context.filename,
+        )
+        return VARIABLE_REGEX.replace(template) { match ->
+            replacements[match.groupValues[1]] ?: match.value
+        }
     }
 
     companion object {
@@ -28,12 +32,13 @@ class TemplateFormatter(private val template: String) : OutputFormatter {
         val VALID_VARIABLES = setOf("path", "line", "range", "code", "lang", "filename")
 
         fun findUnknownVariables(template: String): List<String> {
-            val regex = Regex("""\{(\w+)\}""")
-            return regex.findAll(template)
+            return VARIABLE_REGEX.findAll(template)
                 .map { it.groupValues[1] }
                 .filter { it !in VALID_VARIABLES }
                 .distinct()
                 .toList()
         }
+
+        private val VARIABLE_REGEX = Regex("""\{(\w+)\}""")
     }
 }
