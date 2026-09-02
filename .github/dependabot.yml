@@ -5,3 +5,35 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    target-branch: "main"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      kotlin-tooling:
+        patterns:
+          - "org.jetbrains.kotlin*"
+          - "org.jetbrains.kotlinx*"
+          - "dev.detekt*"
+        update-types:
+          - "minor"
+          - "patch"
+      intellij-tooling:
+        patterns:
+          - "org.jetbrains.intellij.platform*"
+          - "org.jetbrains.changelog*"
+        update-types:
+          - "minor"
+          - "patch"
+      junit:
+        patterns:
+          - "org.junit*"
+          - "junit*"
+        update-types:
+          - "minor"
+          - "patch"

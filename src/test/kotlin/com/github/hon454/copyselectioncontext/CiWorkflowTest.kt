@@ -244,79 +244,230 @@ class CiWorkflowTest {
     fun `workflows declare only required token permissions`() {
         assertEquals(
             listOf("contents: read"),
-            workflowPermissions(readWorkflow("build.yml")),
+            workflowPermissions("build.yml"),
             "build.yml must keep the default GITHUB_TOKEN read-only",
         )
         assertEquals(
             listOf("contents: write", "id-token: write", "attestations: write"),
-            workflowPermissions(readWorkflow("release.yml")),
+            workflowPermissions("release.yml"),
             "release.yml needs release publication and artifact attestation permissions only",
         )
     }
 
     @Test
     fun `Dependabot safely updates action pins through pull request validation`() {
-        val dependabotPath = Path.of(".github", "dependabot.yml")
-        assertTrue(Files.isRegularFile(dependabotPath), "Dependabot configuration is required")
-        val dependabot = Files.readString(dependabotPath)
-        val buildWorkflow = readWorkflow("build.yml")
+        val dependabot = readDependabotConfiguration()
+        val githubActions =
+            dependabot.sequenceForKey("updates").value
+                .filterIsInstance<MappingNode>()
+                .single { it.scalarForKey("package-ecosystem") == "github-actions" }
+        val pullRequest =
+            readWorkflowMapping("build.yml")
+                .mappingForKey("on")
+                .mappingForKey("pull_request")
 
-        assertTrue(
-            dependabot.contains("package-ecosystem: \"github-actions\"") &&
-                dependabot.contains("directory: \"/\"") &&
-                dependabot.contains("interval: \"weekly\""),
-            "Dependabot must check GitHub Actions pins at the repository root on a weekly schedule",
+        assertEquals("/", githubActions.scalarForKey("directory"))
+        assertEquals("weekly", githubActions.mappingForKey("schedule").scalarForKey("interval"))
+        assertEquals(
+            listOf("main"),
+            pullRequest.sequenceForKey("branches").value.map { (it as ScalarNode).value },
+            "Every pull request targeting main, including Dependabot updates, must run the build workflow",
         )
         assertFalse(
-            dependabot.contains("automerge", ignoreCase = true),
+            Files.readString(Path.of(".github", "dependabot.yml")).contains("automerge", ignoreCase = true),
             "GitHub Actions updates must not be configured for automatic merging",
         )
-        assertTrue(
-            Regex("""(?ms)^on:\s.*?^\s{2}pull_request:\s*\n\s{4}branches:\s*\[\s*main\s*]""")
-                .containsMatchIn(buildWorkflow),
-            "Dependabot pull requests targeting main must run the complete build workflow",
+    }
+
+    @Test
+    fun `Dependabot conservatively groups Gradle updates without auto merge`() {
+        val dependabot = readDependabotConfiguration()
+        assertEquals("2", dependabot.scalarForKey("version"))
+        val updates = dependabot.sequenceForKey("updates")
+        assertEquals(
+            setOf("github-actions", "gradle"),
+            updates.value
+                .filterIsInstance<MappingNode>()
+                .map { it.scalarForKey("package-ecosystem") }
+                .toSet(),
+            "Dependabot must contain only the reviewed update ecosystems",
         )
+        val gradle =
+            updates.value
+                .filterIsInstance<MappingNode>()
+                .single { it.scalarForKey("package-ecosystem") == "gradle" }
+
+        assertEquals("/", gradle.scalarForKey("directory"))
+        assertEquals("main", gradle.scalarForKey("target-branch"))
+        assertEquals("weekly", gradle.mappingForKey("schedule").scalarForKey("interval"))
+        assertEquals("5", gradle.scalarForKey("open-pull-requests-limit"))
+        assertEquals(
+            listOf("dependencies"),
+            gradle.sequenceForKey("labels").value.map { (it as ScalarNode).value },
+        )
+
+        val groups = gradle.mappingForKey("groups")
+        val expectedPatterns =
+            mapOf(
+                "kotlin-tooling" to listOf("org.jetbrains.kotlin*", "org.jetbrains.kotlinx*", "dev.detekt*"),
+                "intellij-tooling" to listOf("org.jetbrains.intellij.platform*", "org.jetbrains.changelog*"),
+                "junit" to listOf("org.junit*", "junit*"),
+            )
+        assertEquals(
+            expectedPatterns.keys,
+            groups.value.map { (it.keyNode as ScalarNode).value }.toSet(),
+            "Gradle grouping must stay limited to reviewed dependency families",
+        )
+        groups.value.forEach { groupEntry ->
+            val groupName = (groupEntry.keyNode as ScalarNode).value
+            val group = groupEntry.valueNode as MappingNode
+            assertEquals(
+                expectedPatterns.getValue(groupName),
+                group.sequenceForKey("patterns").value.map { (it as ScalarNode).value },
+                "$groupName must remain limited to its reviewed dependency family",
+            )
+            assertEquals(
+                listOf("minor", "patch"),
+                group.sequenceForKey("update-types").value.map { (it as ScalarNode).value },
+                "Grouped updates must exclude majors",
+            )
+        }
+        assertFalse(
+            Files.readString(Path.of(".github", "dependabot.yml")).contains("automerge", ignoreCase = true),
+            "Gradle updates must never be configured for automatic merging",
+        )
+        val githubAutomation =
+            Files.walk(Path.of(".github")).use { paths ->
+                paths
+                    .filter(Files::isRegularFile)
+                    .filter { it.fileName.toString().endsWith(".yml") || it.fileName.toString().endsWith(".yaml") }
+                    .map(Files::readString)
+                    .toList()
+                    .joinToString("\n")
+                    .lowercase()
+            }
+        assertFalse(
+            listOf("automerge", "auto-merge", "enablepullrequestautomerge", "gh pr merge --auto")
+                .any(githubAutomation::contains),
+            "GitHub automation must not auto-merge dependency pull requests",
+        )
+    }
+
+    @Test
+    fun `Detekt gate is baseline free and limited to reviewed defect rules`() {
+        val buildScript = Files.readString(Path.of("build.gradle.kts"))
+        val detekt = readYamlMapping(Path.of("config", "detekt", "detekt.yml"))
+        val detektConfig = detekt.mappingForKey("config")
+        val configuredRules =
+            detekt.value
+                .filter { (it.keyNode as ScalarNode).value != "config" }
+                .flatMap { ruleSetEntry ->
+                    val ruleSet = (ruleSetEntry.keyNode as ScalarNode).value
+                    val rules = ruleSetEntry.valueNode as MappingNode
+                    rules.value.map { ruleEntry ->
+                        "$ruleSet.${(ruleEntry.keyNode as ScalarNode).value}" to
+                            (ruleEntry.valueNode as MappingNode)
+                    }
+                }.toMap()
+
+        assertEquals(
+            setOf(
+                "empty-blocks.EmptyCatchBlock",
+                "exceptions.SwallowedException",
+                "potential-bugs.UnreachableCode",
+                "style.EqualsNullCall",
+            ),
+            configuredRules.keys,
+        )
+        assertTrue(configuredRules.values.all { it.scalarForKey("active") == "true" })
+        assertEquals("true", detektConfig.scalarForKey("validation"))
+        assertEquals("true", detektConfig.scalarForKey("warningsAsErrors"))
+        assertTrue(buildScript.contains("buildUponDefaultConfig = false"))
+        assertTrue(buildScript.contains("ignoreFailures = false"))
+        assertFalse(buildScript.contains("baseline"), "Detekt must not hide findings behind a baseline")
+        val baselineFiles =
+            Files.walk(Path.of(".")).use { paths ->
+                paths
+                    .filter(Files::isRegularFile)
+                    .filter { path ->
+                        val normalizedPath = path.normalize().toString().replace('\\', '/')
+                        !normalizedPath.startsWith(".git/") &&
+                            !normalizedPath.startsWith(".gradle/") &&
+                            !normalizedPath.startsWith("build/") &&
+                            path.fileName.toString().contains("baseline", ignoreCase = true)
+                    }.toList()
+            }
+        assertTrue(baselineFiles.isEmpty(), "Detekt baseline files are forbidden: $baselineFiles")
     }
 
     private fun assertValidationPipeline(
         workflowName: String,
         publicationStep: String,
     ) {
-        val workflow = readWorkflow(workflowName)
+        val steps = workflowSteps(workflowName)
+        val detektStep = steps.stepNamed("Run Kotlin static analysis")
+        val coverageStep = steps.stepNamed("Run test suite and generate Kotlin coverage")
+        val reportStep = steps.stepNamed("Upload validation reports")
+        val coverageCommand = coverageStep.scalarForKey("run")
+        val reportPaths = reportStep.mappingForKey("with").scalarForKey("path")
         val buildScript = Files.readString(Path.of("build.gradle.kts"))
 
-        assertInOrder(
-            workflow,
-            "name: Run test suite",
+        assertStepsInOrder(
+            steps,
+            "name: Run Kotlin static analysis",
+            "name: Run test suite and generate Kotlin coverage",
             "name: Verify plugin project and structure",
             "name: Verify plugin compatibility",
             "name: Build plugin",
             "name: Upload validation reports",
             "name: $publicationStep",
         )
-        assertTrue(
-            workflow.contains("run: ./gradlew allTests --continue --stacktrace --console=plain"),
-            "$workflowName must run both test tasks even when one fails",
+        assertEquals(
+            "./gradlew detekt --stacktrace --console=plain",
+            detektStep.scalarForKey("run"),
+            "$workflowName must fail on Detekt findings",
+        )
+        assertEquals(
+            "${'$'}{{ !cancelled() }}",
+            coverageStep.scalarForKey("if"),
+            "$workflowName must still run tests after a static-analysis failure",
         )
         assertTrue(
-            workflow.contains("verifyPluginProjectConfiguration") &&
-                workflow.contains("verifyPluginStructure") &&
-                workflow.contains("run: ./gradlew verifyPlugin --stacktrace --console=plain"),
+            listOf("allTests", "koverXmlReport", "koverHtmlReport", "--continue").all { task ->
+                Regex("""(?:^|\s)$task(?:\s|${'$'})""").containsMatchIn(coverageCommand)
+            },
+            "$workflowName must run both test tasks and generate Kotlin XML and HTML coverage",
+        )
+        assertFalse(
+            coverageCommand.contains("koverVerify") ||
+                buildScript.contains("minBound(") ||
+                buildScript.contains("maxBound("),
+            "$workflowName must report coverage without enforcing a vanity percentage",
+        )
+        val verificationStep = steps.stepNamed("Verify plugin project and structure").scalarForKey("run")
+        assertTrue(
+            verificationStep.contains("verifyPluginProjectConfiguration") &&
+                verificationStep.contains("verifyPluginStructure") &&
+                steps.stepNamed("Verify plugin compatibility").scalarForKey("run") ==
+                "./gradlew verifyPlugin --stacktrace --console=plain",
             "$workflowName must run project, structure, and compatibility verification",
         )
-        assertTrue(
-            workflow.contains("name: Upload validation reports\n        if: always()"),
+        assertEquals(
+            "always()",
+            reportStep.scalarForKey("if"),
             "$workflowName must preserve validation reports when a gate fails",
         )
         assertTrue(
-            workflow.contains("build/reports/pluginVerifier/") &&
-                listOf(
-                    "build/reports/tests/test/",
-                    "build/test-results/test/",
-                    "build/reports/tests/platformTest/",
-                    "build/test-results/platformTest/",
-                ).all(workflow::contains),
-            "$workflowName must upload plugin verification and every test task report",
+            listOf(
+                "build/reports/pluginVerifier/",
+                "build/reports/tests/test/",
+                "build/test-results/test/",
+                "build/reports/tests/platformTest/",
+                "build/test-results/platformTest/",
+                "build/reports/detekt/",
+                "build/reports/kover/",
+            ).all(reportPaths::contains),
+            "$workflowName must upload static analysis, coverage, plugin verification, and test diagnostics",
         )
         assertTrue(
             buildScript.contains("intellijPlatformTesting.testIde.register(\"platformTest\")") &&
@@ -329,7 +480,7 @@ class CiWorkflowTest {
         )
         assertPlatformStateTestsAreExplicitlyPartitioned(buildScript)
         assertTrue(
-            workflow.contains("uses: gradle/actions/setup-gradle@"),
+            steps.stepNamed("Setup Gradle").scalarForKey("uses").startsWith("gradle/actions/setup-gradle@"),
             "$workflowName must cache Gradle dependencies used by plugin verification",
         )
     }
@@ -410,6 +561,33 @@ class CiWorkflowTest {
         return Files.readString(path)
     }
 
+    private fun readWorkflowMapping(workflowName: String): MappingNode =
+        readYamlMapping(Path.of(".github", "workflows", workflowName))
+
+    private fun workflowSteps(workflowName: String): List<MappingNode> {
+        val jobs = readWorkflowMapping(workflowName).mappingForKey("jobs")
+        assertEquals(1, jobs.value.size, "$workflowName must keep one ordered validation job")
+        val job = jobs.value.single().valueNode as? MappingNode
+            ?: throw AssertionError("$workflowName must define its validation job as a mapping")
+        return job.sequenceForKey("steps").value.map { step ->
+            step as? MappingNode ?: throw AssertionError("$workflowName contains a non-mapping step")
+        }
+    }
+
+    private fun readDependabotConfiguration(): MappingNode =
+        readYamlMapping(Path.of(".github", "dependabot.yml"))
+
+    private fun readYamlMapping(path: Path): MappingNode {
+        assertTrue(Files.isRegularFile(path), "YAML configuration is required: $path")
+        val settings =
+            LoadSettings
+                .builder()
+                .setLabel(path.toString())
+                .setAllowDuplicateKeys(false)
+                .build()
+        return Compose(settings).composeString(Files.readString(path)).orElseThrow() as MappingNode
+    }
+
     private fun assertWorkflowActionReferencesAreImmutable(
         workflow: String,
         source: String,
@@ -486,6 +664,18 @@ class CiWorkflowTest {
 
     private fun MappingNode.valueForKey(key: String): Node? = entriesForKey(key).singleOrNull()?.value
 
+    private fun MappingNode.scalarForKey(key: String): String =
+        (valueForKey(key) as? ScalarNode)?.value
+            ?: throw AssertionError("Missing scalar Dependabot key: $key")
+
+    private fun MappingNode.mappingForKey(key: String): MappingNode =
+        valueForKey(key) as? MappingNode
+            ?: throw AssertionError("Missing mapping Dependabot key: $key")
+
+    private fun MappingNode.sequenceForKey(key: String): SequenceNode =
+        valueForKey(key) as? SequenceNode
+            ?: throw AssertionError("Missing sequence Dependabot key: $key")
+
     private fun workflowWithStep(step: String): String =
         """
         name: Action pin check
@@ -502,17 +692,31 @@ class CiWorkflowTest {
         val value: Node,
     )
 
-    private fun workflowPermissions(workflow: String): List<String> {
-        val lines = workflow.lines()
-        val permissionsIndex = lines.indexOfFirst { it == "permissions:" }
-        assertTrue(permissionsIndex >= 0, "Workflow must declare permissions explicitly")
+    private fun workflowPermissions(workflowName: String): List<String> =
+        readWorkflowMapping(workflowName)
+            .mappingForKey("permissions")
+            .value
+            .map { permission ->
+                "${(permission.keyNode as ScalarNode).value}: ${(permission.valueNode as ScalarNode).value}"
+            }
 
-        val permissionLines =
-            lines
-                .drop(permissionsIndex + 1)
-                .takeWhile { it.startsWith("  ") && it.isNotBlank() }
-                .map { it.trim() }
-        return permissionLines
+    private fun List<MappingNode>.stepNamed(name: String): MappingNode =
+        singleOrNull { step -> (step.valueForKey("name") as? ScalarNode)?.value == name }
+            ?: throw AssertionError("Missing or duplicate workflow step: $name")
+
+    private fun assertStepsInOrder(
+        steps: List<MappingNode>,
+        vararg markers: String,
+    ) {
+        val names = steps.map { step -> (step.valueForKey("name") as? ScalarNode)?.value }
+        var previousIndex = -1
+        markers.forEach { marker ->
+            val name = marker.removePrefix("name: ")
+            val markerIndex = names.indexOf(name)
+            assertTrue(markerIndex >= 0, "Missing workflow step: $name")
+            assertTrue(markerIndex > previousIndex, "Workflow step is out of order: $name")
+            previousIndex = markerIndex
+        }
     }
 
     private fun assertInOrder(

@@ -35,8 +35,19 @@ jobs:
       - name: Ensure gradlew is executable
         run: chmod +x ./gradlew
 
-      - name: Run test suite
-        run: ./gradlew allTests --continue --stacktrace --console=plain
+      - name: Run Kotlin static analysis
+        run: ./gradlew detekt --stacktrace --console=plain
+
+      - name: Run test suite and generate Kotlin coverage
+        if: ${{ !cancelled() }}
+        run: >-
+          ./gradlew
+          allTests
+          koverXmlReport
+          koverHtmlReport
+          --continue
+          --stacktrace
+          --console=plain
 
       - name: Verify plugin project and structure
         run: >-
@@ -71,6 +82,8 @@ jobs:
             build/test-results/test/
             build/reports/tests/platformTest/
             build/test-results/platformTest/
+            build/reports/detekt/
+            build/reports/kover/
             build/reports/pluginVerifier/
             build/reports/problems/
           if-no-files-found: warn
