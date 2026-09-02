@@ -92,8 +92,11 @@ Releases are automated by [`.github/workflows/release.yml`](.github/workflows/re
    - Verifies the tag version matches `build.gradle.kts`
    - Generates release notes from the matching version section in `CHANGELOG.md`
    - Builds the plugin
+   - Resolves signed or unsigned release mode, failing on partial signing configuration
+   - When both signing credentials are present, signs the plugin and verifies the signed ZIP; otherwise selects the unsigned ZIP and explicitly skips Marketplace publication
+   - Selects exactly one canonical plugin ZIP, writes and verifies `SHA256SUMS`, and generates and verifies GitHub build-provenance attestation for that exact ZIP
    - Creates a non-draft, non-prerelease GitHub Release named after the tag
-   - Attaches the plugin ZIP to the release
+   - Attaches the attested plugin ZIP and `SHA256SUMS` to the release
    - Publishes to JetBrains Marketplace only when `PUBLISH_TOKEN`, `CERTIFICATE_CHAIN`, and `PRIVATE_KEY` are all non-empty
 
 ### Version Rules
@@ -108,6 +111,16 @@ Releases are automated by [`.github/workflows/release.yml`](.github/workflows/re
 
 Keep `[Unreleased]` current as changes land, then run `patchChangelog` after setting the release version so the workflow can find the matching version section. Commit messages remain important for review and repository history, but they are not used to generate release notes.
 
+### Release Artifact Provenance
+
+The plugin ZIP attached to a GitHub Release by [`.github/workflows/release.yml`](.github/workflows/release.yml) is the canonical release artifact. When `CERTIFICATE_CHAIN` and `PRIVATE_KEY` are both configured, the workflow runs `signPlugin` and `verifyPluginSignature`, then selects the single `-signed.zip` output. When both signing credentials are absent, it logs that the canonical ZIP is unsigned and skips Marketplace publication. Supplying only one signing credential fails the release before artifact selection. The workflow grants only `contents: write` for release creation, `id-token: write` for the GitHub OIDC identity, and `attestations: write` for provenance storage. Signing, checksum generation and verification, attestation generation, and offline verification of the returned attestation bundle all run before release creation, so any failure prevents publication.
+
+Cross-environment byte-for-byte reproducibility is not currently supported. Gradle 9 makes archive order and timestamps reproducible by default, and two clean builds in one environment produce identical ZIPs. However, IntelliJ Platform Gradle Plugin 2.18.1's [`GenerateManifestTask`](https://github.com/JetBrains/intellij-platform-gradle-plugin/blob/2.18.1/src/main/kotlin/org/jetbrains/intellij/platform/gradle/tasks/GenerateManifestTask.kt) unconditionally records `Build-JVM` and `Build-OS` from the build host and exposes no supported setting to normalize or omit them. Editing the generated manifest would rely on internal task behavior and would change the input to signing and Marketplace publication, so the repository preserves those fields until JetBrains provides a supported contract. See Gradle's [byte-for-byte reproducibility guidance](https://docs.gradle.org/current/userguide/best_practices_security.html#build_output_should_be_byte_for_byte_reproducible) and GitHub's [artifact attestation guidance](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations).
+
+Release users verify the checksum and provenance with the platform commands documented in all localized README files. The release-time attestation check additionally binds the ZIP to the exact triggering commit, tag ref, repository, and `.github/workflows/release.yml` signer workflow. Marketplace publication passes that same selected path through the official [`PublishPluginTask.archiveFile`](https://github.com/JetBrains/intellij-platform-gradle-plugin/blob/2.18.1/src/main/kotlin/org/jetbrains/intellij/platform/gradle/tasks/PublishPluginTask.kt) property. The explicit `canonicalPluginArchive` opt-in removes `publishPlugin`'s default build/sign dependencies so the already verified ZIP cannot be regenerated or replaced before upload; normal invocations without that property retain JetBrains' default task wiring. The signed path and signature verification follow the official [`SignPluginTask`](https://github.com/JetBrains/intellij-platform-gradle-plugin/blob/2.18.1/src/main/kotlin/org/jetbrains/intellij/platform/gradle/tasks/SignPluginTask.kt) and [`VerifyPluginSignatureTask`](https://github.com/JetBrains/intellij-platform-gradle-plugin/blob/2.18.1/src/main/kotlin/org/jetbrains/intellij/platform/gradle/tasks/VerifyPluginSignatureTask.kt) contracts.
+
+IntelliJ Platform Gradle Plugin 2.18.1 does not declare `verifyPluginSignature` as depending on `signPlugin`, so the release runs them in separate ordered Gradle invocations. Its certificate-content verification path also passes the PEM content as an extra CLI argument. The workflow therefore writes `CERTIFICATE_CHAIN` to a permission-restricted runner-temporary file, removes the content variable only for those Gradle processes, uses the official `certificateChainFile` property, and deletes the temporary file with a shell trap. These workarounds remain necessary until the upstream task wiring and content argument handling are corrected.
+
 ### JetBrains Marketplace Publishing
 
 Publishing activates automatically when the following GitHub repository secrets are configured:
@@ -119,7 +132,7 @@ Publishing activates automatically when the following GitHub repository secrets 
 | `PRIVATE_KEY` | Unencrypted private key (`private.pem` contents) |
 | `PRIVATE_KEY_PASSWORD` | Password for an encrypted private key; passed to Gradle when configured |
 
-The workflow checks `PUBLISH_TOKEN`, `CERTIFICATE_CHAIN`, and `PRIVATE_KEY` before running `publishPlugin`. If any of those three values is empty, the GitHub Release is still created but Marketplace publishing is skipped. `PRIVATE_KEY_PASSWORD` is available to the signing configuration but is not part of the workflow condition, so it may be empty when the private key is unencrypted.
+The workflow resolves signing independently from publishing. `CERTIFICATE_CHAIN` and `PRIVATE_KEY` must either both be present or both be absent. With both present, the canonical GitHub Release artifact is signed even if `PUBLISH_TOKEN` is missing. With both absent, the canonical artifact is explicitly unsigned and Marketplace publishing is skipped. Marketplace publishing runs only when `PUBLISH_TOKEN`, `CERTIFICATE_CHAIN`, and `PRIVATE_KEY` are all non-empty, and receives the same canonical signed path through `-PcanonicalPluginArchive=...`. `PRIVATE_KEY_PASSWORD` is available to the signing configuration but is not part of the workflow condition, so it may be empty when the private key is unencrypted.
 
 To generate signing certificates:
 

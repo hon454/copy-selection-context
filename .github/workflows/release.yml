@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -75,14 +77,53 @@ jobs:
       - name: Build plugin
         run: ./gradlew buildPlugin --stacktrace --console=plain
 
-      - name: Verify plugin ZIP exists
+      - name: Resolve release mode
+        id: release-mode
+        run: bash scripts/resolve-release-mode.sh "$GITHUB_OUTPUT"
+
+      - name: Sign and verify canonical release ZIP
+        if: steps.release-mode.outputs.signed == 'true'
         run: |
-          if [ ! -d "build/distributions" ] || [ -z "$(find build/distributions/ -name '*.zip' 2>/dev/null)" ]; then
-            echo "::error::No plugin ZIP found in build/distributions/"
-            exit 1
-          fi
-          echo "Plugin ZIP found:"
-          ls -la build/distributions/*.zip
+          signing_certificate_file="$RUNNER_TEMP/copy-selection-context-signing-chain.crt"
+          trap 'rm -f "$signing_certificate_file"' EXIT
+          printf '%s' "$CERTIFICATE_CHAIN" > "$signing_certificate_file"
+          chmod 600 "$signing_certificate_file"
+          env -u CERTIFICATE_CHAIN CERTIFICATE_CHAIN_FILE="$signing_certificate_file" \
+            ./gradlew signPlugin --stacktrace --console=plain
+          env -u CERTIFICATE_CHAIN CERTIFICATE_CHAIN_FILE="$signing_certificate_file" \
+            ./gradlew verifyPluginSignature --stacktrace --console=plain
+
+      - name: Select canonical release ZIP
+        id: release-artifact
+        run: >-
+          bash scripts/select-release-artifact.sh
+          build/distributions
+          "${{ steps.release-mode.outputs.signed }}"
+          "$GITHUB_OUTPUT"
+
+      - name: Generate and verify release checksum
+        run: >-
+          bash scripts/generate-release-checksum.sh
+          "${{ steps.release-artifact.outputs.path }}"
+          SHA256SUMS
+
+      - name: Generate release ZIP attestation
+        id: attestation
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ steps.release-artifact.outputs.path }}
+
+      - name: Verify release ZIP attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh attestation verify
+          "${{ steps.release-artifact.outputs.path }}"
+          --bundle "${{ steps.attestation.outputs.bundle-path }}"
+          --repo "${{ github.repository }}"
+          --signer-workflow "${{ github.repository }}/.github/workflows/release.yml"
+          --source-digest "${{ github.sha }}"
+          --source-ref "${{ github.ref }}"
 
       - name: Upload validation reports
         if: always()
@@ -103,14 +144,17 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.tag }}
           body_path: release-notes.md
-          files: build/distributions/*.zip
+          files: |
+            ${{ steps.release-artifact.outputs.path }}
+            SHA256SUMS
           fail_on_unmatched_files: true
           draft: false
           prerelease: false
 
       - name: Publish to JetBrains Marketplace
-        if: >-
-          env.PUBLISH_TOKEN != '' &&
-          env.CERTIFICATE_CHAIN != '' &&
-          env.PRIVATE_KEY != ''
-        run: ./gradlew publishPlugin
+        if: steps.release-mode.outputs.publish == 'true'
+        run: >-
+          ./gradlew publishPlugin
+          -PcanonicalPluginArchive="${{ steps.release-artifact.outputs.path }}"
+          --stacktrace
+          --console=plain

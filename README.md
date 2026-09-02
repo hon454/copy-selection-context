@@ -44,6 +44,35 @@ Tired of manually typing file paths and line numbers when sharing code context w
 2. `File` → `Settings` → `Plugins` → ⚙️ → `Install Plugin from Disk...`
 3. Select the downloaded `.zip` → Restart IDE
 
+## Verifying Release Downloads
+
+The plugin ZIP attached by `.github/workflows/release.yml` is the canonical release artifact. When signing credentials are configured, this is the signature-verified `-signed.zip` file also sent unchanged to JetBrains Marketplace. Without signing credentials, the workflow explicitly marks the canonical ZIP as unsigned and skips Marketplace publication. Local builds can be functionally identical without having the same bytes across environments because the IntelliJ Platform Gradle Plugin records the build JVM and operating system in `META-INF/MANIFEST.MF`. Each GitHub Release therefore includes `SHA256SUMS` and a GitHub artifact attestation for the exact published ZIP.
+
+Download both assets and verify the checksum on Linux:
+
+```bash
+gh release download v1.2.0 \
+  --repo hon454/copy-selection-context \
+  --pattern '*.zip' \
+  --pattern SHA256SUMS
+sha256sum --check SHA256SUMS
+```
+
+On macOS, use the standard `shasum` command instead:
+
+```bash
+shasum -a 256 --check SHA256SUMS
+```
+
+Then verify that GitHub attested the same ZIP from this repository's canonical release workflow and tag. Use the exact downloaded filename; signed releases have the `-signed.zip` suffix shown below, while explicitly unsigned releases do not (replace the version when needed):
+
+```bash
+gh attestation verify copy-selection-context-1.2.0-signed.zip \
+  --repo hon454/copy-selection-context \
+  --signer-workflow hon454/copy-selection-context/.github/workflows/release.yml \
+  --source-ref refs/tags/v1.2.0
+```
+
 ## Usage
 
 ### Keyboard Shortcuts

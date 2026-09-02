@@ -44,6 +44,35 @@ AI 코딩 어시스턴트(Claude, ChatGPT 등)에게 코드 컨텍스트를 전�
 2. `File` → `Settings` → `Plugins` → ⚙️ → `Install Plugin from Disk...`
 3. 다운로드한 `.zip` 선택 → IDE 재시작
 
+## 릴리스 다운로드 검증
+
+`.github/workflows/release.yml`이 첨부한 플러그인 ZIP이 canonical 릴리스 산출물입니다. signing credential이 구성되면 서명을 검증한 `-signed.zip`이 canonical이며, 같은 파일이 변경 없이 JetBrains Marketplace에도 게시됩니다. signing credential이 없으면 workflow가 canonical ZIP을 unsigned로 명확히 표시하고 Marketplace 게시를 건너뜁니다. IntelliJ Platform Gradle Plugin은 빌드 JVM과 운영체제를 `META-INF/MANIFEST.MF`에 기록하므로, 로컬 빌드는 기능적으로 같더라도 환경이 다르면 바이트까지 같지 않을 수 있습니다. 따라서 모든 GitHub Release에는 정확히 게시된 ZIP에 대한 `SHA256SUMS`와 GitHub artifact attestation이 포함됩니다.
+
+두 자산을 모두 다운로드한 뒤 Linux에서 checksum을 검증합니다:
+
+```bash
+gh release download v1.2.0 \
+  --repo hon454/copy-selection-context \
+  --pattern '*.zip' \
+  --pattern SHA256SUMS
+sha256sum --check SHA256SUMS
+```
+
+macOS에서는 표준 `shasum` 명령을 사용합니다:
+
+```bash
+shasum -a 256 --check SHA256SUMS
+```
+
+이어서 GitHub가 같은 ZIP을 이 저장소의 canonical 릴리스 워크플로와 태그에서 생성된 것으로 attest했는지 검증합니다. 다운로드한 정확한 파일명을 사용하세요. signed 릴리스는 아래처럼 `-signed.zip` suffix가 있고, 명시적으로 unsigned인 릴리스에는 없습니다(필요하면 버전을 바꾸세요):
+
+```bash
+gh attestation verify copy-selection-context-1.2.0-signed.zip \
+  --repo hon454/copy-selection-context \
+  --signer-workflow hon454/copy-selection-context/.github/workflows/release.yml \
+  --source-ref refs/tags/v1.2.0
+```
+
 ## 사용법
 
 ### 단축키

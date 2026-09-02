@@ -32,6 +32,70 @@ class CiWorkflowTest {
     }
 
     @Test
+    fun `release signing checksum and attestation gate exact artifact publication`() {
+        val workflow = readWorkflow("release.yml")
+        val buildScript = Files.readString(Path.of("build.gradle.kts"))
+
+        assertInOrder(
+            workflow,
+            "name: Build plugin",
+            "name: Resolve release mode",
+            "name: Sign and verify canonical release ZIP",
+            "name: Select canonical release ZIP",
+            "name: Generate and verify release checksum",
+            "name: Generate release ZIP attestation",
+            "name: Verify release ZIP attestation",
+            "name: Upload validation reports",
+            "name: Create GitHub Release",
+            "name: Publish to JetBrains Marketplace",
+        )
+        assertTrue(
+            workflow.contains("bash scripts/resolve-release-mode.sh \"${'$'}GITHUB_OUTPUT\"") &&
+                workflow.contains("if: steps.release-mode.outputs.signed == 'true'") &&
+                workflow.contains("env -u CERTIFICATE_CHAIN CERTIFICATE_CHAIN_FILE=\"${'$'}signing_certificate_file\"") &&
+                workflow.contains("./gradlew signPlugin --stacktrace --console=plain") &&
+                workflow.contains("./gradlew verifyPluginSignature --stacktrace --console=plain") &&
+                workflow.contains("trap 'rm -f \"${'$'}signing_certificate_file\"' EXIT"),
+            "release.yml must resolve, produce, and verify the signed canonical path when signing is configured",
+        )
+        assertTrue(
+            workflow.contains("bash scripts/select-release-artifact.sh") &&
+                workflow.contains("\"${'$'}{{ steps.release-mode.outputs.signed }}\"") &&
+                workflow.contains("\"${'$'}GITHUB_OUTPUT\""),
+            "release.yml must select the canonical ZIP through the fail-closed selector",
+        )
+        assertTrue(
+            workflow.contains("subject-path: ${'$'}{{ steps.release-artifact.outputs.path }}"),
+            "the attestation must identify the exact ZIP selected for publication",
+        )
+        assertTrue(
+            workflow.contains("--bundle \"${'$'}{{ steps.attestation.outputs.bundle-path }}\"") &&
+                workflow.contains("--source-digest \"${'$'}{{ github.sha }}\"") &&
+                workflow.contains("--source-ref \"${'$'}{{ github.ref }}\""),
+            "release.yml must verify the generated attestation against the triggering commit and tag",
+        )
+        assertTrue(
+            workflow.contains("${'$'}{{ steps.release-artifact.outputs.path }}\n            SHA256SUMS"),
+            "the release must upload the attested ZIP and its checksum file",
+        )
+        assertFalse(
+            workflow.contains("files: build/distributions/*.zip"),
+            "release publication must not re-expand a ZIP glob after attestation",
+        )
+        assertTrue(
+            workflow.contains("if: steps.release-mode.outputs.publish == 'true'") &&
+                workflow.contains("-PcanonicalPluginArchive=\"${'$'}{{ steps.release-artifact.outputs.path }}\""),
+            "Marketplace publication must receive the exact canonical ZIP selected for release",
+        )
+        assertTrue(
+            buildScript.contains("named<PublishPluginTask>(\"publishPlugin\")") &&
+                buildScript.contains("archiveFile.set(layout.projectDirectory.file(canonicalArchive))") &&
+                buildScript.contains("setDependsOn(emptyList<Any>())"),
+            "the explicit canonical archive input must prevent publishPlugin from rebuilding or re-signing",
+        )
+    }
+
+    @Test
     fun `release generates notes only after version and Gradle setup`() {
         val workflow = readWorkflow("release.yml")
 
@@ -179,14 +243,14 @@ class CiWorkflowTest {
     @Test
     fun `workflows declare only required token permissions`() {
         assertEquals(
-            "contents: read",
+            listOf("contents: read"),
             workflowPermissions(readWorkflow("build.yml")),
             "build.yml must keep the default GITHUB_TOKEN read-only",
         )
         assertEquals(
-            "contents: write",
+            listOf("contents: write", "id-token: write", "attestations: write"),
             workflowPermissions(readWorkflow("release.yml")),
-            "release.yml needs only contents write access to create the GitHub release",
+            "release.yml needs release publication and artifact attestation permissions only",
         )
     }
 
@@ -353,7 +417,7 @@ class CiWorkflowTest {
         val value: Node,
     )
 
-    private fun workflowPermissions(workflow: String): String {
+    private fun workflowPermissions(workflow: String): List<String> {
         val lines = workflow.lines()
         val permissionsIndex = lines.indexOfFirst { it == "permissions:" }
         assertTrue(permissionsIndex >= 0, "Workflow must declare permissions explicitly")
@@ -363,8 +427,7 @@ class CiWorkflowTest {
                 .drop(permissionsIndex + 1)
                 .takeWhile { it.startsWith("  ") && it.isNotBlank() }
                 .map { it.trim() }
-        assertEquals(1, permissionLines.size, "Workflow must grant exactly one explicit token permission")
-        return permissionLines.single()
+        return permissionLines
     }
 
     private fun assertInOrder(

@@ -44,6 +44,35 @@
 2. `File` → `Settings` → `Plugins` → ⚙️ → `Install Plugin from Disk...`
 3. 选择下载的 `.zip` 文件 → 重启 IDE
 
+## 验证发布下载
+
+由 `.github/workflows/release.yml` 附加的插件 ZIP 是规范发布产物。配置签名凭据时，规范产物是已验证签名的 `-signed.zip`，同一文件会原样发布到 JetBrains Marketplace。未配置签名凭据时，工作流会明确将规范 ZIP 标记为未签名，并跳过 Marketplace 发布。IntelliJ Platform Gradle Plugin 会把构建 JVM 和操作系统写入 `META-INF/MANIFEST.MF`，因此本地构建即使功能相同，在不同环境中也不一定逐字节一致。为此，每个 GitHub Release 都包含针对实际发布 ZIP 的 `SHA256SUMS` 和 GitHub artifact attestation。
+
+下载这两个资产，并在 Linux 上验证校验和：
+
+```bash
+gh release download v1.2.0 \
+  --repo hon454/copy-selection-context \
+  --pattern '*.zip' \
+  --pattern SHA256SUMS
+sha256sum --check SHA256SUMS
+```
+
+在 macOS 上，请改用标准的 `shasum` 命令：
+
+```bash
+shasum -a 256 --check SHA256SUMS
+```
+
+然后验证 GitHub 是否证明同一个 ZIP 来自此仓库的规范发布工作流和标签。请使用实际下载的文件名；已签名发布带有如下所示的 `-signed.zip` 后缀，明确未签名的发布则没有该后缀（需要时替换版本）：
+
+```bash
+gh attestation verify copy-selection-context-1.2.0-signed.zip \
+  --repo hon454/copy-selection-context \
+  --signer-workflow hon454/copy-selection-context/.github/workflows/release.yml \
+  --source-ref refs/tags/v1.2.0
+```
+
 ## 使用方法
 
 ### 键盘快捷键
