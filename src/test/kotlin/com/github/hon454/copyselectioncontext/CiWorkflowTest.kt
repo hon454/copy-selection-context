@@ -32,13 +32,16 @@ class CiWorkflowTest {
     }
 
     @Test
-    fun `release checksum and attestation gate exact artifact publication`() {
+    fun `release signing checksum and attestation gate exact artifact publication`() {
         val workflow = readWorkflow("release.yml")
+        val buildScript = Files.readString(Path.of("build.gradle.kts"))
 
         assertInOrder(
             workflow,
             "name: Build plugin",
-            "name: Verify plugin ZIP exists",
+            "name: Resolve release mode",
+            "name: Sign and verify canonical release ZIP",
+            "name: Select canonical release ZIP",
             "name: Generate and verify release checksum",
             "name: Generate release ZIP attestation",
             "name: Verify release ZIP attestation",
@@ -47,8 +50,19 @@ class CiWorkflowTest {
             "name: Publish to JetBrains Marketplace",
         )
         assertTrue(
-            workflow.contains("if [ \"${'$'}{#plugin_zips[@]}\" -ne 1 ]"),
-            "release.yml must fail unless buildPlugin produces exactly one ZIP",
+            workflow.contains("bash scripts/resolve-release-mode.sh \"${'$'}GITHUB_OUTPUT\"") &&
+                workflow.contains("if: steps.release-mode.outputs.signed == 'true'") &&
+                workflow.contains("env -u CERTIFICATE_CHAIN CERTIFICATE_CHAIN_FILE=\"${'$'}signing_certificate_file\"") &&
+                workflow.contains("./gradlew signPlugin --stacktrace --console=plain") &&
+                workflow.contains("./gradlew verifyPluginSignature --stacktrace --console=plain") &&
+                workflow.contains("trap 'rm -f \"${'$'}signing_certificate_file\"' EXIT"),
+            "release.yml must resolve, produce, and verify the signed canonical path when signing is configured",
+        )
+        assertTrue(
+            workflow.contains("bash scripts/select-release-artifact.sh") &&
+                workflow.contains("\"${'$'}{{ steps.release-mode.outputs.signed }}\"") &&
+                workflow.contains("\"${'$'}GITHUB_OUTPUT\""),
+            "release.yml must select the canonical ZIP through the fail-closed selector",
         )
         assertTrue(
             workflow.contains("subject-path: ${'$'}{{ steps.release-artifact.outputs.path }}"),
@@ -67,6 +81,17 @@ class CiWorkflowTest {
         assertFalse(
             workflow.contains("files: build/distributions/*.zip"),
             "release publication must not re-expand a ZIP glob after attestation",
+        )
+        assertTrue(
+            workflow.contains("if: steps.release-mode.outputs.publish == 'true'") &&
+                workflow.contains("-PcanonicalPluginArchive=\"${'$'}{{ steps.release-artifact.outputs.path }}\""),
+            "Marketplace publication must receive the exact canonical ZIP selected for release",
+        )
+        assertTrue(
+            buildScript.contains("named<PublishPluginTask>(\"publishPlugin\")") &&
+                buildScript.contains("archiveFile.set(layout.projectDirectory.file(canonicalArchive))") &&
+                buildScript.contains("setDependsOn(emptyList<Any>())"),
+            "the explicit canonical archive input must prevent publishPlugin from rebuilding or re-signing",
         )
     }
 

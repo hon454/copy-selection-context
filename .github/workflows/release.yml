@@ -77,16 +77,29 @@ jobs:
       - name: Build plugin
         run: ./gradlew buildPlugin --stacktrace --console=plain
 
-      - name: Verify plugin ZIP exists
-        id: release-artifact
+      - name: Resolve release mode
+        id: release-mode
+        run: bash scripts/resolve-release-mode.sh "$GITHUB_OUTPUT"
+
+      - name: Sign and verify canonical release ZIP
+        if: steps.release-mode.outputs.signed == 'true'
         run: |
-          mapfile -t plugin_zips < <(find build/distributions -maxdepth 1 -type f -name '*.zip' -print)
-          if [ "${#plugin_zips[@]}" -ne 1 ]; then
-            echo "::error::Expected exactly one plugin ZIP in build/distributions/, found ${#plugin_zips[@]}"
-            exit 1
-          fi
-          echo "path=${plugin_zips[0]}" >> "$GITHUB_OUTPUT"
-          echo "Plugin ZIP found: ${plugin_zips[0]}"
+          signing_certificate_file="$RUNNER_TEMP/copy-selection-context-signing-chain.crt"
+          trap 'rm -f "$signing_certificate_file"' EXIT
+          printf '%s' "$CERTIFICATE_CHAIN" > "$signing_certificate_file"
+          chmod 600 "$signing_certificate_file"
+          env -u CERTIFICATE_CHAIN CERTIFICATE_CHAIN_FILE="$signing_certificate_file" \
+            ./gradlew signPlugin --stacktrace --console=plain
+          env -u CERTIFICATE_CHAIN CERTIFICATE_CHAIN_FILE="$signing_certificate_file" \
+            ./gradlew verifyPluginSignature --stacktrace --console=plain
+
+      - name: Select canonical release ZIP
+        id: release-artifact
+        run: >-
+          bash scripts/select-release-artifact.sh
+          build/distributions
+          "${{ steps.release-mode.outputs.signed }}"
+          "$GITHUB_OUTPUT"
 
       - name: Generate and verify release checksum
         run: >-
@@ -139,8 +152,9 @@ jobs:
           prerelease: false
 
       - name: Publish to JetBrains Marketplace
-        if: >-
-          env.PUBLISH_TOKEN != '' &&
-          env.CERTIFICATE_CHAIN != '' &&
-          env.PRIVATE_KEY != ''
-        run: ./gradlew publishPlugin
+        if: steps.release-mode.outputs.publish == 'true'
+        run: >-
+          ./gradlew publishPlugin
+          -PcanonicalPluginArchive="${{ steps.release-artifact.outputs.path }}"
+          --stacktrace
+          --console=plain

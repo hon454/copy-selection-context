@@ -46,7 +46,7 @@
 
 ## 驗證發行下載
 
-由 `.github/workflows/release.yml` 附加的外掛 ZIP 是標準發行成品。IntelliJ Platform Gradle Plugin 會把建置 JVM 和作業系統寫入 `META-INF/MANIFEST.MF`，因此本機建置即使功能相同，在不同環境中也不一定逐位元組一致。為此，每個 GitHub Release 都包含針對實際發布 ZIP 的 `SHA256SUMS` 和 GitHub artifact attestation。
+由 `.github/workflows/release.yml` 附加的外掛 ZIP 是標準發行成品。設定簽署憑證時，標準成品是已驗證簽章的 `-signed.zip`，同一檔案會原樣發布到 JetBrains Marketplace。未設定簽署憑證時，工作流程會明確將標準 ZIP 標示為未簽署，並略過 Marketplace 發布。IntelliJ Platform Gradle Plugin 會把建置 JVM 和作業系統寫入 `META-INF/MANIFEST.MF`，因此本機建置即使功能相同，在不同環境中也不一定逐位元組一致。為此，每個 GitHub Release 都包含針對實際發布 ZIP 的 `SHA256SUMS` 和 GitHub artifact attestation。
 
 下載這兩個資產，並在 Linux 上驗證 checksum：
 
@@ -64,10 +64,10 @@ sha256sum --check SHA256SUMS
 shasum -a 256 --check SHA256SUMS
 ```
 
-接著驗證 GitHub 是否證明同一個 ZIP 來自此儲存庫的標準發行工作流程和標籤（需要時請替換版本）：
+接著驗證 GitHub 是否證明同一個 ZIP 來自此儲存庫的標準發行工作流程和標籤。請使用實際下載的檔名；已簽署發行帶有如下所示的 `-signed.zip` 後綴，明確未簽署的發行則沒有該後綴（需要時請替換版本）：
 
 ```bash
-gh attestation verify copy-selection-context-1.2.0.zip \
+gh attestation verify copy-selection-context-1.2.0-signed.zip \
   --repo hon454/copy-selection-context \
   --signer-workflow hon454/copy-selection-context/.github/workflows/release.yml \
   --source-ref refs/tags/v1.2.0

@@ -42,9 +42,8 @@ class ReleaseDocumentationTest {
         assertContains(releaseWorkflow, "- 'v*'")
         assertContains(contributing, "any pushed tag matching `v*`")
         assertContains(contributing, "must match exactly")
-        assertContains(releaseWorkflow, "env.PUBLISH_TOKEN != '' &&")
-        assertContains(releaseWorkflow, "env.CERTIFICATE_CHAIN != '' &&")
-        assertContains(releaseWorkflow, "env.PRIVATE_KEY != ''")
+        assertContains(releaseWorkflow, "bash scripts/resolve-release-mode.sh")
+        assertContains(releaseWorkflow, "steps.release-mode.outputs.publish == 'true'")
         assertContains(
             contributing,
             "`PUBLISH_TOKEN`, `CERTIFICATE_CHAIN`, and `PRIVATE_KEY` are all non-empty",
@@ -61,6 +60,9 @@ class ReleaseDocumentationTest {
         assertContains(contributing, "SHA256SUMS")
         assertContains(contributing, "attestations: write")
         assertContains(releaseWorkflow, "bash scripts/generate-release-checksum.sh")
+        assertContains(releaseWorkflow, "./gradlew signPlugin")
+        assertContains(releaseWorkflow, "./gradlew verifyPluginSignature")
+        assertContains(releaseWorkflow, "-PcanonicalPluginArchive=")
         assertContains(releaseWorkflow, "gh attestation verify")
     }
 

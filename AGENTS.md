@@ -46,8 +46,8 @@ cmd //c "gradlew.bat publishPlugin"  # Publish to Marketplace (requires PUBLISH_
 2. Bump `version` in `build.gradle.kts`, then run `cmd //c "gradlew.bat patchChangelog"`
 3. Commit the version and changelog, tag (`v<major>.<minor>.<patch>`), and push
 4. `release.yml` uses `scripts/generate-release-notes.sh` to initialize Gradle separately, then captures only the matching `CHANGELOG.md` section from `getChangelog`
-5. The GitHub Actions-built release ZIP is canonical; the workflow generates and verifies `SHA256SUMS`, generates and verifies GitHub provenance for that exact ZIP, then uploads both release assets
-6. JetBrains Marketplace publishing runs only when `PUBLISH_TOKEN`, `CERTIFICATE_CHAIN`, and `PRIVATE_KEY` are all non-empty
+5. The GitHub Actions-built release ZIP is canonical: signed and signature-verified when both signing credentials are configured, otherwise explicitly unsigned; the workflow then verifies `SHA256SUMS` and GitHub provenance for that exact ZIP before upload
+6. JetBrains Marketplace publishing runs only when `PUBLISH_TOKEN`, `CERTIFICATE_CHAIN`, and `PRIVATE_KEY` are all non-empty, and uploads the same canonical signed ZIP without rebuilding or re-signing it
 
 **Version rule**: Tag version must match `build.gradle.kts` `version` — workflow fails on mismatch.
 

@@ -1,5 +1,6 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.PublishPluginTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -73,6 +74,7 @@ intellijPlatform {
     
     signing {
         certificateChain = providers.environmentVariable("CERTIFICATE_CHAIN")
+        certificateChainFile = providers.environmentVariable("CERTIFICATE_CHAIN_FILE").map { file(it) }
         privateKey = providers.environmentVariable("PRIVATE_KEY")
         password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
     }
@@ -102,5 +104,14 @@ tasks {
 
     buildSearchableOptions {
         jvmArgs("-Xshare:off")
+    }
+
+    named<PublishPluginTask>("publishPlugin") {
+        providers.gradleProperty("canonicalPluginArchive").orNull?.let { canonicalArchive ->
+            archiveFile.set(layout.projectDirectory.file(canonicalArchive))
+            // The release workflow already built, signed, verified, checksummed, and
+            // attested this exact file. Do not rebuild or re-sign it before upload.
+            setDependsOn(emptyList<Any>())
+        }
     }
 }

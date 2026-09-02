@@ -46,7 +46,7 @@ ClaudeやChatGPTなどのAIコーディングアシスタントにコードの�
 
 ## リリースダウンロードの検証
 
-`.github/workflows/release.yml`が添付するプラグインZIPが正規のリリース成果物です。IntelliJ Platform Gradle PluginはビルドJVMとOSを`META-INF/MANIFEST.MF`に記録するため、ローカルビルドは機能的に同じでも、環境が異なるとバイト単位では一致しない場合があります。そのため、各GitHub Releaseには実際に公開されたZIP用の`SHA256SUMS`とGitHub artifact attestationが含まれます。
+`.github/workflows/release.yml`が添付するプラグインZIPが正規のリリース成果物です。署名認証情報が設定されている場合、署名を検証した`-signed.zip`が正規の成果物となり、同じファイルが変更されずにJetBrains Marketplaceへ公開されます。署名認証情報がない場合、ワークフローは正規ZIPを未署名と明示し、Marketplace公開をスキップします。IntelliJ Platform Gradle PluginはビルドJVMとOSを`META-INF/MANIFEST.MF`に記録するため、ローカルビルドは機能的に同じでも、環境が異なるとバイト単位では一致しない場合があります。そのため、各GitHub Releaseには実際に公開されたZIP用の`SHA256SUMS`とGitHub artifact attestationが含まれます。
 
 両方のアセットをダウンロードし、Linuxでchecksumを検証します：
 
@@ -64,10 +64,10 @@ macOSでは標準の`shasum`コマンドを使用します：
 shasum -a 256 --check SHA256SUMS
 ```
 
-続いて、GitHubが同じZIPをこのリポジトリの正規リリースワークフローとタグから生成されたものとしてattestしたことを検証します（必要に応じてバージョンを置き換えてください）：
+続いて、GitHubが同じZIPをこのリポジトリの正規リリースワークフローとタグから生成されたものとしてattestしたことを検証します。実際にダウンロードしたファイル名を使用してください。署名済みリリースには以下のように`-signed.zip`サフィックスがあり、明示的な未署名リリースにはありません（必要に応じてバージョンを置き換えてください）：
 
 ```bash
-gh attestation verify copy-selection-context-1.2.0.zip \
+gh attestation verify copy-selection-context-1.2.0-signed.zip \
   --repo hon454/copy-selection-context \
   --signer-workflow hon454/copy-selection-context/.github/workflows/release.yml \
   --source-ref refs/tags/v1.2.0
