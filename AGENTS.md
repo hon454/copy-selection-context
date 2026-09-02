@@ -45,7 +45,7 @@ cmd //c "gradlew.bat publishPlugin"  # Publish to Marketplace (requires PUBLISH_
 1. Update the `[Unreleased]` entries in `CHANGELOG.md`
 2. Bump `version` in `build.gradle.kts`, then run `cmd //c "gradlew.bat patchChangelog"`
 3. Commit the version and changelog, tag (`v<major>.<minor>.<patch>`), and push
-4. `release.yml` generates GitHub Release notes from the matching `CHANGELOG.md` section with `getChangelog`
+4. `release.yml` uses `scripts/generate-release-notes.sh` to initialize Gradle separately, then captures only the matching `CHANGELOG.md` section from `getChangelog`
 5. JetBrains Marketplace publishing runs only when `PUBLISH_TOKEN`, `CERTIFICATE_CHAIN`, and `PRIVATE_KEY` are all non-empty
 
 **Version rule**: Tag version must match `build.gradle.kts` `version` — workflow fails on mismatch.

@@ -54,17 +54,9 @@ jobs:
 
       - name: Generate release notes from changelog
         run: |
-          ./gradlew getChangelog \
-            --project-version "${{ steps.version.outputs.version }}" \
-            --console=plain \
-            -q \
-            --no-header \
-            --no-links \
-            --no-summary > release-notes.md
-
-          if [ ! -s release-notes.md ]; then
-            echo "Release ${{ steps.version.outputs.tag }}" > release-notes.md
-          fi
+          bash scripts/generate-release-notes.sh \
+            "${{ steps.version.outputs.version }}" \
+            "${{ steps.version.outputs.tag }}"
 
       - name: Run test suite
         run: ./gradlew test --stacktrace --console=plain

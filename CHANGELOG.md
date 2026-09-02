@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Bound project copy history by documented per-entry and total UTF-8 content budgets while preserving oversized clipboard results (#42)
 
+### Fixed
+- Keep Gradle wrapper download and initialization output out of generated GitHub Release notes (#53)
+
 ## [1.1.1] - 2026-09-02
 
 ### Changed

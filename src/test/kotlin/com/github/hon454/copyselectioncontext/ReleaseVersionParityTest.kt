@@ -54,8 +54,9 @@ class ReleaseVersionParityTest {
     }
 
     @Test
-    fun `release workflow uses the deterministic verifier`() {
+    fun `release workflow preserves deterministic version and changelog inputs`() {
         val workflow = Files.readString(projectRoot.resolve(".github/workflows/release.yml"))
+        val releaseNotesGenerator = Files.readString(projectRoot.resolve("scripts/generate-release-notes.sh"))
 
         assertTrue(
             workflow.contains("bash scripts/verify-release-version.sh \"${'$'}{{ steps.version.outputs.tag }}\""),
@@ -63,8 +64,12 @@ class ReleaseVersionParityTest {
         )
         assertFalse(workflow.contains("grep -oP"), workflow)
         assertTrue(
-            workflow.contains("--project-version \"${'$'}{{ steps.version.outputs.version }}\""),
-            workflow
+            workflow.contains("bash scripts/generate-release-notes.sh"),
+            workflow,
+        )
+        assertTrue(
+            releaseNotesGenerator.contains("--project-version \"${'$'}release_version\""),
+            releaseNotesGenerator,
         )
     }
 

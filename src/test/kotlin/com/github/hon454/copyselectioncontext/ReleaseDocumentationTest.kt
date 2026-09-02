@@ -12,11 +12,11 @@ class ReleaseDocumentationTest {
     private val contributing = readProjectFile("CONTRIBUTING.md")
     private val agents = readProjectFile("AGENTS.md")
     private val releaseWorkflow = readProjectFile(".github/workflows/release.yml")
+    private val releaseNotesGenerator = readProjectFile("scripts/generate-release-notes.sh")
 
     @Test
     fun `release guidance uses the changelog workflow commands`() {
-        val getChangelogArguments = listOf(
-            "./gradlew getChangelog",
+        val getChangelogOptions = listOf(
             "--console=plain",
             "-q",
             "--no-header",
@@ -26,10 +26,13 @@ class ReleaseDocumentationTest {
 
         assertContains(contributing, "CHANGELOG.md")
         assertContains(contributing, "./gradlew patchChangelog")
-        getChangelogArguments.forEach { argument ->
-            assertContains(contributing, argument)
-            assertContains(releaseWorkflow, argument)
+        assertContains(contributing, "./gradlew getChangelog")
+        assertContains(releaseNotesGenerator, "\"${'$'}gradle_wrapper\" getChangelog")
+        getChangelogOptions.forEach { option ->
+            assertContains(contributing, option)
+            assertContains(releaseNotesGenerator, option)
         }
+        assertContains(releaseWorkflow, "bash scripts/generate-release-notes.sh")
         assertFalse(contributing.contains("commit-based release notes"))
         assertFalse(agents.contains("commit-based release notes"))
     }
