@@ -61,11 +61,6 @@ object CopySelectionUtils {
         }
     }
 
-    fun resolveLineRange(editor: Editor): String {
-        val (startLine, endLine) = resolveLineNumbers(editor)
-        return toLineRange(startLine, endLine)
-    }
-
     fun resolveLineNumbers(editor: Editor): Pair<Int, Int> {
         val selectionModel = editor.selectionModel
         return if (selectionModel.hasSelection()) {
@@ -85,30 +80,8 @@ object CopySelectionUtils {
         }
     }
 
-    fun resolveLineRange(editor: Editor, caret: Caret): String {
-        val (startLine, endLine) = resolveLineNumbers(editor, caret)
-        return toLineRange(startLine, endLine)
-    }
-
-    fun resolveLineRanges(editor: Editor): List<String> {
-        val caretModel = editor.caretModel
-        if (caretModel.caretCount <= 1) {
-            return listOf(resolveLineRange(editor))
-        }
-
-        val ranges = mutableListOf<String>()
-        caretModel.runForEachCaret { caret ->
-            ranges.add(resolveLineRange(editor, caret))
-        }
-        return ranges
-    }
-
     fun joinCaretBlocks(blocks: List<String>): String {
         return blocks.joinToString("\n\n")
-    }
-
-    fun toLineRange(startLine: Int, endLine: Int): String {
-        return if (startLine == endLine) "$startLine" else "$startLine-$endLine"
     }
 
     private fun resolveSelectedLineNumbers(editor: Editor, selectionStart: Int, selectionEnd: Int): Pair<Int, Int> {
@@ -119,29 +92,14 @@ object CopySelectionUtils {
         return Pair(startLine, endLine)
     }
 
-    fun getCodeContent(editor: Editor): String {
-        val selectionModel = editor.selectionModel
-        return if (selectionModel.hasSelection()) {
-            selectionModel.selectedText ?: ""
-        } else {
-            val document = editor.document
-            val caretLine = editor.caretModel.logicalPosition.line
-            val lineStart = document.getLineStartOffset(caretLine)
-            val lineEnd = document.getLineEndOffset(caretLine)
-            document.getText(TextRange(lineStart, lineEnd))
+    internal fun captureSelectionContexts(path: String, file: VirtualFile, editor: Editor): List<SelectionContext> {
+        val contexts = mutableListOf<SelectionContext>()
+        val language = detectLanguage(file)
+        val filename = file.name
+        editor.caretModel.runForEachCaret { caret ->
+            contexts.add(captureSelectionContext(path, file, language, filename, editor, caret))
         }
-    }
-
-    fun getCodeContent(editor: Editor, caret: Caret): String {
-        return if (caret.hasSelection()) {
-            caret.selectedText ?: ""
-        } else {
-            val document = editor.document
-            val caretLine = caret.logicalPosition.line
-            val lineStart = document.getLineStartOffset(caretLine)
-            val lineEnd = document.getLineEndOffset(caretLine)
-            document.getText(TextRange(lineStart, lineEnd))
-        }
+        return contexts
     }
 
     fun detectLanguage(file: VirtualFile): String {
@@ -149,16 +107,42 @@ object CopySelectionUtils {
         return LANGUAGE_MAP[fileTypeName] ?: file.extension?.lowercase().orEmpty()
     }
 
-    fun formatOutput(path: String, lineRange: String, code: String? = null, language: String? = null): String {
-        val startLine = lineRange.substringBefore("-").toIntOrNull() ?: 0
-        val endLine = lineRange.substringAfter("-", lineRange).toIntOrNull() ?: startLine
-        val context = FormatContext(
+    private fun captureSelectionContext(
+        path: String,
+        file: VirtualFile,
+        language: String,
+        filename: String,
+        editor: Editor,
+        caret: Caret,
+    ): SelectionContext {
+        val document = editor.document
+        val hasSelection = caret.hasSelection()
+        val (startLine, endLine, code) = if (hasSelection) {
+            val selectionStart = caret.selectionStart
+            val selectionEnd = caret.selectionEnd
+            Triple(
+                document.getLineNumber(selectionStart) + 1,
+                document.getLineNumber(selectionEnd - 1) + 1,
+                caret.selectedText ?: "",
+            )
+        } else {
+            val caretLine = caret.logicalPosition.line
+            val lineStart = document.getLineStartOffset(caretLine)
+            val lineEnd = document.getLineEndOffset(caretLine)
+            Triple(
+                caretLine + 1,
+                caretLine + 1,
+                document.getText(TextRange(lineStart, lineEnd)),
+            )
+        }
+        return SelectionContext(
             path = path,
+            file = file,
             startLine = startLine,
             endLine = endLine,
             code = code,
-            language = language ?: "null"
+            language = language,
+            filename = filename,
         )
-        return ClaudeCodeFormatter().format(context)
     }
 }

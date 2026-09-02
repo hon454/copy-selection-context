@@ -3,7 +3,6 @@ package com.github.hon454.copyselectioncontext
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
-import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
@@ -18,18 +17,9 @@ abstract class CopySelectionBaseAction : AnAction() {
         val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
 
         val path = getPath(project, file)
-        val caretCount = editor.caretModel.caretCount
-
-        val copyResult = if (caretCount > 1) {
-            buildMultiCaretContent(path, file, editor, project)
-        } else {
-            val (startLine, endLine) = resolveLineNumbers(editor)
-            val lineRange = CopySelectionUtils.toLineRange(startLine, endLine)
-            CaretCopyResult(
-                content = buildContent(path, lineRange, file, editor, project),
-                lineRanges = listOf(Pair(startLine, endLine)),
-            )
-        }
+        val contexts = CopySelectionUtils.captureSelectionContexts(path, file, editor)
+        if (contexts.isEmpty()) return
+        val copyResult = buildCapturedContent(contexts)
         val result = copyResult.content
 
         copyToClipboard(result)
@@ -38,7 +28,7 @@ abstract class CopySelectionBaseAction : AnAction() {
         if (appSettings.analyticsEnabled) {
             CopySelectionAnalytics.getInstance().recordCopy(
                 format = appSettings.outputFormat,
-                language = detectLanguage(file),
+                language = contexts.first().language,
             )
         }
 
@@ -74,81 +64,25 @@ abstract class CopySelectionBaseAction : AnAction() {
 
     protected abstract fun getPath(project: Project, file: VirtualFile): String
 
-    protected open fun buildContent(path: String, lineRange: String, file: VirtualFile, editor: Editor, project: Project? = null): String {
-        val (startLine, endLine) = resolveLineNumbers(editor)
-        return formatWithSettings(path, startLine, endLine, file)
-    }
+    protected open fun buildContent(context: SelectionContext): String = formatWithSettings(context)
 
-    protected open fun buildContentForCaret(
-        path: String,
-        lineRange: String,
-        startLine: Int,
-        endLine: Int,
-        file: VirtualFile,
-        editor: Editor,
-        caret: Caret,
-        project: Project? = null,
-    ): String {
-        return formatWithSettings(path, startLine, endLine, file)
-    }
-
-    internal fun buildMultiCaretContent(
-        path: String,
-        file: VirtualFile,
-        editor: Editor,
-        project: Project? = null,
-    ): CaretCopyResult {
-        val blocks = mutableListOf<String>()
-        val lineRanges = mutableListOf<Pair<Int, Int>>()
-        editor.caretModel.runForEachCaret { caret ->
-            val (startLine, endLine) = CopySelectionUtils.resolveLineNumbers(editor, caret)
-            val lineRange = CopySelectionUtils.toLineRange(startLine, endLine)
-            lineRanges.add(Pair(startLine, endLine))
-            blocks.add(buildContentForCaret(path, lineRange, startLine, endLine, file, editor, caret, project))
-        }
-        return CaretCopyResult(CopySelectionUtils.joinCaretBlocks(blocks), lineRanges)
-    }
-
-    protected fun resolveLineNumbers(editor: Editor): Pair<Int, Int> {
-        return CopySelectionUtils.resolveLineNumbers(editor)
-    }
+    internal fun buildCapturedContent(contexts: List<SelectionContext>): CaretCopyResult = CaretCopyResult(
+        content = CopySelectionUtils.joinCaretBlocks(contexts.map(::buildContent)),
+        lineRanges = contexts.map(SelectionContext::lineNumbers),
+    )
 
     protected fun formatWithSettings(
-        path: String,
-        startLine: Int,
-        endLine: Int,
-        file: VirtualFile,
-        code: String? = null,
-        language: String = ""
+        context: SelectionContext,
+        includeCode: Boolean = false,
     ): String {
         val settings = CopySelectionSettings.getInstance().state
         val formatter = OutputFormatterFactory.getFormatterForSettings(settings)
-        val context = FormatContext(
-            path = path,
-            startLine = startLine,
-            endLine = endLine,
-            code = code,
-            language = language,
-            filename = file.name
-        )
-        return formatter.format(context)
-    }
-
-    protected fun getCodeContent(editor: Editor): String {
-        return CopySelectionUtils.getCodeContent(editor)
-    }
-
-    protected fun getCodeContent(editor: Editor, caret: Caret): String {
-        return CopySelectionUtils.getCodeContent(editor, caret)
-    }
-
-    protected fun detectLanguage(file: VirtualFile): String {
-        return CopySelectionUtils.detectLanguage(file)
-    }
-
-    protected fun applyCodeTrimming(code: String): String {
-        val settings = CopySelectionSettings.getInstance().state
-        return if (settings.codeTrimming) code.trim() else code
+        val code = if (includeCode) {
+            if (settings.codeTrimming) context.code.trim() else context.code
+        } else {
+            null
+        }
+        return formatter.format(context.toFormatContext(code))
     }
     
     private fun copyToClipboard(content: String) {

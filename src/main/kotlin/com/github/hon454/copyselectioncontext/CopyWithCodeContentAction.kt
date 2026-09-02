@@ -1,7 +1,5 @@
 package com.github.hon454.copyselectioncontext
 
-import com.intellij.openapi.editor.Caret
-import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 
@@ -11,27 +9,6 @@ class CopyWithCodeContentAction : CopySelectionBaseAction() {
         return CopySelectionUtils.resolvePath(project, file, settings.defaultPathType)
     }
 
-    override fun buildContent(path: String, lineRange: String, file: VirtualFile, editor: Editor, project: Project?): String {
-        val (startLine, endLine) = resolveLineNumbers(editor)
-        var code = getCodeContent(editor)
-        code = applyCodeTrimming(code)
-        val language = detectLanguage(file)
-        return formatWithSettings(path, startLine, endLine, file, code, language)
-    }
-
-    protected override fun buildContentForCaret(
-        path: String,
-        lineRange: String,
-        startLine: Int,
-        endLine: Int,
-        file: VirtualFile,
-        editor: Editor,
-        caret: Caret,
-        project: Project?,
-    ): String {
-        var code = getCodeContent(editor, caret)
-        code = applyCodeTrimming(code)
-        val language = detectLanguage(file)
-        return formatWithSettings(path, startLine, endLine, file, code, language)
-    }
+    override fun buildContent(context: SelectionContext): String =
+        formatWithSettings(context, includeCode = true)
 }

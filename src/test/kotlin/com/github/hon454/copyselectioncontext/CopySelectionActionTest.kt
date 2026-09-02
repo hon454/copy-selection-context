@@ -1,31 +1,18 @@
 package com.github.hon454.copyselectioncontext
 
+import com.intellij.openapi.fileTypes.FileType
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
-import com.intellij.openapi.editor.Caret
-import com.intellij.openapi.editor.CaretModel
-import com.intellij.openapi.editor.Document
-import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.editor.LogicalPosition
-import com.intellij.openapi.editor.SelectionModel
-import com.intellij.openapi.fileTypes.FileType
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
-import kotlin.test.assertNotNull
 
-/**
- * Integration tests for CopySelectionAction using mock fixtures.
- * This test class demonstrates the test infrastructure setup for the plugin.
- */
 class CopySelectionActionTest {
-
     private lateinit var settings: CopySelectionSettings
 
     @BeforeTest
@@ -41,101 +28,55 @@ class CopySelectionActionTest {
     }
 
     @Test
-    fun testResolveLineRangeWithMockEditor() {
-        val editor = mockk<Editor>()
-        val selectionModel = mockk<SelectionModel>()
-        val document = mockk<Document>()
-
-        every { editor.selectionModel } returns selectionModel
-        every { editor.document } returns document
-        every { selectionModel.hasSelection() } returns true
-        every { selectionModel.selectionStart } returns 0
-        every { selectionModel.selectionEnd } returns 20
-        every { document.getLineNumber(0) } returns 0
-        every { document.getLineNumber(19) } returns 2
-
-        val result = CopySelectionUtils.resolveLineRange(editor)
-
-        assertNotNull(result)
-        assertTrue(result.contains("-"))
-        assertEquals("1-3", result)
-    }
-
-    @Test
-    fun testDetectLanguageForKotlinFile() {
+    fun `detectLanguage returns Kotlin language tag`() {
         val file = mockk<VirtualFile>()
         val fileType = mockk<FileType>()
         every { file.fileType } returns fileType
         every { fileType.name } returns "Kotlin"
         every { file.extension } returns "kt"
 
-        val language = CopySelectionUtils.detectLanguage(file)
-
-        assertEquals("kotlin", language)
+        assertEquals("kotlin", CopySelectionUtils.detectLanguage(file))
     }
 
     @Test
-    fun testFormatOutputWithCode() {
-        val result = CopySelectionUtils.formatOutput("src/App.kt", "10-15", "fun main() {}", "kotlin")
+    fun `Claude output with code remains byte-for-byte stable`() {
+        val result = ClaudeCodeFormatter().format(
+            FormatContext(
+                path = "src/App.kt",
+                startLine = 10,
+                endLine = 15,
+                code = "fun main() {}",
+                language = "kotlin",
+            ),
+        )
 
-        assertNotNull(result)
-        assertTrue(result.contains("@src/App.kt#L10-15"))
-        assertTrue(result.contains("```kotlin"))
-        assertTrue(result.contains("fun main() {"))
+        assertEquals(" @src/App.kt#L10-15 \n```kotlin\nfun main() {}\n```", result)
     }
 
     @Test
-    fun `custom template includes filename for single caret output`() {
-        useFilenameTemplate()
-        val file = mockk<VirtualFile>()
-        every { file.name } returns "Example.kt"
-
-        val result = TestCopySelectionAction().buildSingleCaretContent(file, mockSingleCaretEditor())
-
-        assertEquals("File: Example.kt", result)
-    }
-
-    @Test
-    fun `custom template includes filename for multi caret output`() {
-        useFilenameTemplate()
-        val file = mockk<VirtualFile>()
-        val caret = mockk<Caret>()
-        every { file.name } returns "Example.kt"
-
-        val result = TestCopySelectionAction().buildMultiCaretContent(file, mockSingleCaretEditor(), caret)
-
-        assertEquals("File: Example.kt", result)
-    }
-
-    private fun useFilenameTemplate() {
+    fun `custom template uses filename from captured context`() {
         every { settings.state } returns CopySelectionSettings.State(
             outputFormat = "template",
-            customFormatTemplate = "File: {filename}"
+            customFormatTemplate = "File: {filename}",
         )
-    }
+        val file = mockk<VirtualFile>()
+        val context = SelectionContext(
+            path = "src/Example.kt",
+            file = file,
+            startLine = 5,
+            endLine = 5,
+            code = "example()",
+            language = "kotlin",
+            filename = "Example.kt",
+        )
 
-    private fun mockSingleCaretEditor(): Editor {
-        val editor = mockk<Editor>()
-        val selectionModel = mockk<SelectionModel>()
-        val caretModel = mockk<CaretModel>()
-        val document = mockk<Document>()
-        every { editor.selectionModel } returns selectionModel
-        every { editor.caretModel } returns caretModel
-        every { editor.document } returns document
-        every { selectionModel.hasSelection() } returns false
-        every { caretModel.logicalPosition } returns LogicalPosition(4, 0)
-        return editor
+        val result = TestCopySelectionAction().buildCapturedContent(listOf(context, context))
+
+        assertEquals("File: Example.kt\n\nFile: Example.kt", result.content)
+        assertEquals(listOf(Pair(5, 5), Pair(5, 5)), result.lineRanges)
     }
 
     private class TestCopySelectionAction : CopySelectionBaseAction() {
         override fun getPath(project: Project, file: VirtualFile): String = file.path
-
-        fun buildSingleCaretContent(file: VirtualFile, editor: Editor): String {
-            return buildContent("src/Example.kt", "5", file, editor)
-        }
-
-        fun buildMultiCaretContent(file: VirtualFile, editor: Editor, caret: Caret): String {
-            return buildContentForCaret("src/Example.kt", "5", 5, 5, file, editor, caret)
-        }
     }
 }

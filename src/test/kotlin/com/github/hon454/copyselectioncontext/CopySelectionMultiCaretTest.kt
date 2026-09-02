@@ -13,6 +13,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import io.mockk.verify
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -24,7 +25,8 @@ class CopySelectionMultiCaretTest {
         val fixture = multiCaretFixture()
         val action = CopySelectionContextAction()
 
-        val result = action.buildMultiCaretContent("src/App.kt", fixture.file, fixture.editor)
+        val contexts = CopySelectionUtils.captureSelectionContexts("src/App.kt", fixture.file, fixture.editor)
+        val result = action.buildCapturedContent(contexts)
 
         assertEquals(
             " @src/App.kt#L1-2 \n```kotlin\nfirst()\n```\n\n" +
@@ -41,7 +43,8 @@ class CopySelectionMultiCaretTest {
         val fixture = multiCaretFixture()
         val action = CopyWithCodeContentAction()
 
-        val result = action.buildMultiCaretContent("src/App.kt", fixture.file, fixture.editor)
+        val contexts = CopySelectionUtils.captureSelectionContexts("src/App.kt", fixture.file, fixture.editor)
+        val result = action.buildCapturedContent(contexts)
 
         assertEquals(
             " @src/App.kt#L1-2 \n```kotlin\nfirst()\n```\n\n" +
@@ -57,9 +60,10 @@ class CopySelectionMultiCaretTest {
     ) {
         val fixture = multiCaretFixture()
         val actions = listOf(CopyAbsolutePathAction(), CopyRelativePathAction())
+        val contexts = CopySelectionUtils.captureSelectionContexts("src/App.kt", fixture.file, fixture.editor)
 
         actions.forEach { action ->
-            val result = action.buildMultiCaretContent("src/App.kt", fixture.file, fixture.editor)
+            val result = action.buildCapturedContent(contexts)
 
             assertEquals(
                 " @src/App.kt#L1-2 \n\n @src/App.kt#L5 ",
@@ -67,6 +71,28 @@ class CopySelectionMultiCaretTest {
             )
             assertEquals(listOf(Pair(1, 2), Pair(5, 5)), result.lineRanges)
         }
+        verify(exactly = 1) { fixture.document.getLineNumber(0) }
+        verify(exactly = 1) { fixture.document.getLineNumber(11) }
+    }
+
+    @Test
+    fun `captured contexts remain deterministic after selections change`() = withSettings(
+        CopySelectionSettings.State(includeCodeContent = true),
+    ) {
+        val fixture = multiCaretFixture()
+        val contexts = CopySelectionUtils.captureSelectionContexts("src/App.kt", fixture.file, fixture.editor)
+        every { fixture.selectedCaret.selectionStart } returns 40
+        every { fixture.selectedCaret.selectionEnd } returns 48
+        every { fixture.selectedCaret.selectedText } returns "changed()"
+
+        val result = CopySelectionContextAction().buildCapturedContent(contexts)
+
+        assertEquals(
+            " @src/App.kt#L1-2 \n```kotlin\nfirst()\n```\n\n" +
+                " @src/App.kt#L5 \n```kotlin\nsecond()\n```",
+            result.content,
+        )
+        assertEquals(listOf(Pair(1, 2), Pair(5, 5)), result.lineRanges)
     }
 
     private fun multiCaretFixture(): MultiCaretFixture {
@@ -101,7 +127,7 @@ class CopySelectionMultiCaretTest {
         every { file.extension } returns "kt"
         every { file.name } returns "App.kt"
 
-        return MultiCaretFixture(editor, selectedCaret, currentLineCaret, file)
+        return MultiCaretFixture(editor, document, selectedCaret, currentLineCaret, file)
     }
 
     private fun withSettings(state: CopySelectionSettings.State, test: () -> Unit) {
@@ -119,6 +145,7 @@ class CopySelectionMultiCaretTest {
 
     private data class MultiCaretFixture(
         val editor: Editor,
+        val document: Document,
         val selectedCaret: Caret,
         val currentLineCaret: Caret,
         val file: VirtualFile,

@@ -18,8 +18,8 @@
 ## Standard Copy Flow
 
 1. The user invokes `CopySelectionContextAction` with `Ctrl+Alt+C` / `Cmd+Alt+C`, or chooses an explicit path/code action from the editor context menu.
-2. `CopySelectionBaseAction` resolves the project, editor, and virtual file. `CopySelectionUtils` derives the configured path, selected text or current line, 1-based inclusive line range, and Markdown language tag.
-3. A non-empty selection uses `selectionEnd - 1` as its last included offset, so a selection ending at the next line's start does not include that line. With multiple carets, each caret is formatted independently and the blocks are joined with a blank line.
+2. `CopySelectionBaseAction` resolves the project, editor, and virtual file. `CopySelectionUtils` reads each caret exactly once into an immutable `SelectionContext` containing the captured path, file, filename, selected text or current line, 1-based inclusive line range, and Markdown language tag.
+3. A non-empty selection uses `selectionEnd - 1` as its last included offset, so a selection ending at the next line's start does not include that line. With multiple carets, each captured context is formatted independently and the blocks are joined with a blank line; formatting and post-copy highlighting never re-read mutable editor selection state.
 4. `OutputFormatterFactory` selects the configured Claude Code, Path:Line, or custom template formatter. `CopySelectionContextAction` includes code only when enabled; `CopyWithCodeContentAction` always includes it.
 5. `CopyPasteManager` writes the complete formatted result to the clipboard.
 6. When analytics are enabled, `CopySelectionAnalytics` increments total, selected-format, and detected-language counters exactly once per standard copy action, including multi-caret copies.
@@ -93,7 +93,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `CopySelectionSettings.kt` | Persistent application settings and path enum |
 | `CopySelectionStatusBarWidget.kt` | Safe last-copy preview and click-to-copy interaction |
 | `CopySelectionStatusBarWidgetFactory.kt` | Status-bar widget registration lifecycle |
-| `CopySelectionUtils.kt` | VFS path, exclusive-end range, code, multi-caret, and language helpers |
+| `CopySelectionUtils.kt` | VFS paths, language detection, exclusive-end ranges, and single-pass caret context capture |
 | `CopySelectionWebHelpProvider.kt` | README help-topic URLs |
 | `CopyWithCodeContentAction.kt` | Context-menu action that always includes code |
 | `GitPermalinkGenerator.kt` | GitHub/GitLab remote parsing and encoded URL construction |
@@ -101,6 +101,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `GitRepositoryMetadataResolver.kt` | Standard and linked-worktree metadata/ref resolution |
 | `OutputFormatOption.kt` | Localized output-format setting options |
 | `OutputFormatter.kt` | Format context, built-in formatters, and formatter factory |
+| `SelectionContext.kt` | Immutable single source of truth for per-caret path, file, range, code, language, and filename inputs |
 | `ShowCopyHistoryAction.kt` | Direct action that opens project copy history |
 | `TemplateFormatter.kt` | Custom variable substitution, presets, and validation |
 

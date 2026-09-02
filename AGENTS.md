@@ -60,7 +60,8 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `CopySelectionContextAction.kt` | Main unified action (`Ctrl+Alt+C` shortcut) |
 | `CopySelectionBaseAction.kt` | Shared copy pipeline: formatting, clipboard, analytics, highlighting, history, notifications, status, and review-prompt accounting |
 | `OutputFormatter.kt` / `TemplateFormatter.kt` | Built-in Claude Code and Path:Line formats plus custom templates |
-| `CopySelectionUtils.kt` | Path, line range, selected code, multi-caret, and language helpers |
+| `SelectionContext.kt` | Immutable per-caret snapshot of path, file, range, code, language, and filename inputs |
+| `CopySelectionUtils.kt` | Path/language helpers and single-pass selection context capture |
 | `CopySelectionHighlighter.kt` | Editor-scoped gutter highlighter lifecycle |
 | `CopyRelativePathAction.kt` | Relative path (context menu only) |
 | `CopyAbsolutePathAction.kt` | Absolute path (context menu only) |
@@ -75,7 +76,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `CopySelectionSettings.kt` | Settings persistence (`@Service` + `@State`) |
 | `CopySelectionConfigurable.kt` | Settings UI with multiline template editor, preview, validation, passive review link, and analytics view/reset controls |
 
-**Flow**: User trigger -> Action reads settings -> Extract editor context -> Format output -> CopyPasteManager -> optional local analytics -> gutter marker -> project history -> optional notification -> status bar update -> session-only review eligibility
+**Flow**: User trigger -> Action reads settings -> Capture one immutable `SelectionContext` per caret -> Format captured contexts -> CopyPasteManager -> optional local analytics -> gutter marker from captured ranges -> project history -> optional notification -> status bar update -> session-only review eligibility
 
 ## Conventions
 
