@@ -80,5 +80,9 @@ class CopySelectionNotifierTest {
         assertEquals(3, labels.size)
         assertEquals(3, labels.toSet().size)
         labels.forEach { assertTrue(it.isNotBlank()) }
+        assertEquals(
+            CopySelectionBundle.message("settings.review.marketplace"),
+            CopySelectionReviewNotifier.actionText(ReviewPromptAction.REVIEW),
+        )
     }
 }

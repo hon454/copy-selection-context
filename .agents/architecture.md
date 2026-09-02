@@ -26,7 +26,7 @@
 7. `CopySelectionHighlighter` replaces the previous gutter markers for the active editor ranges, and the project-level `CopyHistoryService` prepends the result using the configured entry-count limit plus UTF-8 content budgets of 256 KiB per entry and 2 MiB per project. Oversized results remain on the clipboard but are not persisted.
 8. `CopySelectionNotifier` shows a bounded, single-line, markup-escaped preview when notifications are enabled.
 9. `CopySelectionStatusBarWidget` stores the full result, displays a safe preview capped at 40 characters including its prefix, and copies the full value again when clicked.
-10. `CopySelectionReviewService` counts the successful standard copy action once, regardless of caret count or analytics preference. On exactly the tenth copy in the IDE session, supported non-test and non-headless contexts may show one localized review balloon when notifications are enabled.
+10. `CopySelectionReviewService` counts an eligible successful standard copy action once, regardless of caret count or analytics preference. Notifications must be enabled and the context must have a supported plugin version and be non-test and non-headless before the session counter can change. On exactly the tenth eligible copy in the IDE session, one localized review balloon may appear.
 
 `ShowCopyHistoryAction` opens the current project's history popup. Choosing an entry copies its full stored content; choosing the clear-all item deletes the history.
 
@@ -62,7 +62,7 @@ Paths use forward slashes in formatted output. Without a selection, the current 
 | `customFormatTemplate` | empty | Stores the multiline template used by the `template` output format |
 | `analyticsEnabled` | `false` | Enables local-only application usage counters |
 
-`CopySelectionReviewService` keeps its exact successful-copy counter only in memory. Its separate local, non-roaming `copySelectionReview.xml` state contains only `lastPromptedVersion`, `neverAskAgain`, and `marketplacePageOpened`. The prompt records the version before it appears, so `Later` suppresses the rest of that version; opening the official Marketplace review page or choosing `Don't ask again` suppresses every future version. The Settings link opens the same exact review URL on explicit user action. The feature neither reads nor writes analytics, copied content, file information, or review outcomes, and performs no automatic network request.
+`CopySelectionReviewService` keeps its exact eligible-copy counter only in memory. Notification-disabled, unit-test, headless, unsupported-version, already-prompted-version, and permanently suppressed paths return before changing that counter or prompt state. Its separate local, non-roaming `copySelectionReview.xml` state contains only `lastPromptedVersion`, `neverAskAgain`, and `marketplacePageOpened`. The prompt records the version before it appears, so `Later` suppresses the rest of that version; opening the official Marketplace review page or choosing `Don't ask again` suppresses every future version. `Review on Marketplace` and the Settings link open the same exact review URL on explicit user action. The feature neither reads nor writes analytics, copied content, file information, or review outcomes, and performs no automatic network request.
 
 `CopyHistoryService` persists history per project in the IDE's local, non-roaming workspace storage. Copied code is never written to shareable project settings. Each entry is limited to 256 KiB of UTF-8 content and total project history to 2 MiB; oversized results are still copied but skipped by history. Reducing the count limit trims the oldest entries immediately, and load-time normalization applies the count and byte limits to existing or legacy state. Clearing or setting zero persists an empty history. The deprecated `copySelectionHistory.xml` storage entry migrates to workspace storage and is cleaned up. `CopySelectionAnalytics` separately persists opt-in counters at application scope in `copySelectionAnalytics.xml` and does not transmit them. Counter mutation, reset, persistence snapshots, and immutable UI snapshots are synchronized. Settings displays total, format, and language usage and offers a confirmation-gated reset that persists an empty state.
 
@@ -88,7 +88,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `CopySelectionGutterIconRenderer.kt` | Gutter icon and safe tooltip preview |
 | `CopySelectionHighlighter.kt` | Editor-scoped multi-range gutter marker lifecycle |
 | `CopySelectionNotifier.kt` | Settings-aware success and localized permalink-failure balloons |
-| `CopySelectionReviewNotifier.kt` | Localized honest-review balloon and Review / Later / Don't ask again actions |
+| `CopySelectionReviewNotifier.kt` | Localized honest-review balloon and Review on Marketplace / Later / Don't ask again actions |
 | `CopySelectionReviewService.kt` | Session-only threshold, version and environment policy, non-roaming suppression state, and Marketplace opening |
 | `CopySelectionSettings.kt` | Persistent application settings and path enum |
 | `CopySelectionStatusBarWidget.kt` | Safe last-copy preview and click-to-copy interaction |

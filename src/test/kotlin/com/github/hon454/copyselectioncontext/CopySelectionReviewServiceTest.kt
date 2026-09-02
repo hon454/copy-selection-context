@@ -32,6 +32,7 @@ class CopySelectionReviewServiceTest {
                 headlessEnvironment = false,
             ),
         )
+        assertEquals(10, service.sessionCopyCount())
     }
 
     @Test
@@ -77,8 +78,62 @@ class CopySelectionReviewServiceTest {
     }
 
     @Test
-    fun `notification disabled consumes the session threshold without persisting a prompt`() {
+    fun `notification disabled leaves state unchanged and enabled copies get a fresh threshold`() {
+        val originalState = CopySelectionReviewService.State(lastPromptedVersion = "1.1.0")
+        val service = CopySelectionReviewService().apply { loadState(originalState) }
+
+        val disabledDecisions = (1..CopySelectionReviewService.PROMPT_THRESHOLD).map {
+            service.registerSuccessfulCopy(
+                pluginVersion = "1.2.0",
+                notificationsEnabled = false,
+                unitTestMode = false,
+                headlessEnvironment = false,
+            )
+        }
+
+        assertTrue(disabledDecisions.none { it })
+        assertEquals(0, service.sessionCopyCount())
+        assertEquals(originalState, service.state)
+
+        val enabledDecisions = (1..CopySelectionReviewService.PROMPT_THRESHOLD).map {
+            service.registerSuccessfulCopy(
+                pluginVersion = "1.2.0",
+                notificationsEnabled = true,
+                unitTestMode = false,
+                headlessEnvironment = false,
+            )
+        }
+
+        assertTrue(enabledDecisions.take(9).none { it })
+        assertTrue(enabledDecisions.last())
+        assertEquals(10, service.sessionCopyCount())
+        assertEquals("1.2.0", service.state.lastPromptedVersion)
+    }
+
+    @Test
+    fun `suppressed versions and permanent decisions do not advance the session counter`() {
+        val currentVersion = CopySelectionReviewService().apply {
+            loadState(CopySelectionReviewService.State(lastPromptedVersion = "1.2.0"))
+        }
+        val neverAskAgain = CopySelectionReviewService().apply {
+            loadState(CopySelectionReviewService.State(neverAskAgain = true))
+        }
+        val marketplaceOpened = CopySelectionReviewService().apply {
+            loadState(CopySelectionReviewService.State(marketplacePageOpened = true))
+        }
+
+        assertFalse(reachThreshold(currentVersion, pluginVersion = "1.2.0"))
+        assertFalse(reachThreshold(neverAskAgain, pluginVersion = "99.0.0"))
+        assertFalse(reachThreshold(marketplaceOpened, pluginVersion = "99.0.0"))
+        assertEquals(0, currentVersion.sessionCopyCount())
+        assertEquals(0, neverAskAgain.sessionCopyCount())
+        assertEquals(0, marketplaceOpened.sessionCopyCount())
+    }
+
+    @Test
+    fun `notification disabled alone never mutates a default service`() {
         val service = CopySelectionReviewService()
+        val originalState = service.state
 
         val prompted = reachThreshold(
             service = service,
@@ -87,8 +142,8 @@ class CopySelectionReviewServiceTest {
         )
 
         assertFalse(prompted)
-        assertEquals(10, service.sessionCopyCount())
-        assertEquals("", service.state.lastPromptedVersion)
+        assertEquals(0, service.sessionCopyCount())
+        assertEquals(originalState, service.state)
     }
 
     @Test
@@ -100,6 +155,9 @@ class CopySelectionReviewServiceTest {
         assertFalse(reachThreshold(unitTestService, unitTestMode = true))
         assertFalse(reachThreshold(headlessService, headlessEnvironment = true))
         assertFalse(reachThreshold(missingVersionService, pluginVersion = null))
+        assertEquals(0, unitTestService.sessionCopyCount())
+        assertEquals(0, headlessService.sessionCopyCount())
+        assertEquals(0, missingVersionService.sessionCopyCount())
         assertEquals("", unitTestService.state.lastPromptedVersion)
         assertEquals("", headlessService.state.lastPromptedVersion)
         assertEquals("", missingVersionService.state.lastPromptedVersion)

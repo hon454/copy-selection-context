@@ -141,10 +141,18 @@ class CopySelectionBundleTest {
             assertTrue(base.getProperty(key).isNotBlank(), "Base message '$key' should be non-blank")
             assertTrue(korean.getProperty(key).isNotBlank(), "Korean message '$key' should be non-blank")
         }
-        assertEquals("Review", base.getProperty("review.prompt.action.review"))
+        assertEquals("Review on Marketplace", base.getProperty("review.prompt.action.review"))
         assertEquals("Later", base.getProperty("review.prompt.action.later"))
         assertEquals("Don''t ask again", base.getProperty("review.prompt.action.never"))
         assertEquals("Review on Marketplace", base.getProperty("settings.review.marketplace"))
+        assertEquals(
+            base.getProperty("settings.review.marketplace"),
+            base.getProperty("review.prompt.action.review"),
+        )
+        assertEquals(
+            korean.getProperty("settings.review.marketplace"),
+            korean.getProperty("review.prompt.action.review"),
+        )
         assertTrue(base.getProperty("review.prompt.content").contains("honest", ignoreCase = true))
     }
 

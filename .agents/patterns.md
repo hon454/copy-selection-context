@@ -60,7 +60,7 @@ NotificationGroupManager.getInstance()
 class CopySelectionSettings : PersistentStateComponent<CopySelectionSettings.State>
 ```
 
-Review-prompt decisions use a separate application service with `RoamingType.DISABLED`. Keep the session counter outside its persisted `State`; store only the last prompted plugin version and permanent suppression signals. Mark the version before notifying so closing the balloon or choosing `Later` cannot repeat the prompt in that version.
+Review-prompt decisions use a separate application service with `RoamingType.DISABLED`. Gate notification-disabled, unit-test, headless, unsupported-version, and already-suppressed contexts before changing the session counter or persisted state. Keep the eligible-copy counter outside persisted `State`; store only the last prompted plugin version and permanent suppression signals. Mark the version before notifying so closing the balloon or choosing `Later` cannot repeat the prompt in that version.
 
 ## Selection Range and Current-Line Fallback
 

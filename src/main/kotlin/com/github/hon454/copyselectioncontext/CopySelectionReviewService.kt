@@ -58,10 +58,12 @@ class CopySelectionReviewService : PersistentStateComponent<CopySelectionReviewS
         unitTestMode: Boolean,
         headlessEnvironment: Boolean,
     ): Boolean {
-        val copyCount = successfulCopiesThisSession.incrementAndGet()
-        if (copyCount != PROMPT_THRESHOLD) return false
         if (!notificationsEnabled || unitTestMode || headlessEnvironment) return false
         if (pluginVersion.isNullOrBlank()) return false
+        if (isPromptSuppressed(pluginVersion)) return false
+
+        val copyCount = successfulCopiesThisSession.incrementAndGet()
+        if (copyCount != PROMPT_THRESHOLD) return false
 
         return markPromptedIfEligible(pluginVersion)
     }
@@ -84,6 +86,12 @@ class CopySelectionReviewService : PersistentStateComponent<CopySelectionReviewS
     internal fun suppressPermanently() {
         myState.neverAskAgain = true
     }
+
+    @Synchronized
+    private fun isPromptSuppressed(pluginVersion: String): Boolean =
+        myState.neverAskAgain ||
+            myState.marketplacePageOpened ||
+            myState.lastPromptedVersion == pluginVersion
 
     @Synchronized
     private fun markPromptedIfEligible(pluginVersion: String): Boolean {
