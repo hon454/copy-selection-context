@@ -13,8 +13,8 @@ class ReleaseVersionParityTest {
     private val verifier = projectRoot.resolve("scripts/verify-release-version.sh")
 
     @Test
-    fun `canonical project version is 1_1_0`() {
-        assertEquals("1.1.0", canonicalVersion(projectRoot.resolve("build.gradle.kts")))
+    fun `canonical project version is 1_1_1`() {
+        assertEquals("1.1.1", canonicalVersion(projectRoot.resolve("build.gradle.kts")))
     }
 
     @Test
@@ -22,7 +22,7 @@ class ReleaseVersionParityTest {
         val result = runVerifier("v${canonicalVersion(projectRoot.resolve("build.gradle.kts"))}")
 
         assertEquals(0, result.exitCode, result.output)
-        assertTrue(result.output.contains("Version verified: v1.1.0"), result.output)
+        assertTrue(result.output.contains("Version verified: v1.1.1"), result.output)
     }
 
     @Test
