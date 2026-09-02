@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show local-only copy totals, output-format usage, and language usage in Settings with a confirmed reset action (#41)
 
 ### Fixed
+- Localize action menus, Git permalink presentation, gutter feedback, and template preset labels without changing persisted settings or template contents (#43)
 - Record the detected file language exactly once per successful standard copy action, including multi-caret copies (#41)
 
 ### Fixed

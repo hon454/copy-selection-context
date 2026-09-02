@@ -1,5 +1,7 @@
 package com.github.hon454.copyselectioncontext
 
+import java.util.Locale
+import java.util.ResourceBundle
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -143,6 +145,29 @@ class CopySelectionSettingsTest {
 
             assertEquals(option.key, settings.state.outputFormat)
         }
+    }
+
+    @Test
+    fun `localized preset labels do not alter persisted format or template content`() {
+        val control = ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES)
+        val english = ResourceBundle.getBundle("messages.CopySelectionBundle", Locale.ENGLISH, control)
+        val korean = ResourceBundle.getBundle("messages.CopySelectionBundle", Locale.KOREAN, control)
+        val preset = TemplatePreset.WITH_CODE_BLOCK
+        val template = requireNotNull(preset.template)
+
+        assertFalse(english.getString(preset.messageKey) == korean.getString(preset.messageKey))
+
+        val settings = CopySelectionSettings()
+        settings.loadState(
+            CopySelectionSettings.State(
+                outputFormat = OutputFormatOption.TEMPLATE.key,
+                customFormatTemplate = template,
+            ),
+        )
+
+        assertEquals("template", settings.state.outputFormat)
+        assertEquals(template, settings.state.customFormatTemplate)
+        assertEquals("with-code-block", preset.key)
     }
 
     @Test

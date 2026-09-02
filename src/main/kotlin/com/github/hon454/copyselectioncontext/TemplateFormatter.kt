@@ -1,8 +1,26 @@
 package com.github.hon454.copyselectioncontext
 
+private const val PATH_AND_RANGE_TEMPLATE = "{path}:{range}"
+private const val CLAUDE_REFERENCE_TEMPLATE = " @{path}#L{range} "
+private const val WITH_CODE_BLOCK_TEMPLATE = "{path}:{range}\n```{lang}\n{code}\n```"
+
+enum class TemplatePreset(
+    val key: String,
+    val messageKey: String,
+    val template: String?,
+) {
+    CUSTOM("custom", "settings.template.preset.custom", null),
+    PATH_AND_RANGE("path-and-range", "settings.template.preset.path.and.range", PATH_AND_RANGE_TEMPLATE),
+    CLAUDE_REFERENCE("claude-reference", "settings.template.preset.claude.reference", CLAUDE_REFERENCE_TEMPLATE),
+    WITH_CODE_BLOCK("with-code-block", "settings.template.preset.with.code.block", WITH_CODE_BLOCK_TEMPLATE);
+
+    override fun toString(): String = CopySelectionBundle.message(messageKey)
+}
+
 class TemplateFormatter(private val template: String) : OutputFormatter {
     override val key = "template"
-    override val displayName = "Custom Template"
+    override val displayName: String
+        get() = CopySelectionBundle.message("settings.format.template")
 
     override fun format(context: FormatContext): String {
         val replacements = mapOf(
@@ -19,15 +37,11 @@ class TemplateFormatter(private val template: String) : OutputFormatter {
     }
 
     companion object {
-        const val PRESET_PATH_AND_RANGE = "{path}:{range}"
-        const val PRESET_CLAUDE_REFERENCE = " @{path}#L{range} "
-        const val PRESET_WITH_CODE_BLOCK = "{path}:{range}\n```{lang}\n{code}\n```"
+        const val PRESET_PATH_AND_RANGE = PATH_AND_RANGE_TEMPLATE
+        const val PRESET_CLAUDE_REFERENCE = CLAUDE_REFERENCE_TEMPLATE
+        const val PRESET_WITH_CODE_BLOCK = WITH_CODE_BLOCK_TEMPLATE
 
-        val PRESETS: List<Pair<String, String>> = listOf(
-            "Path and Range" to PRESET_PATH_AND_RANGE,
-            "Claude Reference" to PRESET_CLAUDE_REFERENCE,
-            "With Code Block" to PRESET_WITH_CODE_BLOCK
-        )
+        val PRESETS: List<TemplatePreset> = TemplatePreset.entries.filter { it.template != null }
 
         val VALID_VARIABLES = setOf("path", "line", "range", "code", "lang", "filename")
 

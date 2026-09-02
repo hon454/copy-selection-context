@@ -19,7 +19,7 @@ class CopySelectionConfigurableTest {
         val fixture = createFixture()
 
         fixture.outputFormat.selectedItem = OutputFormatOption.TEMPLATE
-        fixture.preset.selectedItem = "With Code Block"
+        fixture.preset.selectedItem = TemplatePreset.WITH_CODE_BLOCK
 
         assertEquals(TemplateFormatter.PRESET_WITH_CODE_BLOCK, fixture.editor.text)
         assertEquals(
@@ -161,7 +161,7 @@ class CopySelectionConfigurableTest {
         val buttons = descendantsOfType<JButton>(component)
 
         val outputFormat = comboBoxes.firstOrNull { combo -> combo.items().contains(OutputFormatOption.TEMPLATE) }
-        val preset = comboBoxes.firstOrNull { combo -> combo.items().contains("With Code Block") }
+        val preset = comboBoxes.firstOrNull { combo -> combo.items().contains(TemplatePreset.WITH_CODE_BLOCK) }
         val editor = textAreas.firstOrNull { it.isEditable }
         val preview = textAreas.firstOrNull {
             it.accessibleContext.accessibleName == CopySelectionBundle.message("settings.template.preview.label")

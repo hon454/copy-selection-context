@@ -27,7 +27,7 @@ class CopySelectionConfigurable internal constructor(
 
     private var dialogPanel: DialogPanel? = null
     private var outputFormatCombo: JComboBox<OutputFormatOption>? = null
-    private var presetCombo: JComboBox<String>? = null
+    private var presetCombo: JComboBox<TemplatePreset>? = null
     private var templateTextArea: JTextArea? = null
     private var previewTextArea: JTextArea? = null
     private var analyticsTextArea: JTextArea? = null
@@ -56,9 +56,7 @@ class CopySelectionConfigurable internal constructor(
                         .onChanged { updateTemplateControls() }
                 }
                 row(CopySelectionBundle.message("settings.template.preset.label")) {
-                    val presetNames = TemplateFormatter.PRESETS.map { it.first }
-                    val items = listOf(CopySelectionBundle.message("settings.template.preset.custom")) + presetNames
-                    comboBox(items)
+                    comboBox(TemplatePreset.entries)
                         .also { cell ->
                             presetCombo = cell.component
                             cell.component.addActionListener {
@@ -215,25 +213,19 @@ class CopySelectionConfigurable internal constructor(
             return
         }
 
-        val customLabel = CopySelectionBundle.message("settings.template.preset.custom")
-        val selected = presetCombo?.selectedItem as? String ?: return
-        if (selected == customLabel) {
-            return
-        }
-
-        val presetTemplate = TemplateFormatter.PRESETS.find { it.first == selected }?.second ?: return
+        val selected = presetCombo?.selectedItem as? TemplatePreset ?: return
+        val presetTemplate = selected.template ?: return
         templateTextArea?.text = presetTemplate
         updatePreview()
     }
 
     private fun updatePresetSelection() {
         val currentTemplate = templateTextArea?.text ?: settings.state.customFormatTemplate
-        val customLabel = CopySelectionBundle.message("settings.template.preset.custom")
-        val presetName = TemplateFormatter.PRESETS.find { it.second == currentTemplate }?.first ?: customLabel
-        if (presetCombo?.selectedItem != presetName) {
+        val preset = TemplateFormatter.PRESETS.find { it.template == currentTemplate } ?: TemplatePreset.CUSTOM
+        if (presetCombo?.selectedItem != preset) {
             updatingPresetSelection = true
             try {
-                presetCombo?.selectedItem = presetName
+                presetCombo?.selectedItem = preset
             } finally {
                 updatingPresetSelection = false
             }

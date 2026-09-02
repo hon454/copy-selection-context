@@ -19,7 +19,8 @@ interface OutputFormatter {
 
 class ClaudeCodeFormatter : OutputFormatter {
     override val key = "claude"
-    override val displayName = "Claude Code (@path#L)"
+    override val displayName: String
+        get() = CopySelectionBundle.message("settings.format.claude")
     override fun format(context: FormatContext): String {
         val normalizedPath = context.path.replace("\\", "/")
         return if (context.code.isNullOrBlank()) {
@@ -40,7 +41,8 @@ class ClaudeCodeFormatter : OutputFormatter {
 
 class PathLineFormatter : OutputFormatter {
     override val key = "pathline"
-    override val displayName = "Path:Line (path:line)"
+    override val displayName: String
+        get() = CopySelectionBundle.message("settings.format.pathline")
     override fun format(context: FormatContext): String {
         val normalizedPath = context.path.replace("\\", "/")
         return if (context.code.isNullOrBlank()) {

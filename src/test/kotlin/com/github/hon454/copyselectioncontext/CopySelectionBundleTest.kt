@@ -61,20 +61,30 @@ class CopySelectionBundleTest {
     }
 
     @Test
-    fun `all action keys resolve`() {
-        listOf(
-            "action.copy.context.text",
-            "action.copy.context.description",
-            "action.copy.relative.text",
-            "action.copy.absolute.text",
-            "action.copy.with.code.text",
-            "action.show.history.text",
-            "action.show.history.description",
-            "action.group.text",
-            "action.group.description"
-        ).forEach { key ->
-            assertTrue(CopySelectionBundle.message(key).isNotBlank(), "Key '$key' should resolve to non-blank string")
+    fun `English and Korean bundles localize action tooltip and preset strings`() {
+        val base = loadBundle("messages/CopySelectionBundle.properties")
+        val korean = loadBundle("messages/CopySelectionBundle_ko.properties")
+        val keys = listOf(
+            "action.CopySelectionContext.Copy.text",
+            "action.CopySelectionContext.CopyGitPermalink.text",
+            "group.CopySelectionContextGroup.text",
+            "gutter.tooltip.copied",
+        ) + TemplatePreset.entries.map { it.messageKey }
+
+        keys.forEach { key ->
+            assertTrue(base.getProperty(key).isNotBlank(), "Base key '$key' should be non-blank")
+            assertTrue(korean.getProperty(key).isNotBlank(), "Korean key '$key' should be non-blank")
         }
+        TemplatePreset.entries.forEach { preset ->
+            assertEquals(CopySelectionBundle.message(preset.messageKey), preset.toString())
+        }
+
+        assertEquals("Copy GitHub/GitLab Permalink", base.getProperty("action.CopySelectionContext.CopyGitPermalink.text"))
+        assertEquals("GitHub/GitLab 퍼머링크 복사", korean.getProperty("action.CopySelectionContext.CopyGitPermalink.text"))
+        assertEquals("Copied to clipboard", base.getProperty("gutter.tooltip.copied"))
+        assertEquals("클립보드에 복사됨", korean.getProperty("gutter.tooltip.copied"))
+        assertEquals("With Code Block", base.getProperty(TemplatePreset.WITH_CODE_BLOCK.messageKey))
+        assertEquals("코드 블록 포함", korean.getProperty(TemplatePreset.WITH_CODE_BLOCK.messageKey))
     }
 
     @Test
