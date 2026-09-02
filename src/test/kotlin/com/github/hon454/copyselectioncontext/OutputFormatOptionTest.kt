@@ -26,20 +26,30 @@ class OutputFormatOptionTest {
     }
 
     @Test
-    fun `English and Korean bundles localize every output format option`() {
+    fun `every shipped locale localizes every output format option`() {
         val control = ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES)
-        val english = ResourceBundle.getBundle("messages.CopySelectionBundle", Locale.ENGLISH, control)
-        val korean = ResourceBundle.getBundle("messages.CopySelectionBundle", Locale.KOREAN, control)
+        val expectedLabels = linkedMapOf(
+            Locale.ENGLISH to listOf("Claude Code (@path#L)", "Path:Line (path:line)", "Custom Template"),
+            Locale.KOREAN to listOf("Claude Code (@path#L)", "경로:줄 (path:line)", "사용자 정의 템플릿"),
+            Locale.JAPANESE to listOf(
+                "Claude Code (@path#L)",
+                "パス:行 (path:line)",
+                "カスタムテンプレート",
+            ),
+            Locale.SIMPLIFIED_CHINESE to listOf("Claude Code (@path#L)", "路径:行 (path:line)", "自定义模板"),
+            Locale.TRADITIONAL_CHINESE to listOf("Claude Code (@path#L)", "路徑:行 (path:line)", "自訂範本"),
+        )
 
-        OutputFormatOption.entries.forEach { option ->
-            assertTrue(english.getString(option.messageKey).isNotBlank())
-            assertTrue(korean.getString(option.messageKey).isNotBlank())
-            assertEquals(CopySelectionBundle.message(option.messageKey), option.toString())
+        expectedLabels.forEach { (locale, expected) ->
+            val bundle = ResourceBundle.getBundle("messages.CopySelectionBundle", locale, control)
+            OutputFormatOption.entries.forEachIndexed { index, option ->
+                assertTrue(bundle.getString(option.messageKey).isNotBlank())
+                assertEquals(expected[index], bundle.getString(option.messageKey))
+            }
         }
 
-        assertEquals("Path:Line (path:line)", english.getString(OutputFormatOption.PATH_LINE.messageKey))
-        assertEquals("경로:줄 (path:line)", korean.getString(OutputFormatOption.PATH_LINE.messageKey))
-        assertEquals("Custom Template", english.getString(OutputFormatOption.TEMPLATE.messageKey))
-        assertEquals("사용자 정의 템플릿", korean.getString(OutputFormatOption.TEMPLATE.messageKey))
+        OutputFormatOption.entries.forEach { option ->
+            assertEquals(CopySelectionBundle.message(option.messageKey), option.toString())
+        }
     }
 }

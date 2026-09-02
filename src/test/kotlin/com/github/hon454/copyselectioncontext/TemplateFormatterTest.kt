@@ -1,5 +1,7 @@
 package com.github.hon454.copyselectioncontext
 
+import java.util.Locale
+import java.util.ResourceBundle
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -189,6 +191,42 @@ class TemplateFormatterTest {
         assertEquals("{path}:{range}", TemplatePreset.PATH_AND_RANGE.template)
         assertEquals(" @{path}#L{range} ", TemplatePreset.CLAUDE_REFERENCE.template)
         assertEquals("{path}:{range}\n```{lang}\n{code}\n```", TemplatePreset.WITH_CODE_BLOCK.template)
+    }
+
+    @Test
+    fun `every shipped locale localizes preset labels without changing preset data`() {
+        val control = ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES)
+        val expectedLabels = linkedMapOf(
+            Locale.ENGLISH to listOf("Custom", "Path and Range", "Claude Reference", "With Code Block"),
+            Locale.KOREAN to listOf(
+                "사용자 정의",
+                "경로 및 줄 범위",
+                "Claude 참조",
+                "코드 블록 포함",
+            ),
+            Locale.JAPANESE to listOf(
+                "カスタム",
+                "パスと行範囲",
+                "Claude 参照",
+                "コードブロック付き",
+            ),
+            Locale.SIMPLIFIED_CHINESE to listOf("自定义", "路径和行范围", "Claude 引用", "包含代码块"),
+            Locale.TRADITIONAL_CHINESE to listOf(
+                "自訂",
+                "路徑和行範圍",
+                "Claude 參照",
+                "包含程式碼區塊",
+            ),
+        )
+        val stablePresetData = TemplatePreset.entries.map { Triple(it.key, it.messageKey, it.template) }
+
+        expectedLabels.forEach { (locale, expected) ->
+            val bundle = ResourceBundle.getBundle("messages.CopySelectionBundle", locale, control)
+            TemplatePreset.entries.forEachIndexed { index, preset ->
+                assertEquals(expected[index], bundle.getString(preset.messageKey))
+            }
+            assertEquals(stablePresetData, TemplatePreset.entries.map { Triple(it.key, it.messageKey, it.template) })
+        }
     }
 
     @Test
