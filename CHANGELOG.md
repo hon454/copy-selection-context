@@ -7,8 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-03
+
+### Added
+- Add complete Japanese, Simplified Chinese, and Traditional Chinese IDE UI bundles with locale-parity validation (#66)
+
 ### Changed
 - Make copy history safer with Unicode-aware previews, localized timestamps, confirmed clearing, and consecutive-duplicate refreshes (#67)
+- Split reusable unit tests from isolated IntelliJ Platform tests while preserving one complete `allTests` verification task (#68)
+- Enforce Detekt analysis and generate Kover coverage reports in CI and release builds, with grouped Gradle Dependabot updates (#69)
+- Consolidate per-caret selection capture into an immutable context and remove legacy helpers without changing formatted output (#70)
 
 ## [1.2.1] - 2026-09-02
 
@@ -136,7 +144,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Toast notifications
 - IntelliJ Platform 2024.3+ compatibility
 
-[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/hon454/copy-selection-context/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/hon454/copy-selection-context/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/hon454/copy-selection-context/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/hon454/copy-selection-context/compare/v1.1.0...v1.1.1
