@@ -7,17 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-02
+
 ### Added
 - Bound project copy history by documented per-entry and total UTF-8 content budgets while preserving oversized clipboard results (#42)
 - Show local-only copy totals, output-format usage, and language usage in Settings with a confirmed reset action (#41)
 - Publish SHA-256 checksums and GitHub build provenance for canonical release ZIPs (#45)
 - Offer a localized, non-modal Marketplace review path after 10 successful session copies, with version-aware and permanent suppression controls plus a passive Settings link (#56)
 
+### Changed
+- Pin GitHub Actions to reviewed immutable commit SHAs while preserving least-privilege workflow permissions (#44)
+
 ### Fixed
 - Localize action menus, Git permalink presentation, gutter feedback, and template preset labels without changing persisted settings or template contents (#43)
 - Record the detected file language exactly once per successful standard copy action, including multi-caret copies (#41)
-
-### Fixed
 - Keep Gradle wrapper download and initialization output out of generated GitHub Release notes (#53)
 
 ## [1.1.1] - 2026-09-02
@@ -125,7 +128,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Toast notifications
 - IntelliJ Platform 2024.3+ compatibility
 
-[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/hon454/copy-selection-context/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/hon454/copy-selection-context/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/hon454/copy-selection-context/compare/v1.0.4...v1.1.0
 [1.0.4]: https://github.com/hon454/copy-selection-context/compare/v1.0.3...v1.0.4
