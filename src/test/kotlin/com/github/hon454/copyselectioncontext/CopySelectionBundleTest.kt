@@ -100,7 +100,10 @@ class CopySelectionBundleTest {
             "widget.empty",
             "history.popup.title",
             "history.popup.empty",
-            "history.popup.clear.all"
+            "history.popup.clear.all",
+            "history.popup.entry",
+            "history.popup.clear.confirm.title",
+            "history.popup.clear.confirm.message",
         ).forEach { key ->
             assertTrue(CopySelectionBundle.message(key).isNotBlank(), "Key '$key' should resolve to non-blank string")
         }

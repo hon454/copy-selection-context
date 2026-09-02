@@ -50,6 +50,18 @@ class CopyPreviewTest {
         assertFalse(preview.contains("<script"))
     }
 
+    @Test
+    fun `history preview uses the shared safe preview pipeline`() {
+        val content = "e\u0301 😀\n\t" + "x".repeat(200)
+
+        val preview = CopyPreview.history(content)
+
+        assertEquals(CopyPreview.create(content, CopyPreview.HISTORY_MAX_LENGTH), preview)
+        assertTrue(preview.length <= CopyPreview.HISTORY_MAX_LENGTH)
+        assertTrue(preview.hasOnlyPairedSurrogates())
+        assertFalse(preview.any { it == '\n' || it == '\r' || it == '\t' })
+    }
+
     private fun String.hasOnlyPairedSurrogates(): Boolean {
         forEachIndexed { index, character ->
             if (character.isHighSurrogate()) {

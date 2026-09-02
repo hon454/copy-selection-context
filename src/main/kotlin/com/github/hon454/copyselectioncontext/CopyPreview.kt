@@ -8,6 +8,7 @@ internal object CopyPreview {
     const val NOTIFICATION_MAX_LENGTH = 120
     const val STATUS_MAX_LENGTH = 40
     const val TOOLTIP_MAX_LENGTH = 120
+    const val HISTORY_MAX_LENGTH = 80
 
     private const val ELLIPSIS = "…"
 
@@ -16,6 +17,8 @@ internal object CopyPreview {
     fun status(content: String, maxLength: Int = STATUS_MAX_LENGTH): String = create(content, maxLength)
 
     fun tooltip(content: String): String = create(content, TOOLTIP_MAX_LENGTH)
+
+    fun history(content: String): String = create(content, HISTORY_MAX_LENGTH)
 
     internal fun create(content: String, maxLength: Int): String {
         require(maxLength > 0) { "maxLength must be positive" }
