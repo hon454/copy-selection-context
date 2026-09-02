@@ -39,6 +39,7 @@ class CopySelectionGutterIconRendererTest {
     }
 
     @Test
+    @Suppress("EqualsNullCall") // Exercise the equals(null) contract directly.
     fun `renderer is not equal to null`() {
         val renderer = CopySelectionGutterIconRenderer()
         assertFalse(renderer.equals(null))

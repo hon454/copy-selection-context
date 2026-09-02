@@ -1,0 +1,21 @@
+# Keep this gate intentionally narrow. Add rules only after reviewing the
+# existing codebase; do not replace this policy with Detekt's full defaults.
+config:
+  validation: true
+  warningsAsErrors: true
+
+empty-blocks:
+  EmptyCatchBlock:
+    active: true
+
+exceptions:
+  SwallowedException:
+    active: true
+
+potential-bugs:
+  UnreachableCode:
+    active: true
+
+style:
+  EqualsNullCall:
+    active: true

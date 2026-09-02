@@ -18,6 +18,8 @@ JetBrains IDE plugin for copying code context (file path, line numbers, optional
 | Kotlin | 2.4.10 |
 | Gradle | 9.7.1 |
 | IntelliJ Platform Plugin | 2.18.1 |
+| Detekt | 2.0.0-alpha.6 |
+| Kover | 0.9.8 |
 | JVM Toolchain | 21 |
 | Min IDE Version | 2024.3 |
 
@@ -28,6 +30,7 @@ JetBrains IDE plugin for copying code context (file path, line numbers, optional
 cmd //c "gradlew.bat buildPlugin"    # Build plugin ZIP (build/distributions/)
 cmd //c "gradlew.bat runIde"         # Run IDE with plugin installed
 cmd //c "gradlew.bat verifyPlugin"   # Verify plugin structure
+cmd //c "gradlew.bat detekt koverXmlReport koverHtmlReport" # Static analysis + coverage
 cmd //c "gradlew.bat publishPlugin"  # Publish to Marketplace (requires PUBLISH_TOKEN)
 ```
 

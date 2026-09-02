@@ -7,6 +7,8 @@
 | Kotlin | 2.4.10 |
 | Gradle wrapper | 9.7.1 |
 | IntelliJ Platform Gradle Plugin | 2.18.1 |
+| Detekt | 2.0.0-alpha.6 |
+| Kover | 0.9.8 |
 | IntelliJ IDEA Community test platform | 2024.3 |
 | JVM toolchain and target | 21 |
 | Minimum IDE build | 243 (2024.3) |
@@ -111,6 +113,6 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 
 ## Verification Architecture
 
-Unit tests cover formatters, `{filename}`, exclusive selection ends, multi-caret joins and highlighting, safe previews, five-locale key parity and descriptor presentations, locale-independent persisted format/preset data, worktree-safe Git metadata, history privacy/migration/retention, template editor behavior, and review threshold/version/suppression/environment policy. `CopySelectionActionFixtureTest` exercises real IntelliJ editor, action-event, clipboard, history, highlighter, async permalink, review cardinality, and missing-context flows. `DocumentationSyncTest` derives toolchain values from build sources, checks all localized README structures and feature markers, lists every Kotlin source file, and verifies registered action inheritance. `CiWorkflowTest` keeps test, project/structure verification, three-IDE Plugin Verifier, packaging, and diagnostic artifact gates ordered before publication.
+Unit tests cover formatters, `{filename}`, exclusive selection ends, multi-caret joins and highlighting, safe previews, five-locale key parity and descriptor presentations, locale-independent persisted format/preset data, worktree-safe Git metadata, history privacy/migration/retention, template editor behavior, and review threshold/version/suppression/environment policy. `CopySelectionActionFixtureTest` exercises real IntelliJ editor, action-event, clipboard, history, highlighter, async permalink, review cardinality, and missing-context flows. `DocumentationSyncTest` derives toolchain values from build sources, checks all localized README structures and feature markers, lists every Kotlin source file, and verifies registered action inheritance. `CiWorkflowTest` keeps Detekt, Kover XML/HTML coverage, test, project/structure verification, three-IDE Plugin Verifier, packaging, and diagnostic artifact gates ordered before publication, and structurally validates conservative Gradle Dependabot grouping. Detekt intentionally enables only four reviewed defect rules and uses no baseline; Kover publishes diagnostics without enforcing a coverage percentage.
 
 Gradle separates reusable pure unit execution (`test`) from IntelliJ application and editor-fixture execution (`platformTest`). `CopySelectionActionFixtureTest` and `CopyHistoryPersistenceTest` run through `platformTest` with one class per JVM; `allTests` is the complete local and CI aggregate, and `check` depends on it. `buildPlugin` remains packaging-only because CI and release workflows gate it behind a separate `allTests` invocation. `CiWorkflowTest` keeps standard IntelliJ application/fixture markers synchronized with the explicit task partition so new platform-state tests cannot silently fall into the reusable worker. CI invokes the aggregate with `--continue` and uploads XML and HTML report directories for both test tasks.
