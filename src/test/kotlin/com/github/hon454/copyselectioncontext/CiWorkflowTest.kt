@@ -61,6 +61,12 @@ class CiWorkflowTest {
             workflow.contains("uses: gradle/actions/setup-gradle@v6"),
             "$workflowName must cache Gradle dependencies used by plugin verification",
         )
+        assertTrue(
+            workflow.contains(
+                "uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0",
+            ),
+            "$workflowName must pin the verified setup-java v6.0.0 commit",
+        )
     }
 
     private fun readWorkflow(workflowName: String): String {
