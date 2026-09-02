@@ -31,7 +31,7 @@
 
 ## Git Permalink Flow
 
-`CopyGitPermalinkAction` extends `AnAction` directly rather than using the standard copy pipeline. It captures the editor ranges and Git root on the UI thread, sorts multiple carets by selection start, and resolves repository metadata on a pooled thread. Only the latest request may publish a result back on the UI thread.
+`CopyGitPermalinkAction` extends `AnAction` directly rather than using the standard copy pipeline. It captures the editor ranges and Git root on the UI thread, sorts multiple carets by selection start, and resolves repository metadata on a pooled thread. Only the latest request may publish a result back on the UI thread. Resolution uses typed success/failure results so VCS mapping, metadata, remote-host, path-boundary, I/O, and unexpected failures receive distinct localized guidance. Safe diagnostics record only the failure category, operation, sanitized remote host, and exception class.
 
 `GitRepositoryMetadataResolver` uses NIO and supports normal repositories and linked worktrees. It follows `.git` and `commondir`, resolves symbolic or detached HEADs from loose or packed refs, and prefers the current branch's tracked remote before `origin` or an unambiguous single remote. `GitPermalinkGenerator` accepts supported GitHub/GitLab HTTPS and SSH forms and percent-encodes every repository-relative path segment.
 
@@ -92,6 +92,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `CopySelectionWebHelpProvider.kt` | README help-topic URLs |
 | `CopyWithCodeContentAction.kt` | Context-menu action that always includes code |
 | `GitPermalinkGenerator.kt` | GitHub/GitLab remote parsing and encoded URL construction |
+| `GitPermalinkResult.kt` | Typed permalink results, failure categories, and redacted diagnostic formatting |
 | `GitRepositoryMetadataResolver.kt` | Standard and linked-worktree metadata/ref resolution |
 | `OutputFormatOption.kt` | Localized output-format setting options |
 | `OutputFormatter.kt` | Format context, built-in formatters, and formatter factory |

@@ -1,11 +1,13 @@
 package com.github.hon454.copyselectioncontext
 
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
 
 class GitRepositoryMetadataResolverTest {
     @TempDir
@@ -19,11 +21,10 @@ class GitRepositoryMetadataResolverTest {
         write(gitDir.resolve("refs/heads/main"), "$MAIN_SHA\n")
         write(gitDir.resolve("config"), remoteConfig("origin", "https://github.com/owner/repo.git"))
 
-        val result = GitRepositoryMetadataResolver.resolve(root)
+        val result = success(GitRepositoryMetadataResolver.resolve(root))
 
-        assertNotNull(result)
-        assertEquals("https://github.com/owner/repo.git", result?.remoteUrl)
-        assertEquals(MAIN_SHA, result?.commitSha)
+        assertEquals("https://github.com/owner/repo.git", result.remoteUrl)
+        assertEquals(MAIN_SHA, result.commitSha)
     }
 
     @Test
@@ -48,11 +49,10 @@ class GitRepositoryMetadataResolverTest {
             """.trimIndent()
         )
 
-        val result = GitRepositoryMetadataResolver.resolve(worktreeRoot)
+        val result = success(GitRepositoryMetadataResolver.resolve(worktreeRoot))
 
-        assertNotNull(result)
-        assertEquals("git@gitlab.com:team/project.git", result?.remoteUrl)
-        assertEquals(FEATURE_SHA, result?.commitSha)
+        assertEquals("git@gitlab.com:team/project.git", result.remoteUrl)
+        assertEquals(FEATURE_SHA, result.commitSha)
     }
 
     @Test
@@ -71,10 +71,9 @@ class GitRepositoryMetadataResolverTest {
         )
         write(gitDir.resolve("config"), remoteConfig("origin", "git@github.com:owner/repo.git"))
 
-        val result = GitRepositoryMetadataResolver.resolve(root)
+        val result = success(GitRepositoryMetadataResolver.resolve(root))
 
-        assertNotNull(result)
-        assertEquals(PACKED_SHA, result?.commitSha)
+        assertEquals(PACKED_SHA, result.commitSha)
     }
 
     @Test
@@ -84,11 +83,51 @@ class GitRepositoryMetadataResolverTest {
         write(gitDir.resolve("HEAD"), "$DETACHED_SHA\n")
         write(gitDir.resolve("config"), remoteConfig("origin", "https://gitlab.com/team/project.git"))
 
-        val result = GitRepositoryMetadataResolver.resolve(root)
+        val result = success(GitRepositoryMetadataResolver.resolve(root))
 
-        assertNotNull(result)
-        assertEquals(DETACHED_SHA, result?.commitSha)
-        assertEquals("https://gitlab.com/team/project.git", result?.remoteUrl)
+        assertEquals(DETACHED_SHA, result.commitSha)
+        assertEquals("https://gitlab.com/team/project.git", result.remoteUrl)
+    }
+
+    @Test
+    fun `missing or invalid metadata returns an explicit unresolved reason`() {
+        val root = tempDir.resolve("missing-metadata")
+        Files.createDirectories(root)
+
+        val failure = assertIs<GitPermalinkResult.Failure>(GitRepositoryMetadataResolver.resolve(root))
+
+        assertEquals(GitPermalinkFailureReason.UNRESOLVED_GIT_METADATA, failure.reason)
+        assertEquals(GitPermalinkOperation.RESOLVE_GIT_METADATA, failure.diagnostic.operation)
+    }
+
+    @Test
+    fun `io failures retain only the exception type in safe diagnostics`() {
+        val root = tempDir.resolve("io-failure")
+        write(root.resolve(".git/HEAD"), "ref: refs/heads/main\n")
+        val sensitiveMessage = "token=secret at ${root.toAbsolutePath()}"
+
+        val failure = assertIs<GitPermalinkResult.Failure>(
+            GitRepositoryMetadataResolver.resolve(root) { throw IOException(sensitiveMessage) }
+        )
+        val logMessage = failure.safeLogMessage()
+
+        assertEquals(GitPermalinkFailureReason.IO_FAILURE, failure.reason)
+        assertEquals(IOException::class.java.name, failure.diagnostic.exceptionType)
+        assertFalse(logMessage.contains("secret"))
+        assertFalse(logMessage.contains(root.toString()))
+    }
+
+    @Test
+    fun `unexpected resolver failures return a typed reason without exception text`() {
+        val root = tempDir.resolve("unexpected-failure")
+        write(root.resolve(".git/HEAD"), "ref: refs/heads/main\n")
+
+        val failure = assertIs<GitPermalinkResult.Failure>(
+            GitRepositoryMetadataResolver.resolve(root) { throw IllegalStateException("copied code") }
+        )
+
+        assertEquals(GitPermalinkFailureReason.UNEXPECTED_FAILURE, failure.reason)
+        assertFalse(failure.safeLogMessage().contains("copied code"))
     }
 
     private fun remoteConfig(name: String, url: String): String =
@@ -101,6 +140,9 @@ class GitRepositoryMetadataResolverTest {
         Files.createDirectories(path.parent)
         Files.writeString(path, content)
     }
+
+    private fun success(result: GitPermalinkResult<GitRepositoryMetadata>): GitRepositoryMetadata =
+        assertIs<GitPermalinkResult.Success<GitRepositoryMetadata>>(result).value
 
     private companion object {
         const val MAIN_SHA = "0123456789abcdef0123456789abcdef01234567"

@@ -27,9 +27,14 @@ class CopySelectionBundleTest {
     }
 
     @Test
-    fun `permalink failure key resolves`() {
-        val msg = CopySelectionBundle.message("notification.permalink.failed")
-        assertTrue(msg.isNotBlank())
+    fun `every permalink failure reason has English and Korean guidance`() {
+        val base = loadBundle("messages/CopySelectionBundle.properties")
+        val korean = loadBundle("messages/CopySelectionBundle_ko.properties")
+
+        PERMALINK_FAILURE_KEYS.forEach { key ->
+            assertTrue(base.getProperty(key).isNotBlank(), "Base message '$key' should be non-blank")
+            assertTrue(korean.getProperty(key).isNotBlank(), "Korean message '$key' should be non-blank")
+        }
     }
 
     @Test
@@ -109,11 +114,26 @@ class CopySelectionBundleTest {
     }
 
     private fun loadBundleKeys(resourcePath: String): Set<String> {
+        return loadBundle(resourcePath).stringPropertyNames()
+    }
+
+    private fun loadBundle(resourcePath: String): Properties {
         val properties = Properties()
         val stream = requireNotNull(javaClass.classLoader.getResourceAsStream(resourcePath)) {
             "Missing test resource: $resourcePath"
         }
         stream.use(properties::load)
-        return properties.stringPropertyNames()
+        return properties
+    }
+
+    private companion object {
+        val PERMALINK_FAILURE_KEYS = listOf(
+            "notification.permalink.failed.missing.vcs.root",
+            "notification.permalink.failed.git.metadata",
+            "notification.permalink.failed.remote.host",
+            "notification.permalink.failed.out.of.root",
+            "notification.permalink.failed.io",
+            "notification.permalink.failed.unexpected",
+        )
     }
 }

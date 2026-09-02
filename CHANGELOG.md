@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Prevent custom-template replacement values from recursively expanding placeholder-like text and align blank previews with the runtime fallback (#40)
+- Add actionable, localized Git permalink failure diagnostics with credential-safe logging (#46)
 
 ## [1.1.0]
 

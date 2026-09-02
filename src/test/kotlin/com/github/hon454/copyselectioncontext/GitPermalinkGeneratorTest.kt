@@ -2,85 +2,79 @@ package com.github.hon454.copyselectioncontext
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class GitPermalinkGeneratorTest {
 
     @Test
     fun `parse SSH github remote url`() {
-        val result = GitPermalinkGenerator.parseRemoteUrl("git@github.com:owner/repo.git")
+        val result = success("git@github.com:owner/repo.git")
 
-        assertNotNull(result)
-        assertEquals("https://github.com/owner/repo", result.first)
-        assertEquals("github.com", result.second)
+        assertEquals("https://github.com/owner/repo", result.repositoryUrl)
+        assertEquals("github.com", result.host)
     }
 
     @Test
     fun `parse HTTPS github remote url`() {
-        val result = GitPermalinkGenerator.parseRemoteUrl("https://github.com/owner/repo.git")
+        val result = success("https://github.com/owner/repo.git")
 
-        assertNotNull(result)
-        assertEquals("https://github.com/owner/repo", result.first)
-        assertEquals("github.com", result.second)
+        assertEquals("https://github.com/owner/repo", result.repositoryUrl)
+        assertEquals("github.com", result.host)
     }
 
     @Test
     fun `parse SSH gitlab remote url`() {
-        val result = GitPermalinkGenerator.parseRemoteUrl("git@gitlab.com:owner/repo.git")
+        val result = success("git@gitlab.com:owner/repo.git")
 
-        assertNotNull(result)
-        assertTrue(result.first.contains("gitlab.com"))
-        assertEquals("gitlab.com", result.second)
+        assertTrue(result.repositoryUrl.contains("gitlab.com"))
+        assertEquals("gitlab.com", result.host)
     }
 
     @Test
     fun `parse SSH URI github remote url`() {
-        val result = GitPermalinkGenerator.parseRemoteUrl("ssh://git@github.com/owner/repo.git")
+        val result = success("ssh://git@github.com/owner/repo.git")
 
-        assertNotNull(result)
-        assertEquals("https://github.com/owner/repo", result.first)
-        assertEquals("github.com", result.second)
+        assertEquals("https://github.com/owner/repo", result.repositoryUrl)
+        assertEquals("github.com", result.host)
     }
 
     @Test
     fun `parse github SSH over HTTPS port remote url`() {
-        val result = GitPermalinkGenerator.parseRemoteUrl(
+        val result = success(
             "ssh://git@ssh.github.com:443/owner/repo.git"
         )
 
-        assertNotNull(result)
-        assertEquals("https://github.com/owner/repo", result.first)
-        assertEquals("github.com", result.second)
+        assertEquals("https://github.com/owner/repo", result.repositoryUrl)
+        assertEquals("github.com", result.host)
     }
 
     @Test
     fun `parse git plus SSH URI with nested gitlab namespace`() {
-        val result = GitPermalinkGenerator.parseRemoteUrl("git+ssh://git@gitlab.com/group/subgroup/repo.git")
+        val result = success("git+ssh://git@gitlab.com/group/subgroup/repo.git")
 
-        assertNotNull(result)
-        assertEquals("https://gitlab.com/group/subgroup/repo", result.first)
-        assertEquals("gitlab.com", result.second)
+        assertEquals("https://gitlab.com/group/subgroup/repo", result.repositoryUrl)
+        assertEquals("gitlab.com", result.host)
     }
 
     @Test
     fun `parse HTTPS without git suffix`() {
-        val result = GitPermalinkGenerator.parseRemoteUrl("https://github.com/owner/repo")
+        val result = success("https://github.com/owner/repo")
 
-        assertNotNull(result)
-        assertEquals("https://github.com/owner/repo", result.first)
+        assertEquals("https://github.com/owner/repo", result.repositoryUrl)
     }
 
     @Test
-    fun `unknown remote returns null`() {
-        val result = GitPermalinkGenerator.parseRemoteUrl("https://bitbucket.org/owner/repo.git")
+    fun `unknown remote returns an explicit unsupported host reason`() {
+        val result = failure("https://bitbucket.org/owner/repo.git")
 
-        assertNull(result)
+        assertEquals(GitPermalinkFailureReason.UNSUPPORTED_REMOTE_HOST, result.reason)
+        assertEquals("bitbucket.org", result.diagnostic.remoteHost)
     }
 
     @Test
-    fun `remote path traversal returns null`() {
+    fun `invalid remote paths return typed failures`() {
         listOf(
             "https://github.com/owner/../victim.git",
             "https://github.com/owner/%2e%2e/victim.git",
@@ -89,11 +83,35 @@ class GitPermalinkGeneratorTest {
             "https://github.com/owner/repo/extra.git",
             "git@gitlab.com:group//project.git"
         ).forEach { remoteUrl ->
-            assertNull(
-                GitPermalinkGenerator.parseRemoteUrl(remoteUrl),
-                "Remote '$remoteUrl' should be rejected"
+            assertEquals(
+                GitPermalinkFailureReason.UNSUPPORTED_REMOTE_HOST,
+                failure(remoteUrl).reason,
+                "Remote '$remoteUrl' should be rejected",
             )
         }
+    }
+
+    @Test
+    fun `credential bearing supported remote is canonicalized without credentials`() {
+        val result = success("https://user:super-secret@github.com/owner/repo.git")
+
+        assertEquals("https://github.com/owner/repo", result.repositoryUrl)
+        assertFalse(result.repositoryUrl.contains("user"))
+        assertFalse(result.repositoryUrl.contains("super-secret"))
+    }
+
+    @Test
+    fun `credential bearing unsupported remote is redacted from diagnostics`() {
+        val remoteUrl = "https://user:super-secret@bitbucket.org/private/repo.git"
+        val failure = failure(remoteUrl)
+        val logMessage = failure.safeLogMessage()
+
+        assertEquals("bitbucket.org", failure.diagnostic.remoteHost)
+        assertTrue(logMessage.contains("remoteHost=bitbucket.org"))
+        assertFalse(logMessage.contains("user"))
+        assertFalse(logMessage.contains("super-secret"))
+        assertFalse(logMessage.contains("private/repo"))
+        assertFalse(logMessage.contains(remoteUrl))
     }
 
     @Test
@@ -142,7 +160,7 @@ class GitPermalinkGeneratorTest {
     }
 
     @Test
-    fun `fallback returns null for unknown remote`() {
+    fun `fallback returns typed failure for unknown remote`() {
         val result = GitPermalinkGenerator.buildPermalinkFromRemote(
             remoteUrl = "https://bitbucket.org/owner/repo.git",
             sha = "abc123",
@@ -151,6 +169,15 @@ class GitPermalinkGeneratorTest {
             endLine = 5
         )
 
-        assertNull(result)
+        val failure = assertIs<GitPermalinkResult.Failure>(result)
+        assertEquals(GitPermalinkFailureReason.UNSUPPORTED_REMOTE_HOST, failure.reason)
     }
+
+    private fun success(remoteUrl: String): GitRemoteRepository =
+        assertIs<GitPermalinkResult.Success<GitRemoteRepository>>(
+            GitPermalinkGenerator.parseRemoteUrl(remoteUrl)
+        ).value
+
+    private fun failure(remoteUrl: String): GitPermalinkResult.Failure =
+        assertIs(GitPermalinkGenerator.parseRemoteUrl(remoteUrl))
 }
