@@ -283,6 +283,7 @@ class CiWorkflowTest {
         publicationStep: String,
     ) {
         val workflow = readWorkflow(workflowName)
+        val buildScript = Files.readString(Path.of("build.gradle.kts"))
 
         assertInOrder(
             workflow,
@@ -294,8 +295,8 @@ class CiWorkflowTest {
             "name: $publicationStep",
         )
         assertTrue(
-            workflow.contains("run: ./gradlew test --stacktrace --console=plain"),
-            "$workflowName must run the complete test task with diagnostic output",
+            workflow.contains("run: ./gradlew allTests --continue --stacktrace --console=plain"),
+            "$workflowName must run both test tasks even when one fails",
         )
         assertTrue(
             workflow.contains("verifyPluginProjectConfiguration") &&
@@ -309,13 +310,97 @@ class CiWorkflowTest {
         )
         assertTrue(
             workflow.contains("build/reports/pluginVerifier/") &&
-                workflow.contains("build/reports/tests/") &&
-                workflow.contains("build/test-results/"),
-            "$workflowName must upload plugin verification and test diagnostics",
+                listOf(
+                    "build/reports/tests/test/",
+                    "build/test-results/test/",
+                    "build/reports/tests/platformTest/",
+                    "build/test-results/platformTest/",
+                ).all(workflow::contains),
+            "$workflowName must upload plugin verification and every test task report",
         )
+        assertTrue(
+            buildScript.contains("intellijPlatformTesting.testIde.register(\"platformTest\")") &&
+                buildScript.contains("CopyHistoryPersistenceTest") &&
+                buildScript.contains("CopySelectionActionFixtureTest") &&
+                buildScript.contains("forkEvery = 0") &&
+                buildScript.contains("forkEvery = 1") &&
+                buildScript.contains("register(\"allTests\")"),
+            "Gradle must reuse pure-test workers, isolate platform-state classes, and aggregate both tasks",
+        )
+        assertPlatformStateTestsAreExplicitlyPartitioned(buildScript)
         assertTrue(
             workflow.contains("uses: gradle/actions/setup-gradle@"),
             "$workflowName must cache Gradle dependencies used by plugin verification",
+        )
+    }
+
+    private fun assertPlatformStateTestsAreExplicitlyPartitioned(buildScript: String) {
+        val configuredBlock =
+            Regex("""(?s)val platformStateTestClasses = listOf\((.*?)\n\)""")
+                .find(buildScript)
+                ?.groupValues
+                ?.get(1)
+                .orEmpty()
+        val configuredClasses =
+            Regex("\"(com\\.github\\.hon454\\.copyselectioncontext\\.[A-Za-z0-9_]+)\"")
+                .findAll(configuredBlock)
+                .map { it.groupValues[1] }
+                .toSet()
+
+        assertTrue(configuredClasses.isNotEmpty(), "Gradle must declare explicit platform-state test classes")
+        assertTrue(
+            buildScript.contains("platformStateTestClasses.forEach(::includeTestsMatching)") &&
+                buildScript.contains("platformStateTestClasses.forEach(::excludeTestsMatching)"),
+            "test and platformTest must use the same partition list",
+        )
+        assertTrue(
+            Regex("""(?s)named\("check"\)\s*\{.*?dependsOn\(allTests\).*?}""").containsMatchIn(buildScript),
+            "check must include the complete test aggregate",
+        )
+
+        val testSourceRoot = Path.of("src", "test", "kotlin")
+        val detectedClasses =
+            Files.walk(testSourceRoot).use { paths ->
+                paths
+                    .filter { Files.isRegularFile(it) && it.fileName.toString().endsWith("Test.kt") }
+                    .map { path ->
+                        val source = Files.readString(path)
+                        val lines = source.lines()
+                        val hasTestApplication = lines.any { it.trim() == "@TestApplication" }
+                        val hasPlatformFixture =
+                            lines.any { line ->
+                                Regex(
+                                    """^class\s+[A-Za-z0-9_]+\s*:\s*(?:BasePlatformTestCase|LightPlatformTestCase)\b""",
+                                ).containsMatchIn(line.trim())
+                            }
+                        if (!hasTestApplication && !hasPlatformFixture) {
+                            return@map null
+                        }
+
+                        val packageName =
+                            lines
+                                .firstOrNull { it.startsWith("package ") }
+                                ?.removePrefix("package ")
+                                ?.trim()
+                                .orEmpty()
+                        val className =
+                            lines
+                                .firstNotNullOfOrNull { line ->
+                                    Regex("""^class\s+([A-Za-z0-9_]+)\b""")
+                                        .find(line.trim())
+                                        ?.groupValues
+                                        ?.get(1)
+                                }.orEmpty()
+                        "$packageName.$className"
+                    }.toList()
+                    .filterNotNull()
+                    .toSet()
+            }
+
+        assertEquals(
+            detectedClasses,
+            configuredClasses,
+            "Every IntelliJ application or fixture test must be isolated in platformTest, with no stale entries",
         )
     }
 

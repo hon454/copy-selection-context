@@ -16,15 +16,24 @@ cd copy-selection-context
 # Unix / macOS
 ./gradlew buildPlugin    # Build plugin ZIP (build/distributions/)
 ./gradlew runIde         # Run dev IDE with plugin installed
-./gradlew test           # Run tests
+./gradlew test           # Run reusable pure unit tests
+./gradlew platformTest   # Run isolated IntelliJ Platform tests
+./gradlew allTests       # Run the complete test suite
 ./gradlew verifyPlugin   # Verify plugin structure
 
 # Windows
 gradlew.bat buildPlugin
 gradlew.bat runIde
 gradlew.bat test
+gradlew.bat platformTest
+gradlew.bat allTests
 gradlew.bat verifyPlugin
 ```
+
+`allTests` is the aggregate command used locally and in CI. The `test` task reuses
+its Gradle worker for pure unit tests, while `platformTest` starts a fresh JVM for
+each IntelliJ application or editor-fixture test class. CI adds `--continue` so
+both tasks can produce reports even if one task fails.
 
 ## Project Structure
 

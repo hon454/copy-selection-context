@@ -175,12 +175,12 @@ cd copy-selection-context
 # Unix / macOS
 ./gradlew buildPlugin    # Build plugin ZIP
 ./gradlew runIde         # Run dev IDE with plugin
-./gradlew test           # Run tests
+./gradlew allTests       # Run the complete test suite
 
 # Windows
 gradlew.bat buildPlugin
 gradlew.bat runIde
-gradlew.bat test
+gradlew.bat allTests
 ```
 
 有關開發和發佈的詳細指南，請參閱 [CONTRIBUTING.md](CONTRIBUTING.md)。
