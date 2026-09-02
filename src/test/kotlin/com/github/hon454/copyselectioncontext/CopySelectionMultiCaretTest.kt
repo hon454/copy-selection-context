@@ -92,6 +92,7 @@ class CopySelectionMultiCaretTest {
                 " @src/App.kt#L5 \n```kotlin\nsecond()\n```",
             result.content,
         )
+        assertEquals(listOf(Pair(1, 2), Pair(5, 5)), result.lineRanges)
     }
 
     private fun multiCaretFixture(): MultiCaretFixture {

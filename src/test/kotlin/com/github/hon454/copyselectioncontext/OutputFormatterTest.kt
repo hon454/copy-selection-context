@@ -34,6 +34,27 @@ class OutputFormatterTest {
     }
 
     @Test
+    fun `built-in formatters preserve internal backticks byte-for-byte`() {
+        val code = "val inline = \"````\"\n```nested\nbody"
+        val context = FormatContext(
+            path = "src/App.kt",
+            startLine = 4,
+            endLine = 6,
+            code = code,
+            language = "kotlin",
+        )
+
+        assertEquals(
+            " @src/App.kt#L4-6 \n````kotlin\n$code\n````",
+            ClaudeCodeFormatter().format(context),
+        )
+        assertEquals(
+            "src/App.kt:4-6\n````kotlin\n$code\n````",
+            PathLineFormatter().format(context),
+        )
+    }
+
+    @Test
     fun `ClaudeCodeFormatter formats single line`() {
         val formatter = ClaudeCodeFormatter()
         val context = FormatContext(path = "src/App.kt", startLine = 42, endLine = 42)

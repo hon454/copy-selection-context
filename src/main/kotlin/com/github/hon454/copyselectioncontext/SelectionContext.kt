@@ -11,9 +11,6 @@ data class SelectionContext(
     val language: String,
     val filename: String,
 ) {
-    val lineRange: String
-        get() = if (startLine == endLine) "$startLine" else "$startLine-$endLine"
-
     val lineNumbers: Pair<Int, Int>
         get() = Pair(startLine, endLine)
 

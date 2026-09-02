@@ -23,7 +23,6 @@ class SelectionContextTest {
         assertEquals("src/App.kt", context.path)
         assertSame(file, context.file)
         assertEquals(Pair(7, 9), context.lineNumbers)
-        assertEquals("7-9", context.lineRange)
         assertEquals("println(1)", context.code)
         assertEquals("kotlin", context.language)
         assertEquals("App.kt", context.filename)
