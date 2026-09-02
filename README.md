@@ -104,7 +104,7 @@ The separate **Copy GitHub/GitLab Permalink** action reads normal-repository or 
 - Standard path/code copy actions prepend entries to project-specific history. `Ctrl+Alt+H` opens the stored entries, and choosing one copies its full content again.
 - Copy notifications are enabled by default and can be disabled. They are shown after standard path/code copies and Git permalink copies.
 - A standard copy replaces the gutter markers in the active editor and updates the status-bar widget with a single-line, Unicode-safe, markup-escaped preview capped at 40 characters including its prefix. Click the widget to copy the full last value again.
-- Optional local usage analytics count copies and output-format usage in the IDE's application settings. Analytics are disabled by default and do not send data off the machine.
+- Optional local usage analytics count successful standard copy actions by output format and detected file language. Settings shows an immutable snapshot of every counter and provides a confirmed reset. Analytics are disabled by default, stored only in local IDE application settings, and never transmitted.
 
 ### Settings
 
@@ -117,7 +117,7 @@ The separate **Copy GitHub/GitLab Permalink** action reads normal-repository or 
 - **Trim code whitespace** — Remove leading and trailing whitespace from included code (off by default)
 - **Show copy notifications** — Show a balloon after supported copy actions (on by default)
 - **Copy history size** — Keep 0–100 entries per project (default: 10); set `0` to disable and clear history
-- **Local usage analytics** — Store opt-in copy counters only on this machine (off by default)
+- **Local usage analytics** — Inspect and reset opt-in total, output-format, and language counters stored only on this machine (off by default; never transmitted)
 
 Copy history may contain copied code. It is stored only in the IDE's local, non-roaming workspace data and is not written to shareable project settings. Each stored entry is limited to 256 KiB of UTF-8 content, and total history per project is limited to 2 MiB. Results over 256 KiB are still copied in full but are not added to history. When either the configured entry count or total byte budget is exceeded, the oldest entries are removed immediately. Use **Clear all history** at the bottom of the history popup to remove every entry. Existing history, including data migrated from `copySelectionHistory.xml`, is normalized to the same limits when loaded; the legacy file is then cleaned up by the IDE.
 

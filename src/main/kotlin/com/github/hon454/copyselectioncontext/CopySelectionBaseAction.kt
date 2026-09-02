@@ -36,7 +36,10 @@ abstract class CopySelectionBaseAction : AnAction() {
 
         val appSettings = CopySelectionSettings.getInstance().state
         if (appSettings.analyticsEnabled) {
-            CopySelectionAnalytics.getInstance()?.recordCopy(appSettings.outputFormat)
+            CopySelectionAnalytics.getInstance().recordCopy(
+                format = appSettings.outputFormat,
+                language = detectLanguage(file),
+            )
         }
 
         CopySelectionHighlighter.update(editor, copyResult.lineRanges)

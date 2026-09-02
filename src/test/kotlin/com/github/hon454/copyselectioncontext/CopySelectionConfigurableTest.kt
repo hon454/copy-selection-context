@@ -3,6 +3,7 @@ package com.github.hon454.copyselectioncontext
 import com.intellij.openapi.options.ConfigurationException
 import java.awt.Component
 import java.awt.Container
+import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JTextArea
 import kotlin.test.Test
@@ -99,17 +100,78 @@ class CopySelectionConfigurableTest {
         assertTrue(fixture.preview.accessibleContext.accessibleDescription.isNotBlank())
     }
 
-    private fun createFixture(): Fixture {
+    @Test
+    fun `analytics view shows total format and language counters`() = onEdt {
+        val analytics = CopySelectionAnalytics().apply {
+            recordCopy("template", "typescript")
+            recordCopy("claude", "kotlin")
+            recordCopy("template", "typescript")
+        }
+
+        val fixture = createFixture(analytics = analytics)
+
+        assertTrue(fixture.analyticsSummary.text.contains("3"))
+        assertTrue(fixture.analyticsSummary.text.contains("claude: 1"))
+        assertTrue(fixture.analyticsSummary.text.contains("template: 2"))
+        assertTrue(fixture.analyticsSummary.text.contains("kotlin: 1"))
+        assertTrue(fixture.analyticsSummary.text.contains("typescript: 2"))
+        assertFalse(fixture.analyticsSummary.isEditable)
+        assertTrue(fixture.analyticsSummary.isFocusable)
+        assertTrue(fixture.analyticsSummary.accessibleContext.accessibleDescription.isNotBlank())
+    }
+
+    @Test
+    fun `analytics reset requires confirmation and refreshes persisted view`() = onEdt {
+        val analytics = CopySelectionAnalytics().apply { recordCopy("claude", "kotlin") }
+        var resetConfirmed = false
+        val fixture = createFixture(
+            analytics = analytics,
+            confirmAnalyticsReset = { resetConfirmed },
+        )
+
+        fixture.analyticsReset.doClick()
+        assertEquals(1, analytics.snapshot().totalCopyCount)
+
+        resetConfirmed = true
+        fixture.analyticsReset.doClick()
+
+        assertEquals(CopySelectionAnalytics.Snapshot(0, emptyMap(), emptyMap()), analytics.snapshot())
+        assertTrue(fixture.analyticsSummary.text.contains("0"))
+        assertFalse(fixture.analyticsSummary.text.contains("claude: 1"))
+
+        val reloaded = CopySelectionAnalytics()
+        reloaded.loadState(analytics.state)
+        assertEquals(CopySelectionAnalytics.Snapshot(0, emptyMap(), emptyMap()), reloaded.snapshot())
+    }
+
+    private fun createFixture(
+        analytics: CopySelectionAnalytics = CopySelectionAnalytics(),
+        confirmAnalyticsReset: () -> Boolean = { false },
+    ): Fixture {
         val settings = CopySelectionSettings()
-        val configurable = CopySelectionConfigurable(settings, trimOpenProjectHistory = {})
+        val configurable = CopySelectionConfigurable(
+            settings = settings,
+            trimOpenProjectHistory = {},
+            analytics = analytics,
+            confirmAnalyticsReset = confirmAnalyticsReset,
+        )
         val component = configurable.createComponent()
         val comboBoxes = descendantsOfType<JComboBox<*>>(component)
         val textAreas = descendantsOfType<JTextArea>(component)
+        val buttons = descendantsOfType<JButton>(component)
 
         val outputFormat = comboBoxes.firstOrNull { combo -> combo.items().contains(OutputFormatOption.TEMPLATE) }
         val preset = comboBoxes.firstOrNull { combo -> combo.items().contains("With Code Block") }
         val editor = textAreas.firstOrNull { it.isEditable }
-        val preview = textAreas.firstOrNull { !it.isEditable }
+        val preview = textAreas.firstOrNull {
+            it.accessibleContext.accessibleName == CopySelectionBundle.message("settings.template.preview.label")
+        }
+        val analyticsSummary = textAreas.firstOrNull {
+            it.accessibleContext.accessibleName == CopySelectionBundle.message("settings.analytics.statistics.label")
+        }
+        val analyticsReset = buttons.firstOrNull {
+            it.text == CopySelectionBundle.message("settings.analytics.reset")
+        }
 
         return Fixture(
             configurable = configurable,
@@ -117,7 +179,9 @@ class CopySelectionConfigurableTest {
             outputFormat = assertNotNull(outputFormat),
             preset = assertNotNull(preset),
             editor = assertNotNull(editor),
-            preview = assertNotNull(preview)
+            preview = assertNotNull(preview),
+            analyticsSummary = assertNotNull(analyticsSummary),
+            analyticsReset = assertNotNull(analyticsReset),
         )
     }
 
@@ -150,6 +214,8 @@ class CopySelectionConfigurableTest {
         val outputFormat: JComboBox<*>,
         val preset: JComboBox<*>,
         val editor: JTextArea,
-        val preview: JTextArea
+        val preview: JTextArea,
+        val analyticsSummary: JTextArea,
+        val analyticsReset: JButton,
     )
 }

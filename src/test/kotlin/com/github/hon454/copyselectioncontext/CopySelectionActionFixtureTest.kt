@@ -15,11 +15,13 @@ import java.awt.datatransfer.Transferable
 
 class CopySelectionActionFixtureTest : BasePlatformTestCase() {
     private lateinit var originalSettings: CopySelectionSettings.State
+    private lateinit var originalAnalyticsState: CopySelectionAnalytics.State
     private var originalClipboard: Transferable? = null
 
     override fun setUp() {
         super.setUp()
         originalSettings = CopySelectionSettings.getInstance().state.copy()
+        originalAnalyticsState = CopySelectionAnalytics.getInstance().state
         originalClipboard = CopyPasteManager.getInstance().contents
         resetActionState()
     }
@@ -27,6 +29,7 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
     override fun tearDown() {
         try {
             CopySelectionSettings.getInstance().loadState(originalSettings)
+            CopySelectionAnalytics.getInstance().loadState(originalAnalyticsState)
             CopyPasteManager.getInstance().setContents(originalClipboard ?: StringSelection(""))
         } finally {
             super.tearDown()
@@ -81,6 +84,56 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         val path = relativePath()
         assertEquals("$path:1\n\n$path:3", clipboardText())
         assertEquals(listOf("$path:1\n\n$path:3"), historyContents())
+    }
+
+    fun testEnabledAnalyticsRecordsSingleCaretFormatAndLanguageOnce() {
+        myFixture.configureByText("analytics.py", "<selection>first line</selection>\nsecond line")
+        settings().analyticsEnabled = true
+
+        perform(CopySelectionContextAction())
+
+        assertEquals(
+            CopySelectionAnalytics.Snapshot(
+                totalCopyCount = 1,
+                formatUsage = mapOf("pathline" to 1),
+                languageUsage = mapOf(CopySelectionUtils.detectLanguage(myFixture.file.virtualFile) to 1),
+            ),
+            CopySelectionAnalytics.getInstance().snapshot(),
+        )
+    }
+
+    fun testEnabledAnalyticsRecordsMultiCaretActionOnlyOnce() {
+        myFixture.configureByText("analytics.py", "first line\nsecond line\nthird line")
+        val editor = myFixture.editor
+        editor.caretModel.primaryCaret.moveToLogicalPosition(LogicalPosition(0, 0))
+        requireNotNull(
+            editor.caretModel.addCaret(editor.logicalToVisualPosition(LogicalPosition(2, 0))),
+        )
+        settings().analyticsEnabled = true
+
+        perform(CopySelectionContextAction())
+
+        assertEquals(2, editor.caretModel.caretCount)
+        assertEquals(
+            CopySelectionAnalytics.Snapshot(
+                totalCopyCount = 1,
+                formatUsage = mapOf("pathline" to 1),
+                languageUsage = mapOf(CopySelectionUtils.detectLanguage(myFixture.file.virtualFile) to 1),
+            ),
+            CopySelectionAnalytics.getInstance().snapshot(),
+        )
+    }
+
+    fun testDisabledAnalyticsDoesNotWriteAnyCounters() {
+        myFixture.configureByText("disabled.py", "content<caret>")
+        val analytics = CopySelectionAnalytics.getInstance()
+        analytics.recordCopy("existing", "kotlin")
+        val before = analytics.snapshot()
+        settings().analyticsEnabled = false
+
+        perform(CopySelectionContextAction())
+
+        assertEquals(before, analytics.snapshot())
     }
 
     fun testMainActionIncludesTrimmedCodeWithCustomTemplate() {
@@ -247,6 +300,7 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
             ),
         )
         CopyHistoryService.getInstance(project).clear()
+        CopySelectionAnalytics.getInstance().reset()
         CopyPasteManager.getInstance().setContents(StringSelection("fixture-initial"))
     }
 

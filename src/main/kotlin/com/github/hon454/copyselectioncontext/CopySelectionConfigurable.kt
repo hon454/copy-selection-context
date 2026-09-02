@@ -3,6 +3,7 @@ package com.github.hon454.copyselectioncontext
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.ui.DialogPanel
+import com.intellij.openapi.ui.Messages
 import com.intellij.ui.dsl.builder.*
 import javax.swing.JComponent
 import javax.swing.JComboBox
@@ -12,7 +13,15 @@ import javax.swing.event.DocumentListener
 
 class CopySelectionConfigurable internal constructor(
     private val settings: CopySelectionSettings,
-    private val trimOpenProjectHistory: (Int) -> Unit = CopyHistoryService::trimOpenProjects
+    private val trimOpenProjectHistory: (Int) -> Unit = CopyHistoryService::trimOpenProjects,
+    private val analytics: CopySelectionAnalytics = CopySelectionAnalytics.getInstance(),
+    private val confirmAnalyticsReset: () -> Boolean = {
+        Messages.showYesNoDialog(
+            CopySelectionBundle.message("settings.analytics.reset.confirm.message"),
+            CopySelectionBundle.message("settings.analytics.reset.confirm.title"),
+            Messages.getQuestionIcon(),
+        ) == Messages.YES
+    },
 ) : Configurable {
     constructor() : this(CopySelectionSettings.getInstance())
 
@@ -21,6 +30,7 @@ class CopySelectionConfigurable internal constructor(
     private var presetCombo: JComboBox<String>? = null
     private var templateTextArea: JTextArea? = null
     private var previewTextArea: JTextArea? = null
+    private var analyticsTextArea: JTextArea? = null
     private var updatingPresetSelection = false
 
     override fun getDisplayName() = CopySelectionBundle.message("settings.title")
@@ -132,12 +142,38 @@ class CopySelectionConfigurable internal constructor(
                     checkBox(CopySelectionBundle.message("settings.analytics.enable"))
                         .bindSelected(state::analyticsEnabled)
                 }
+                row {
+                    label(CopySelectionBundle.message("settings.analytics.local.only"))
+                }
+                row(CopySelectionBundle.message("settings.analytics.statistics.label")) {
+                    textArea()
+                        .rows(ANALYTICS_ROWS)
+                        .columns(TEMPLATE_COLUMNS)
+                        .align(AlignX.FILL)
+                        .resizableColumn()
+                        .accessibleName(CopySelectionBundle.message("settings.analytics.statistics.label"))
+                        .accessibleDescription(CopySelectionBundle.message("settings.analytics.local.only"))
+                        .applyToComponent {
+                            isEditable = false
+                            isFocusable = true
+                        }
+                        .also { cell -> analyticsTextArea = cell.component }
+                }.resizableRow()
+                row {
+                    button(CopySelectionBundle.message("settings.analytics.reset")) {
+                        if (confirmAnalyticsReset()) {
+                            analytics.reset()
+                            updateAnalyticsSummary()
+                        }
+                    }
+                }
             }
         }
         dialogPanel = panel
         updatePresetSelection()
         updatePreview()
         updateTemplateControls()
+        updateAnalyticsSummary()
         return panel
     }
 
@@ -161,6 +197,7 @@ class CopySelectionConfigurable internal constructor(
         updatePresetSelection()
         updatePreview()
         updateTemplateControls()
+        updateAnalyticsSummary()
     }
 
     override fun disposeUIResources() {
@@ -169,6 +206,7 @@ class CopySelectionConfigurable internal constructor(
         presetCombo = null
         templateTextArea = null
         previewTextArea = null
+        analyticsTextArea = null
         updatingPresetSelection = false
     }
 
@@ -216,12 +254,18 @@ class CopySelectionConfigurable internal constructor(
         updatePresetSelection()
     }
 
+    private fun updateAnalyticsSummary() {
+        analyticsTextArea?.text = renderAnalyticsSummary(analytics.snapshot())
+        analyticsTextArea?.caretPosition = 0
+    }
+
     private fun isTemplateFormatSelected() =
         outputFormatCombo?.selectedItem == OutputFormatOption.TEMPLATE
 
     companion object {
         internal const val TEMPLATE_EDITOR_ROWS = 6
         internal const val PREVIEW_ROWS = 6
+        internal const val ANALYTICS_ROWS = 8
         private const val TEMPLATE_COLUMNS = 60
 
         private val SAMPLE_CONTEXT = FormatContext(
@@ -235,6 +279,34 @@ class CopySelectionConfigurable internal constructor(
 
         internal fun renderTemplatePreview(template: String): String =
             OutputFormatterFactory.getTemplateFormatter(template).format(SAMPLE_CONTEXT)
+
+        internal fun renderAnalyticsSummary(snapshot: CopySelectionAnalytics.Snapshot): String = buildString {
+            appendLine(
+                CopySelectionBundle.message(
+                    "settings.analytics.statistics.total",
+                    snapshot.totalCopyCount,
+                ),
+            )
+            appendLine()
+            appendUsage(
+                CopySelectionBundle.message("settings.analytics.statistics.formats"),
+                snapshot.formatUsage,
+            )
+            appendLine()
+            appendUsage(
+                CopySelectionBundle.message("settings.analytics.statistics.languages"),
+                snapshot.languageUsage,
+            )
+        }.trimEnd()
+
+        private fun StringBuilder.appendUsage(title: String, usage: Map<String, Int>) {
+            appendLine(title)
+            if (usage.isEmpty()) {
+                appendLine(CopySelectionBundle.message("settings.analytics.statistics.empty"))
+                return
+            }
+            usage.toSortedMap().forEach { (key, count) -> appendLine("$key: $count") }
+        }
 
         internal fun templateValidationMessage(template: String): String? {
             val unknownVariables = TemplateFormatter.findUnknownVariables(template)
