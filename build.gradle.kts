@@ -121,10 +121,19 @@ tasks {
         forkEvery = 0
     }
 
-    register("allTests") {
-        description = "Runs reusable unit tests and isolated IntelliJ Platform tests."
-        group = "verification"
-        dependsOn(test, "platformTest")
+    val allTests =
+        register("allTests") {
+            description = "Runs reusable unit tests and isolated IntelliJ Platform tests."
+            group = "verification"
+            dependsOn(test, "platformTest")
+        }
+
+    named("check") {
+        dependsOn(allTests)
+    }
+
+    named("buildPlugin") {
+        dependsOn(allTests)
     }
 
     buildSearchableOptions {
