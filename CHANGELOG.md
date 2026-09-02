@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Make copy history safer with Unicode-aware previews, localized timestamps, confirmed clearing, and consecutive-duplicate refreshes (#67)
+
 ## [1.2.1] - 2026-09-02
 
 ### Changed

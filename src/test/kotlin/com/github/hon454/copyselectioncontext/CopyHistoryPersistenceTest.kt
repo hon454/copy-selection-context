@@ -148,6 +148,18 @@ class CopyHistoryPersistenceTest {
         assertTrue(historyContents().isEmpty())
     }
 
+    @Test
+    fun `consecutive duplicate remains collapsed across persistence reload`() {
+        service.addEntry("persisted-duplicate")
+        service.addEntry("persisted-duplicate")
+        saveProjectStore()
+
+        service.clear()
+        fixtureStore.reloadState(CopyHistoryService::class.java)
+
+        assertEquals(1, historyContents().count { it == "persisted-duplicate" })
+    }
+
     @Suppress("UNCHECKED_CAST")
     private fun registerProjectIdManager(project: StoreBackedMockProject) {
         val serviceClass =

@@ -3,9 +3,12 @@ package com.github.hon454.copyselectioncontext
 import com.intellij.openapi.components.RoamingType
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.StoragePathMacros
+import java.util.Locale
+import java.util.TimeZone
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class CopyHistoryServiceTest {
@@ -81,6 +84,27 @@ class CopyHistoryServiceTest {
     }
 
     @Test
+    fun `consecutive duplicate refreshes newest entry without crowding history`() {
+        var currentTime = 100L
+        val service = CopyHistoryService(
+            currentTimeMillis = { currentTime },
+            historySizeProvider = { 10 },
+        )
+
+        service.addEntry("distinct", maxSize = 10)
+        currentTime = 200L
+        service.addEntry("duplicate", maxSize = 10)
+        val originalTimestamp = service.getEntries().first().timestamp
+        currentTime = 300L
+        service.addEntry("duplicate", maxSize = 10)
+
+        val entries = service.getEntries()
+        assertEquals(listOf("duplicate", "distinct"), entries.map { it.content })
+        assertNotEquals(originalTimestamp, entries.first().timestamp)
+        assertEquals(300L, entries.first().timestamp)
+    }
+
+    @Test
     fun `history persists only in the local workspace storage`() {
         val state = CopyHistoryService::class.java.getAnnotation(State::class.java)
         val workspaceStorage = state.storages.first()
@@ -99,16 +123,70 @@ class CopyHistoryServiceTest {
     }
 
     @Test
-    fun `popup clear-all action removes every entry`() {
+    fun `popup clear-all cancellation preserves every entry`() {
         val service = CopyHistoryService()
         service.addEntry("first")
         service.addEntry("second")
         val clearAll = CopyHistoryPopup.createItems(service.getEntries()).last()
 
-        CopyHistoryPopup.handleSelection(service, clearAll) { error("Clear must not copy content") }
+        CopyHistoryPopup.handleSelection(
+            service = service,
+            selected = clearAll,
+            copyContent = { error("Clear must not copy content") },
+            confirmClear = { false },
+        )
 
         assertEquals(CopyHistoryPopup.PopupItem.ClearAll, clearAll)
+        assertEquals(listOf("second", "first"), service.getEntries().map { it.content })
+    }
+
+    @Test
+    fun `popup clear-all confirmation removes every entry`() {
+        val service = CopyHistoryService()
+        service.addEntry("first")
+        service.addEntry("second")
+        val clearAll = CopyHistoryPopup.createItems(service.getEntries()).last()
+
+        CopyHistoryPopup.handleSelection(
+            service = service,
+            selected = clearAll,
+            copyContent = { error("Clear must not copy content") },
+            confirmClear = { true },
+        )
+
         assertTrue(service.getEntries().isEmpty())
+    }
+
+    @Test
+    fun `popup entry preview is safe bounded and includes accessible timestamp text`() {
+        val content = "e\u0301 😀\r\n\t<script>" + "x".repeat(200)
+        val timestampText = "Jan 2, 2024, 3:04 AM"
+
+        val entry = CopyHistoryPopup.createItems(
+            entries = listOf(CopyHistoryService.HistoryEntry(content, timestamp = 123L)),
+            formatTimestamp = { timestampText },
+        ).first() as CopyHistoryPopup.PopupItem.Entry
+
+        assertEquals(CopyPreview.history(content), entry.preview)
+        assertTrue(entry.preview.length <= CopyPreview.HISTORY_MAX_LENGTH)
+        assertFalse(entry.preview.any { it == '\n' || it == '\r' || it == '\t' })
+        assertTrue(entry.preview.hasOnlyPairedSurrogates())
+        assertTrue(entry.preview.startsWith("e\u0301 😀 &lt;script&gt;"))
+        assertTrue(entry.toString().contains(timestampText))
+        assertFalse(entry.toString().contains("x".repeat(100)))
+    }
+
+    @Test
+    fun `history timestamp uses the requested locale`() {
+        val timestamp = 1_704_164_640_000L
+        val utc = TimeZone.getTimeZone("UTC")
+
+        val english = CopyHistoryPopup.formatTimestamp(timestamp, Locale.US, utc)
+        val korean = CopyHistoryPopup.formatTimestamp(timestamp, Locale.KOREA, utc)
+
+        assertNotEquals(english, korean)
+        assertTrue(english.contains("2024"))
+        assertTrue(korean.contains("2024"))
     }
 
     @Test
@@ -210,5 +288,32 @@ class CopyHistoryServiceTest {
         service.loadState(CopyHistoryService.State(entries.toMutableList()))
 
         assertEquals(entries.take(8), service.getEntries())
+    }
+
+    @Test
+    fun `loadState deterministically collapses only consecutive duplicates`() {
+        val entries = listOf(
+            CopyHistoryService.HistoryEntry("same", timestamp = 40L),
+            CopyHistoryService.HistoryEntry("same", timestamp = 30L),
+            CopyHistoryService.HistoryEntry("distinct", timestamp = 20L),
+            CopyHistoryService.HistoryEntry("same", timestamp = 10L),
+        )
+        val service = CopyHistoryService { 10 }
+
+        service.loadState(CopyHistoryService.State(entries.toMutableList()))
+
+        assertEquals(listOf(entries[0], entries[2], entries[3]), service.getEntries())
+    }
+
+    private fun String.hasOnlyPairedSurrogates(): Boolean {
+        forEachIndexed { index, character ->
+            if (character.isHighSurrogate()) {
+                if (index + 1 >= length || !this[index + 1].isLowSurrogate()) return false
+            }
+            if (character.isLowSurrogate()) {
+                if (index == 0 || !this[index - 1].isHighSurrogate()) return false
+            }
+        }
+        return true
     }
 }

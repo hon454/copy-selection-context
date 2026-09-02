@@ -40,6 +40,15 @@ class CopyPreviewTest {
     }
 
     @Test
+    fun `unicode grapheme clusters are not split during truncation`() {
+        val combiningPreview = CopyPreview.history("a".repeat(78) + "e\u0301z")
+        val emojiPreview = CopyPreview.history("a".repeat(76) + "👩‍💻z")
+
+        assertEquals("a".repeat(78) + "…", combiningPreview)
+        assertEquals("a".repeat(76) + "…", emojiPreview)
+    }
+
+    @Test
     fun `markup-like content is escaped without partial entities`() {
         val preview = CopyPreview.create("src/App.kt:7\n<script title=\"x\">& 'value'</script>", 120)
 
@@ -48,6 +57,18 @@ class CopyPreviewTest {
             preview
         )
         assertFalse(preview.contains("<script"))
+    }
+
+    @Test
+    fun `history preview uses the shared safe preview pipeline`() {
+        val content = "e\u0301 😀\n\t" + "x".repeat(200)
+
+        val preview = CopyPreview.history(content)
+
+        assertEquals(CopyPreview.create(content, CopyPreview.HISTORY_MAX_LENGTH), preview)
+        assertTrue(preview.length <= CopyPreview.HISTORY_MAX_LENGTH)
+        assertTrue(preview.hasOnlyPairedSurrogates())
+        assertFalse(preview.any { it == '\n' || it == '\r' || it == '\t' })
     }
 
     private fun String.hasOnlyPairedSurrogates(): Boolean {

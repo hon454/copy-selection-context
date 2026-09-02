@@ -18,10 +18,11 @@ import com.intellij.openapi.project.ProjectManager
     ]
 )
 class CopyHistoryService internal constructor(
+    private val currentTimeMillis: () -> Long = System::currentTimeMillis,
     private val historySizeProvider: () -> Int,
 ) : PersistentStateComponent<CopyHistoryService.State> {
 
-    constructor() : this({ CopySelectionSettings.getInstance().state.copyHistorySize })
+    constructor() : this(historySizeProvider = { CopySelectionSettings.getInstance().state.copyHistorySize })
 
     data class HistoryEntry(var content: String = "", var timestamp: Long = 0L)
 
@@ -47,7 +48,14 @@ class CopyHistoryService internal constructor(
             return
         }
 
-        myState.entries.add(0, HistoryEntry(content = content, timestamp = System.currentTimeMillis()))
+        val newestEntry = myState.entries.firstOrNull()
+        if (newestEntry?.content == content) {
+            newestEntry.timestamp = currentTimeMillis()
+            trimToSize(limit)
+            return
+        }
+
+        myState.entries.add(0, HistoryEntry(content = content, timestamp = currentTimeMillis()))
         trimToSize(limit)
     }
 
@@ -67,10 +75,14 @@ class CopyHistoryService internal constructor(
 
         val normalized = ArrayList<HistoryEntry>(minOf(entries.size, limit))
         var totalBytes = 0
+        var previousContent: String? = null
         for (entry in entries) {
             if (normalized.size == limit) break
 
             val entryBytes = entry.content.utf8Size()
+            val isConsecutiveDuplicate = entry.content == previousContent
+            previousContent = entry.content
+            if (isConsecutiveDuplicate) continue
             if (entryBytes > MAX_ENTRY_CONTENT_BYTES) continue
             if (totalBytes + entryBytes > MAX_TOTAL_CONTENT_BYTES) break
 

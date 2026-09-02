@@ -2,16 +2,22 @@ package com.github.hon454.copyselectioncontext
 
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.awt.RelativePoint
 import java.awt.Point
 import java.awt.datatransfer.StringSelection
+import java.text.DateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import javax.swing.JComponent
 
 object CopyHistoryPopup {
     internal sealed interface PopupItem {
-        data class Entry(val preview: String, val content: String) : PopupItem {
-            override fun toString(): String = preview
+        data class Entry(val preview: String, val timestamp: String, val content: String) : PopupItem {
+            override fun toString(): String =
+                CopySelectionBundle.message("history.popup.entry", preview, timestamp)
         }
 
         data object ClearAll : PopupItem {
@@ -29,9 +35,14 @@ object CopyHistoryPopup {
         val popup = JBPopupFactory.getInstance().createPopupChooserBuilder(items)
             .setTitle(CopySelectionBundle.message("history.popup.title"))
             .setItemChosenCallback { selected ->
-                handleSelection(service, selected) { content ->
-                    CopyPasteManager.getInstance().setContents(StringSelection(content))
-                }
+                handleSelection(
+                    service = service,
+                    selected = selected,
+                    copyContent = { content ->
+                        CopyPasteManager.getInstance().setContents(StringSelection(content))
+                    },
+                    confirmClear = { confirmClear(project) },
+                )
             }
             .createPopup()
 
@@ -42,22 +53,45 @@ object CopyHistoryPopup {
         }
     }
 
-    internal fun createItems(entries: List<CopyHistoryService.HistoryEntry>): List<PopupItem> =
+    internal fun createItems(
+        entries: List<CopyHistoryService.HistoryEntry>,
+        formatTimestamp: (Long) -> String = ::formatTimestamp,
+    ): List<PopupItem> =
         entries.map { entry ->
             PopupItem.Entry(
-                preview = entry.content.take(80).replace("\n", " "),
-                content = entry.content
+                preview = CopyPreview.history(entry.content),
+                timestamp = formatTimestamp(entry.timestamp),
+                content = entry.content,
             )
         } + PopupItem.ClearAll
 
     internal fun handleSelection(
         service: CopyHistoryService,
         selected: PopupItem,
-        copyContent: (String) -> Unit
+        copyContent: (String) -> Unit,
+        confirmClear: () -> Boolean,
     ) {
         when (selected) {
             is PopupItem.Entry -> copyContent(selected.content)
-            PopupItem.ClearAll -> service.clear()
+            PopupItem.ClearAll -> if (confirmClear()) service.clear()
         }
     }
+
+    internal fun formatTimestamp(
+        timestamp: Long,
+        locale: Locale = Locale.getDefault(),
+        timeZone: TimeZone = TimeZone.getDefault(),
+    ): String {
+        val formatter = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, locale)
+        formatter.timeZone = timeZone
+        return formatter.format(Date(timestamp))
+    }
+
+    private fun confirmClear(project: Project): Boolean =
+        Messages.showYesNoDialog(
+            project,
+            CopySelectionBundle.message("history.popup.clear.confirm.message"),
+            CopySelectionBundle.message("history.popup.clear.confirm.title"),
+            Messages.getWarningIcon(),
+        ) == Messages.YES
 }
