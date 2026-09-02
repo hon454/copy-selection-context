@@ -86,8 +86,15 @@ class DocumentationSyncTest {
         val junitVersion = capture(buildScript, "junit-jupiter-api:([^\"]+)\"")
         val mockkVersion = capture(buildScript, "io\\.mockk:mockk:([^\"]+)\"")
         val gradleVersion = capture(wrapperProperties, "gradle-([0-9.]+)-bin\\.zip")
+        val distributionChecksum = capture(wrapperProperties, "distributionSha256Sum=([0-9a-f]{64})")
         val useBundledKotlinStdlib = gradleProperties.getProperty("kotlin.stdlib.default.dependency")
             ?: error("gradle.properties must declare kotlin.stdlib.default.dependency")
+
+        assertEquals(
+            "acd53f1edaf02f1a8ff99879f8a34b302661a057d9b063ae9e35b552f804d20a",
+            distributionChecksum,
+            "Gradle 9.7.1 bin distribution must use the official SHA-256 checksum",
+        )
 
         val knowledgeBase = repositoryRoot.resolve("AGENTS.md").readText()
         assertTableValue(knowledgeBase, "Kotlin", kotlinVersion)
