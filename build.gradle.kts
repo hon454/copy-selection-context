@@ -132,10 +132,6 @@ tasks {
         dependsOn(allTests)
     }
 
-    named("buildPlugin") {
-        dependsOn(allTests)
-    }
-
     buildSearchableOptions {
         jvmArgs("-Xshare:off")
     }

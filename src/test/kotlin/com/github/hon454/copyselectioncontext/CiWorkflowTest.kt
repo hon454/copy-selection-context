@@ -354,10 +354,8 @@ class CiWorkflowTest {
             "test and platformTest must use the same partition list",
         )
         assertTrue(
-            Regex("""(?s)named\("check"\)\s*\{.*?dependsOn\(allTests\).*?}""").containsMatchIn(buildScript) &&
-                Regex("""(?s)named\("buildPlugin"\)\s*\{.*?dependsOn\(allTests\).*?}""")
-                    .containsMatchIn(buildScript),
-            "check and buildPlugin must include the complete test aggregate",
+            Regex("""(?s)named\("check"\)\s*\{.*?dependsOn\(allTests\).*?}""").containsMatchIn(buildScript),
+            "check must include the complete test aggregate",
         )
 
         val testSourceRoot = Path.of("src", "test", "kotlin")
