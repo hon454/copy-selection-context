@@ -269,6 +269,7 @@ class CopySelectionBundleTest {
             "settings.title",
             "settings.format.claude",
             "settings.template.variables.comment",
+            "history.popup.entry",
         )
 
         val MESSAGE_ARGUMENT = Regex("""\{(\d+)(?:,[^{}]+)?}""")
