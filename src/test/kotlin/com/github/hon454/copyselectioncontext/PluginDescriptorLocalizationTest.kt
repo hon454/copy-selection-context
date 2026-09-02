@@ -14,8 +14,13 @@ import org.w3c.dom.Document
 class PluginDescriptorLocalizationTest {
     private val repositoryRoot = Path.of(System.getProperty("user.dir"))
     private val descriptor = loadDescriptor()
-    private val baseBundle = loadProperties("src/main/resources/messages/CopySelectionBundle.properties")
-    private val koreanBundle = loadProperties("src/main/resources/messages/CopySelectionBundle_ko.properties")
+    private val bundles = linkedMapOf(
+        "Base" to loadProperties("src/main/resources/messages/CopySelectionBundle.properties"),
+        "Korean" to loadProperties("src/main/resources/messages/CopySelectionBundle_ko.properties"),
+        "Japanese" to loadProperties("src/main/resources/messages/CopySelectionBundle_ja.properties"),
+        "Simplified Chinese" to loadProperties("src/main/resources/messages/CopySelectionBundle_zh_CN.properties"),
+        "Traditional Chinese" to loadProperties("src/main/resources/messages/CopySelectionBundle_zh_TW.properties"),
+    )
 
     @Test
     fun `descriptor declares the action resource bundle`() {
@@ -54,11 +59,15 @@ class PluginDescriptorLocalizationTest {
             }
         }
 
-        assertEquals(expectedKeys, descriptorPresentationKeys(baseBundle))
-        assertEquals(expectedKeys, descriptorPresentationKeys(koreanBundle))
-        expectedKeys.forEach { key ->
-            assertTrue(baseBundle.getProperty(key).isNotBlank(), "Base bundle key '$key' must be non-blank")
-            assertTrue(koreanBundle.getProperty(key).isNotBlank(), "Korean bundle key '$key' must be non-blank")
+        bundles.forEach { (localeName, bundle) ->
+            assertEquals(
+                expectedKeys,
+                descriptorPresentationKeys(bundle),
+                "$localeName action and group presentation keys must match the descriptor",
+            )
+            expectedKeys.forEach { key ->
+                assertTrue(bundle.getProperty(key).isNotBlank(), "$localeName bundle key '$key' must be non-blank")
+            }
         }
     }
 

@@ -26,7 +26,7 @@ Tired of manually typing file paths and line numbers when sharing code context w
 - **Respectful review path** — After demonstrated use, offer one honest-review prompt per version plus a passive Marketplace link
 - **Multi-caret context** — Format every caret independently and separate its path/code block with a blank line
 - **Accurate selection ends** — Treat IntelliJ's `selectionEnd - 1` as the final included offset, avoiding an extra trailing line
-- **Localized settings** — Use localized output-format labels and matching English/Korean resource keys
+- **Localized IDE UI** — Use translated actions, settings, notifications, history, status, and formatting labels in English, Korean, Japanese, Simplified Chinese, and Traditional Chinese
 - **Smart line handling** — Copies current line number when no text is selected
 - **Context menu** — Access all actions from the editor right-click menu
 - **Cross-platform** — Works on Windows, macOS, and Linux
