@@ -3,6 +3,7 @@ package com.github.hon454.copyselectioncontext
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -50,6 +51,88 @@ class CiWorkflowTest {
         )
     }
 
+    @Test
+    fun `external actions use immutable full SHA pins with version comments`() {
+        val workflowDirectory = Path.of(".github", "workflows")
+        val workflowPaths =
+            Files.list(workflowDirectory).use { paths ->
+                paths
+                    .filter { path ->
+                        val fileName = path.fileName.toString()
+                        fileName.endsWith(".yml") || fileName.endsWith(".yaml")
+                    }.sorted()
+                    .toList()
+            }
+        assertTrue(workflowPaths.isNotEmpty(), "No GitHub Actions workflows found")
+
+        val externalActionPattern = Regex("""^\s*(?:-\s*)?uses:\s*([^\s#]+)(?:\s+#\s*(\S+))?\s*${'$'}""")
+        val immutableReferencePattern = Regex("""^[^/@\s]+/[^@\s]+@[0-9a-f]{40}${'$'}""")
+        val versionCommentPattern = Regex("""^v\d+(?:\.\d+){0,2}(?:[-+][0-9A-Za-z.-]+)?${'$'}""")
+        var externalActionCount = 0
+
+        workflowPaths.forEach { path ->
+            Files.readAllLines(path).forEachIndexed { index, line ->
+                val match = externalActionPattern.matchEntire(line) ?: return@forEachIndexed
+                val reference = match.groupValues[1]
+                if (reference.startsWith("./") || reference.startsWith("docker://")) {
+                    return@forEachIndexed
+                }
+
+                externalActionCount += 1
+                val location = "${path}:${index + 1}"
+                assertTrue(
+                    immutableReferencePattern.matches(reference),
+                    "$location must pin external action '$reference' to a full 40-character commit SHA",
+                )
+                val versionComment = match.groupValues[2]
+                assertTrue(
+                    versionCommentPattern.matches(versionComment),
+                    "$location must include a readable version comment such as '# v1.2.3'",
+                )
+            }
+        }
+
+        assertTrue(externalActionCount > 0, "No external actions found to validate")
+    }
+
+    @Test
+    fun `workflows declare only required token permissions`() {
+        assertEquals(
+            "contents: read",
+            workflowPermissions(readWorkflow("build.yml")),
+            "build.yml must keep the default GITHUB_TOKEN read-only",
+        )
+        assertEquals(
+            "contents: write",
+            workflowPermissions(readWorkflow("release.yml")),
+            "release.yml needs only contents write access to create the GitHub release",
+        )
+    }
+
+    @Test
+    fun `Dependabot safely updates action pins through pull request validation`() {
+        val dependabotPath = Path.of(".github", "dependabot.yml")
+        assertTrue(Files.isRegularFile(dependabotPath), "Dependabot configuration is required")
+        val dependabot = Files.readString(dependabotPath)
+        val buildWorkflow = readWorkflow("build.yml")
+
+        assertTrue(
+            dependabot.contains("package-ecosystem: \"github-actions\"") &&
+                dependabot.contains("directory: \"/\"") &&
+                dependabot.contains("interval: \"weekly\""),
+            "Dependabot must check GitHub Actions pins at the repository root on a weekly schedule",
+        )
+        assertFalse(
+            dependabot.contains("automerge", ignoreCase = true),
+            "GitHub Actions updates must not be configured for automatic merging",
+        )
+        assertTrue(
+            Regex("""(?ms)^on:\s.*?^\s{2}pull_request:\s*\n\s{4}branches:\s*\[\s*main\s*]""")
+                .containsMatchIn(buildWorkflow),
+            "Dependabot pull requests targeting main must run the complete build workflow",
+        )
+    }
+
     private fun assertValidationPipeline(
         workflowName: String,
         publicationStep: String,
@@ -86,14 +169,8 @@ class CiWorkflowTest {
             "$workflowName must upload plugin verification and test diagnostics",
         )
         assertTrue(
-            workflow.contains("uses: gradle/actions/setup-gradle@v6"),
+            workflow.contains("uses: gradle/actions/setup-gradle@"),
             "$workflowName must cache Gradle dependencies used by plugin verification",
-        )
-        assertTrue(
-            workflow.contains(
-                "uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0",
-            ),
-            "$workflowName must pin the verified setup-java v6.0.0 commit",
         )
     }
 
@@ -101,6 +178,20 @@ class CiWorkflowTest {
         val path = Path.of(".github", "workflows", workflowName)
         assertTrue(Files.isRegularFile(path), "Workflow not found: $path")
         return Files.readString(path)
+    }
+
+    private fun workflowPermissions(workflow: String): String {
+        val lines = workflow.lines()
+        val permissionsIndex = lines.indexOfFirst { it == "permissions:" }
+        assertTrue(permissionsIndex >= 0, "Workflow must declare permissions explicitly")
+
+        val permissionLines =
+            lines
+                .drop(permissionsIndex + 1)
+                .takeWhile { it.startsWith("  ") && it.isNotBlank() }
+                .map { it.trim() }
+        assertEquals(1, permissionLines.size, "Workflow must grant exactly one explicit token permission")
+        return permissionLines.single()
     }
 
     private fun assertInOrder(
