@@ -234,7 +234,7 @@ class CopySelectionConfigurable internal constructor(
         )
 
         internal fun renderTemplatePreview(template: String): String =
-            if (template.isBlank()) "" else TemplateFormatter(template).format(SAMPLE_CONTEXT)
+            OutputFormatterFactory.getTemplateFormatter(template).format(SAMPLE_CONTEXT)
 
         internal fun templateValidationMessage(template: String): String? {
             val unknownVariables = TemplateFormatter.findUnknownVariables(template)

@@ -71,6 +71,36 @@ class TemplateFormatterTest {
     }
 
     @Test
+    fun `TemplateFormatter preserves placeholder tokens in code`() {
+        val code = "{path} {line} {range} {code} {lang} {filename} {unknown}"
+        val formatter = TemplateFormatter("{code}")
+
+        assertEquals(code, formatter.format(context.copy(code = code)))
+    }
+
+    @Test
+    fun `TemplateFormatter preserves placeholder tokens in paths while normalizing separators`() {
+        val formatter = TemplateFormatter("{path}")
+        val path = "C:\\work\\{line}\\{filename}.kt"
+
+        assertEquals("C:/work/{line}/{filename}.kt", formatter.format(context.copy(path = path)))
+    }
+
+    @Test
+    fun `TemplateFormatter preserves placeholder tokens in language`() {
+        val formatter = TemplateFormatter("{lang}")
+
+        assertEquals("{code}-{path}", formatter.format(context.copy(language = "{code}-{path}")))
+    }
+
+    @Test
+    fun `TemplateFormatter preserves placeholder tokens in filename`() {
+        val formatter = TemplateFormatter("{filename}")
+
+        assertEquals("{lang}-{range}.kt", formatter.format(context.copy(filename = "{lang}-{range}.kt")))
+    }
+
+    @Test
     fun `TemplateFormatter returns empty string for empty template`() {
         val formatter = TemplateFormatter("")
 
@@ -122,6 +152,7 @@ class TemplateFormatterTest {
         val formatter = OutputFormatterFactory.getFormatterForSettings(settings)
 
         assertIs<TemplateFormatter>(formatter)
+        assertEquals("src/App.kt:15-23", formatter.format(context))
     }
 
     @Test
