@@ -9,7 +9,7 @@ JetBrains IDE plugin for copying code context (file path, line numbers, optional
 
 - **Core Value**: One shortcut copies file path + line numbers + optional code, formatted for AI
 - **Target Users**: Developers using AI coding assistants (Claude, ChatGPT, etc.)
-- **Primary IDE**: Rider (compatible with all IntelliJ Platform IDEs 2024.3+)
+- **IDE Scope**: Cross-IDE IntelliJ Platform plugin for 2024.3+; IntelliJ IDEA is the largest observed user base, while Rider is the original use case
 
 ## Tech Stack
 
