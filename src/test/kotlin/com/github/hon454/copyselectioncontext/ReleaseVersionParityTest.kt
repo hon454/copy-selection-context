@@ -13,8 +13,16 @@ class ReleaseVersionParityTest {
     private val verifier = projectRoot.resolve("scripts/verify-release-version.sh")
 
     @Test
-    fun `canonical project version is 1_3_0`() {
-        assertEquals("1.3.0", canonicalVersion(projectRoot.resolve("build.gradle.kts")))
+    fun `canonical project version is 1_3_1`() {
+        assertEquals("1.3.1", canonicalVersion(projectRoot.resolve("build.gradle.kts")))
+    }
+
+    @Test
+    fun `runtime version resource matches the canonical project version`() {
+        assertEquals(
+            canonicalVersion(projectRoot.resolve("build.gradle.kts")),
+            CopySelectionReviewService().currentPluginVersion(),
+        )
     }
 
     @Test
@@ -22,7 +30,7 @@ class ReleaseVersionParityTest {
         val result = runVerifier("v${canonicalVersion(projectRoot.resolve("build.gradle.kts"))}")
 
         assertEquals(0, result.exitCode, result.output)
-        assertTrue(result.output.contains("Version verified: v1.3.0"), result.output)
+        assertTrue(result.output.contains("Version verified: v1.3.1"), result.output)
     }
 
     @Test

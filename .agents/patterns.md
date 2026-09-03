@@ -62,6 +62,8 @@ class CopySelectionSettings : PersistentStateComponent<CopySelectionSettings.Sta
 
 Review-prompt decisions use a separate application service with `RoamingType.DISABLED`. Gate notification-disabled, unit-test, headless, unsupported-version, and already-suppressed contexts before changing the session counter or persisted state. Keep the eligible-copy counter outside persisted `State`; store only the last prompted plugin version and permanent suppression signals. Mark the version before notifying so closing the balloon or choosing `Later` cannot repeat the prompt in that version.
 
+Read the current plugin version from `META-INF/copy-selection-context-version.properties`, which `processResources` expands from the canonical Gradle project version. Do not use `PluginManagerCore` for plugin metadata; its lookup methods are internal in newer IDE builds.
+
 ## Selection Range and Current-Line Fallback
 
 ```kotlin
@@ -93,8 +95,7 @@ There are 39 explicit mappings, including Kotlin, Java, C#, JavaScript/TypeScrip
 ## Status Bar Widget
 
 ```kotlin
-class CopySelectionStatusBarWidget(project: Project) :
-    EditorBasedWidget(project), TextPresentation
+class CopySelectionStatusBarWidget : CustomStatusBarWidgetAdapter()
 ```
 
-The widget stores the full last-copied content in an `AtomicReference`, shows a bounded single-line preview with a total 40-character budget including its prefix, and copies the full value again when clicked. `CopyPreview` preserves Unicode code points, escapes notification/tooltip markup, and never cuts an escape entity. `CopySelectionStatusBarWidgetFactory` registers the widget through `statusBarWidgetFactory` in `plugin.xml`; standard path/code actions call `update()` after copying.
+The Java `CustomStatusBarWidgetAdapter` implements the public `CustomStatusBarWidget` API without Kotlin generating compatibility bridges for deprecated `StatusBarWidget` default methods. The Kotlin widget extends that adapter instead of implementation-only editor widget classes or the obsolete IntelliJ `Consumer` callback. Its Swing label is created lazily, stores the full last-copied content in an `AtomicReference`, shows a bounded single-line preview with a total 40-character budget including its prefix, and copies the full value again when clicked. `CopyPreview` preserves Unicode code points, escapes notification/tooltip markup, and never cuts an escape entity. `CopySelectionStatusBarWidgetFactory` registers the widget through `statusBarWidgetFactory` in `plugin.xml`; standard path/code actions call `update()` after copying.
