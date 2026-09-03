@@ -1,7 +1,6 @@
 package com.github.hon454.copyselectioncontext
 
 import com.intellij.openapi.ide.CopyPasteManager
-import com.intellij.openapi.project.Project
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -11,6 +10,7 @@ import io.mockk.slot
 import io.mockk.unmockkStatic
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
+import javax.swing.JLabel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -19,11 +19,14 @@ import kotlin.test.assertTrue
 class CopySelectionStatusBarWidgetTest {
     @Test
     fun `status and tooltip use safe bounded previews`() {
-        val widget = CopySelectionStatusBarWidget(mockk<Project>(relaxed = true))
+        val widget = CopySelectionStatusBarWidget()
         val content = "src/App.kt:10-20\n<script>😀 ${"x".repeat(1_000)}</script>"
 
         widget.update(content)
+        val label = widget.component as JLabel
 
+        assertEquals(widget.getText(), label.text)
+        assertEquals(widget.getTooltipText(), label.toolTipText)
         assertTrue(widget.getText().length <= CopyPreview.STATUS_MAX_LENGTH)
         assertTrue(widget.getTooltipText().length <= CopyPreview.TOOLTIP_MAX_LENGTH)
         assertFalse(widget.getText().any { it == '\n' || it == '\r' })
@@ -41,11 +44,12 @@ class CopySelectionStatusBarWidgetTest {
             every { CopyPasteManager.getInstance() } returns manager
             every { manager.setContents(capture(copied)) } just runs
 
-            val widget = CopySelectionStatusBarWidget(mockk<Project>(relaxed = true))
+            val widget = CopySelectionStatusBarWidget()
             val content = "src/App.kt:10-20\n<script>😀 ${"x".repeat(1_000)}</script>"
             widget.update(content)
 
-            widget.getClickConsumer().consume(mockk(relaxed = true))
+            val mouseEvent = mockk<java.awt.event.MouseEvent>(relaxed = true)
+            widget.component.mouseListeners.forEach { it.mouseClicked(mouseEvent) }
 
             assertEquals(content, copied.captured.getTransferData(DataFlavor.stringFlavor))
         } finally {

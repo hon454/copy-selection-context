@@ -1,15 +1,14 @@
 package com.github.hon454.copyselectioncontext
 
 import com.intellij.ide.BrowserUtil
-import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.RoamingType
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
-import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
+import java.util.Properties
 import java.util.concurrent.atomic.AtomicInteger
 
 @Service(Service.Level.APP)
@@ -104,16 +103,18 @@ class CopySelectionReviewService : PersistentStateComponent<CopySelectionReviewS
 
     internal fun sessionCopyCount(): Int = successfulCopiesThisSession.get()
 
-    private fun currentPluginVersion(): String? = PluginManagerCore
-        .getPlugin(PluginId.getId(PLUGIN_ID))
-        ?.version
-        ?.takeIf(String::isNotBlank)
+    internal fun currentPluginVersion(): String? = pluginVersion
 
     companion object {
         internal const val PROMPT_THRESHOLD = 10
         internal const val MARKETPLACE_REVIEW_URL =
             "https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews"
-        private const val PLUGIN_ID = "com.github.hon454.copy-selection-context"
+        private const val VERSION_RESOURCE = "/META-INF/copy-selection-context-version.properties"
+        private val pluginVersion: String? by lazy {
+            CopySelectionReviewService::class.java.getResourceAsStream(VERSION_RESOURCE)
+                ?.use { stream -> Properties().apply { load(stream) }.getProperty("version") }
+                ?.takeIf(String::isNotBlank)
+        }
 
         fun getInstance(): CopySelectionReviewService =
             ApplicationManager.getApplication().getService(CopySelectionReviewService::class.java)

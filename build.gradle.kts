@@ -13,7 +13,7 @@ plugins {
 }
 
 group = "com.github.hon454"
-version = "1.3.0"
+version = "1.3.1"
 
 repositories {
     mavenCentral()
@@ -115,6 +115,14 @@ intellijPlatformTesting.testIde.register("platformTest") {
 }
 
 tasks {
+    processResources {
+        val pluginVersion = project.version.toString()
+        inputs.property("pluginVersion", pluginVersion)
+        filesMatching("META-INF/copy-selection-context-version.properties") {
+            expand("pluginVersion" to pluginVersion)
+        }
+    }
+
     withType<JavaCompile> {
         sourceCompatibility = "21"
         targetCompatibility = "21"

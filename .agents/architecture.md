@@ -27,8 +27,8 @@
 6. When analytics are enabled, `CopySelectionAnalytics` increments total, selected-format, and detected-language counters exactly once per standard copy action, including multi-caret copies.
 7. `CopySelectionHighlighter` replaces the previous gutter markers for the active editor ranges, and the project-level `CopyHistoryService` prepends the result using the configured entry-count limit plus UTF-8 content budgets of 256 KiB per entry and 2 MiB per project. A consecutive duplicate refreshes the newest entry's timestamp instead of adding another row. Oversized results remain on the clipboard but are not persisted.
 8. `CopySelectionNotifier` shows a bounded, single-line, markup-escaped preview when notifications are enabled.
-9. `CopySelectionStatusBarWidget` stores the full result, displays a safe preview capped at 40 characters including its prefix, and copies the full value again when clicked.
-10. `CopySelectionReviewService` counts an eligible successful standard copy action once, regardless of caret count or analytics preference. Notifications must be enabled and the context must have a supported plugin version and be non-test and non-headless before the session counter can change. On exactly the tenth eligible copy in the IDE session, one localized review balloon may appear.
+9. `CopySelectionStatusBarWidget` uses the public custom-widget API, stores the full result, displays a safe preview capped at 40 characters including its prefix, and copies the full value again when clicked.
+10. `CopySelectionReviewService` counts an eligible successful standard copy action once, regardless of caret count or analytics preference. It reads the canonical plugin version from a build-expanded resource without relying on internal plugin-manager APIs. Notifications must be enabled and the context must have a supported plugin version and be non-test and non-headless before the session counter can change. On exactly the tenth eligible copy in the IDE session, one localized review balloon may appear.
 
 `ShowCopyHistoryAction` opens the current project's history popup. Each row combines a bounded, single-line `CopyPreview` with a localized timestamp while retaining the full stored content for re-copy. Choosing the clear-all item requires explicit confirmation before deleting history.
 
@@ -76,6 +76,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 
 | File | Responsibility |
 |------|----------------|
+| `CustomStatusBarWidgetAdapter.java` | Public custom-widget bridge that avoids Kotlin-generated deprecated status API methods |
 | `CopyAbsolutePathAction.kt` | Context-menu action with an absolute path |
 | `CopyGitPermalinkAction.kt` | Asynchronous, latest-request-wins Git permalink action |
 | `CopyHistoryPopup.kt` | History chooser, re-copy, and clear-all behavior |
@@ -84,16 +85,16 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `CopyRelativePathAction.kt` | Context-menu action with a project-relative path |
 | `CopySelectionAnalytics.kt` | Thread-safe opt-in application-local counters and immutable snapshots |
 | `CopySelectionBaseAction.kt` | Shared standard-copy lifecycle and post-copy integrations |
-| `CopySelectionBundle.kt` | Localized message lookup |
+| `CopySelectionBundle.kt` | Localized message lookup through the public class-aware `DynamicBundle` constructor |
 | `CopySelectionConfigurable.kt` | Tools settings UI, multiline template editor, preview, validation, and local analytics controls |
 | `CopySelectionContextAction.kt` | Settings-driven primary action |
 | `CopySelectionGutterIconRenderer.kt` | Gutter icon and safe tooltip preview |
 | `CopySelectionHighlighter.kt` | Editor-scoped multi-range gutter marker lifecycle |
 | `CopySelectionNotifier.kt` | Settings-aware success and localized permalink-failure balloons |
 | `CopySelectionReviewNotifier.kt` | Localized honest-review balloon and Review on Marketplace / Later / Don't ask again actions |
-| `CopySelectionReviewService.kt` | Session-only threshold, version and environment policy, non-roaming suppression state, and Marketplace opening |
+| `CopySelectionReviewService.kt` | Session-only threshold, build-resource version and environment policy, non-roaming suppression state, and Marketplace opening |
 | `CopySelectionSettings.kt` | Persistent application settings and path enum |
-| `CopySelectionStatusBarWidget.kt` | Safe last-copy preview and click-to-copy interaction |
+| `CopySelectionStatusBarWidget.kt` | Public custom status widget with safe last-copy preview and click-to-copy interaction |
 | `CopySelectionStatusBarWidgetFactory.kt` | Status-bar widget registration lifecycle |
 | `CopySelectionUtils.kt` | VFS paths, language detection, exclusive-end ranges, and single-pass caret context capture |
 | `CopySelectionWebHelpProvider.kt` | README help-topic URLs |

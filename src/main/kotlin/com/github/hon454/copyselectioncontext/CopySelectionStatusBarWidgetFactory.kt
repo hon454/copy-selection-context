@@ -9,7 +9,7 @@ class CopySelectionStatusBarWidgetFactory : StatusBarWidgetFactory {
     override fun getId() = CopySelectionStatusBarWidget.ID
     override fun getDisplayName() = CopySelectionBundle.message("settings.title")
     override fun isAvailable(project: Project) = true
-    override fun createWidget(project: Project): StatusBarWidget = CopySelectionStatusBarWidget(project)
+    override fun createWidget(project: Project): StatusBarWidget = CopySelectionStatusBarWidget()
     override fun disposeWidget(widget: StatusBarWidget) = widget.dispose()
     override fun canBeEnabledOn(statusBar: StatusBar) = true
 }
