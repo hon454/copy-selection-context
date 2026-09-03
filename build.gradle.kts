@@ -13,7 +13,7 @@ plugins {
 }
 
 group = "com.github.hon454"
-version = "1.3.1"
+version = "1.4.0"
 
 repositories {
     mavenCentral()

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-03
+
 ### Changed
 - Route standard and Git permalink successes through one project-scoped result publisher, giving permalinks consistent history, gutter, notification, and status feedback while preserving standard-only analytics and review accounting (#71)
 - Suppress stale permalink completions across separate permalink actions and newer standard copies so older async work cannot replace the latest plugin copy (#71)
@@ -156,7 +158,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Toast notifications
 - IntelliJ Platform 2024.3+ compatibility
 
-[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/hon454/copy-selection-context/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/hon454/copy-selection-context/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/hon454/copy-selection-context/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/hon454/copy-selection-context/compare/v1.2.0...v1.2.1
