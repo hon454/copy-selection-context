@@ -61,7 +61,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | File | Role |
 |------|------|
 | `CopySelectionContextAction.kt` | Main unified action (`Ctrl+Alt+C` shortcut) |
-| `CopySelectionBaseAction.kt` | Shared copy pipeline: formatting, clipboard, analytics, highlighting, history, notifications, status, and review-prompt accounting |
+| `CopySelectionBaseAction.kt` / `CopyResultPublisher.kt` | Standard formatting plus the project-scoped, policy-driven publisher for clipboard, analytics, highlighting, history, notifications, status, review accounting, and cross-action ordering |
 | `OutputFormatter.kt` / `TemplateFormatter.kt` | Built-in Claude Code and Path:Line formats plus custom templates |
 | `SelectionContext.kt` | Immutable per-caret snapshot of path, file, range, code, language, and filename inputs |
 | `CopySelectionUtils.kt` | Path/language helpers and single-pass selection context capture |
@@ -69,7 +69,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `CopyRelativePathAction.kt` | Relative path (context menu only) |
 | `CopyAbsolutePathAction.kt` | Absolute path (context menu only) |
 | `CopyWithCodeContentAction.kt` | Path + markdown code block (context menu only) |
-| `CopyGitPermalinkAction.kt` / `GitRepositoryMetadataResolver.kt` / `GitPermalinkGenerator.kt` | Async, worktree-safe GitHub/GitLab permalink generation |
+| `CopyGitPermalinkAction.kt` / `GitRepositoryMetadataResolver.kt` / `GitPermalinkGenerator.kt` | Async, worktree-safe GitHub/GitLab permalink generation published through the shared result boundary |
 | `CopyHistoryService.kt` / `CopyHistoryPopup.kt` | Local non-roaming project history, migration, re-copy, and clear-all |
 | `CopyPreview.kt` | Bounded, single-line, Unicode-safe, markup-escaped previews |
 | `CopySelectionAnalytics.kt` | Thread-safe opt-in, local-only usage counters and immutable UI snapshots |
@@ -79,7 +79,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `CopySelectionSettings.kt` | Settings persistence (`@Service` + `@State`) |
 | `CopySelectionConfigurable.kt` | Settings UI with multiline template editor, preview, validation, passive review link, and analytics view/reset controls |
 
-**Flow**: User trigger -> Action reads settings -> Capture one immutable `SelectionContext` per caret -> Format captured contexts -> CopyPasteManager -> optional local analytics -> gutter marker from captured ranges -> project history -> optional notification -> status bar update -> session-only review eligibility
+**Flow**: User trigger -> Action captures/formats a result or begins async permalink resolution -> project-scoped `CopyResultPublisher` applies explicit standard/permalink policy -> clipboard -> optional standard-only analytics -> gutter marker -> project history -> optional notification -> status bar -> optional standard-only review eligibility
 
 ## Conventions
 

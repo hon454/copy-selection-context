@@ -6,23 +6,19 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.ProjectLevelVcsManager
 import com.intellij.openapi.vfs.VirtualFile
-import java.awt.datatransfer.StringSelection
 import java.io.IOException
 import java.nio.file.Path
-import java.util.concurrent.atomic.AtomicLong
 
 open class CopyGitPermalinkAction : AnAction() {
-    private val requests = LatestPermalinkRequestTracker()
-
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.getData(CommonDataKeys.PROJECT) ?: return
         val editor = e.getData(CommonDataKeys.EDITOR) ?: return
         val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
-        val requestId = requests.begin()
+        val publisher = copyResultPublisher(project)
+        val request = publisher.beginRequest()
 
         val lineRanges = resolveLineRanges(editor)
         val rootPath = resolveGitRootPath(project, file)
@@ -42,13 +38,22 @@ open class CopyGitPermalinkAction : AnAction() {
             val result = tryBuildPermalink(rootPath, filePath, lineRanges)
             invokeOnUiThread {
                 if (project.isDisposed) return@invokeOnUiThread
-                requests.runIfCurrent(requestId) {
-                    when (result) {
-                        is GitPermalinkResult.Failure -> handlePermalinkFailure(project, result)
-                        is GitPermalinkResult.Success -> {
-                            CopyPasteManager.getInstance().setContents(StringSelection(result.value))
-                            showPermalinkSuccess(project, result.value)
+                when (result) {
+                    is GitPermalinkResult.Failure -> {
+                        publisher.runIfCurrent(request) {
+                            handlePermalinkFailure(project, result)
                         }
+                    }
+                    is GitPermalinkResult.Success -> {
+                        publisher.publishIfCurrent(
+                            request = request,
+                            result = CopyResult(
+                                content = result.value,
+                                editor = editor,
+                                lineRanges = lineRanges,
+                            ),
+                            policy = CopyResultPolicy.GIT_PERMALINK,
+                        )
                     }
                 }
             }
@@ -78,9 +83,8 @@ open class CopyGitPermalinkAction : AnAction() {
         CopySelectionNotifier.notifyPermalinkFailure(project, reason)
     }
 
-    protected open fun showPermalinkSuccess(project: Project, permalink: String) {
-        CopySelectionNotifier.notify(project, permalink)
-    }
+    internal open fun copyResultPublisher(project: Project): CopyResultPublisher =
+        CopyResultPublisher.getInstance(project)
 
     internal fun resolveLineRanges(editor: Editor): List<Pair<Int, Int>> {
         if (editor.caretModel.caretCount <= 1) {
@@ -167,17 +171,5 @@ open class CopyGitPermalinkAction : AnAction() {
 
     private companion object {
         val LOG = Logger.getInstance(CopyGitPermalinkAction::class.java)
-    }
-}
-
-internal class LatestPermalinkRequestTracker {
-    private val latestRequestId = AtomicLong()
-
-    fun begin(): Long = latestRequestId.incrementAndGet()
-
-    fun runIfCurrent(requestId: Long, action: () -> Unit): Boolean {
-        if (latestRequestId.get() != requestId) return false
-        action()
-        return true
     }
 }
