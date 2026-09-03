@@ -11,8 +11,6 @@ internal data class GitRepositoryMetadata(
 
 internal object GitRepositoryMetadataResolver {
     private val objectIdPattern = Regex("^[0-9a-fA-F]{40}(?:[0-9a-fA-F]{24})?$")
-    private val sectionPattern = Regex("""^\[\s*([A-Za-z0-9.-]+)(?:\s+\"((?:\\.|[^\"])*)\")?\s*]$""")
-    private val valuePattern = Regex("""^([A-Za-z][A-Za-z0-9-]*)\s*=\s*(.*)$""")
 
     fun resolve(
         root: Path,
@@ -24,6 +22,14 @@ internal object GitRepositoryMetadataResolver {
                 reason = GitPermalinkFailureReason.UNRESOLVED_GIT_METADATA,
                 diagnostic = GitPermalinkDiagnostic(GitPermalinkOperation.RESOLVE_GIT_METADATA),
             )
+    } catch (exception: GitConfigIncludeException) {
+        GitPermalinkResult.Failure(
+            reason = exception.reason,
+            diagnostic = GitPermalinkDiagnostic(
+                operation = GitPermalinkOperation.EXPAND_GIT_CONFIG_INCLUDES,
+                exceptionType = exception.safeExceptionType,
+            ),
+        )
     } catch (exception: IOException) {
         GitPermalinkResult.Failure(
             reason = GitPermalinkFailureReason.IO_FAILURE,
@@ -46,8 +52,11 @@ internal object GitRepositoryMetadataResolver {
         val gitDir = resolveGitDir(root, fileReader) ?: return null
         val commonDir = resolveCommonDir(gitDir, fileReader) ?: return null
         val head = resolveHead(gitDir, commonDir, fileReader) ?: return null
-        val config = readText(commonDir.resolve("config"), fileReader) ?: return null
-        val remoteUrl = extractRemoteUrl(config, head.branchName) ?: return null
+        val configPath = commonDir.resolve("config")
+        val config = readText(configPath, fileReader) ?: return null
+        val remoteUrl = GitConfigIncludeResolver(gitDir, head.branchName, fileReader)
+            .resolve(configPath, config)
+            ?: return null
 
         return GitRepositoryMetadata(remoteUrl, head.commitSha)
     }
@@ -135,42 +144,6 @@ internal object GitRepositoryMetadataResolver {
             }
             ?.firstOrNull()
 
-    private fun extractRemoteUrl(config: String, branchName: String?): String? {
-        val remotes = linkedMapOf<String, String>()
-        val branchRemotes = mutableMapOf<String, String>()
-        var section: ConfigSection? = null
-
-        config.lineSequence().forEach { line ->
-            val trimmed = line.trim()
-            if (trimmed.isEmpty() || trimmed.startsWith('#') || trimmed.startsWith(';')) return@forEach
-
-            sectionPattern.matchEntire(trimmed)?.let { match ->
-                section = ConfigSection(
-                    type = match.groupValues[1].lowercase(),
-                    name = match.groupValues[2].replace("\\\"", "\"").replace("\\\\", "\\")
-                )
-                return@forEach
-            }
-
-            val currentSection = section ?: return@forEach
-            val valueMatch = valuePattern.matchEntire(trimmed) ?: return@forEach
-            val key = valueMatch.groupValues[1].lowercase()
-            val value = valueMatch.groupValues[2].trim().removeSurrounding("\"")
-            when {
-                currentSection.type == "remote" && key == "url" ->
-                    remotes.putIfAbsent(currentSection.name, value)
-                currentSection.type == "branch" && key == "remote" ->
-                    branchRemotes.putIfAbsent(currentSection.name, value)
-            }
-        }
-
-        branchName?.let { branchRemotes[it] }?.let { remoteName ->
-            remotes[remoteName]?.let { return it }
-        }
-        remotes["origin"]?.let { return it }
-        return remotes.values.singleOrNull()
-    }
-
     private fun safeRelativePath(refName: String): Path? {
         val path = runCatching { Path.of(refName) }.getOrNull() ?: return null
         if (path.isAbsolute || path.any { it.toString() == ".." }) return null
@@ -183,5 +156,4 @@ internal object GitRepositoryMetadataResolver {
     private fun isObjectId(value: String): Boolean = objectIdPattern.matches(value)
 
     private data class HeadResolution(val commitSha: String, val branchName: String?)
-    private data class ConfigSection(val type: String, val name: String)
 }

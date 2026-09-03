@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Route standard and Git permalink successes through one project-scoped result publisher, giving permalinks consistent history, gutter, notification, and status feedback while preserving standard-only analytics and review accounting (#71)
 - Suppress stale permalink completions across separate permalink actions and newer standard copies so older async work cannot replace the latest plugin copy (#71)
 
+### Fixed
+- Resolve Git remote and tracked-branch metadata from bounded, ordered `include.path`, `gitdir`, `gitdir/i`, and `onbranch` config includes while keeping failures credential-safe (#72)
+
 ## [1.3.1] - 2026-09-03
 
 ### Fixed

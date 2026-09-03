@@ -234,8 +234,8 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         CopyPasteManager.getInstance().setContents(StringSelection(failureSentinel))
         val failedAction = StubCopyGitPermalinkAction(
             GitPermalinkResult.Failure(
-                reason = GitPermalinkFailureReason.UNRESOLVED_GIT_METADATA,
-                diagnostic = GitPermalinkDiagnostic(GitPermalinkOperation.RESOLVE_GIT_METADATA),
+                reason = GitPermalinkFailureReason.GIT_CONFIG_INCLUDE_IO_FAILURE,
+                diagnostic = GitPermalinkDiagnostic(GitPermalinkOperation.EXPAND_GIT_CONFIG_INCLUDES),
             )
         )
 
@@ -247,7 +247,7 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         assertTrue(historyContents().isEmpty())
         assertTrue(myFixture.editor.markupModel.allHighlighters.isEmpty())
         assertEquals(0, CopySelectionAnalytics.getInstance().getTotalCopyCount())
-        assertEquals(listOf(GitPermalinkFailureReason.UNRESOLVED_GIT_METADATA), failedAction.failureReasons)
+        assertEquals(listOf(GitPermalinkFailureReason.GIT_CONFIG_INCLUDE_IO_FAILURE), failedAction.failureReasons)
         assertEquals(1, failedAction.loggedFailures.size)
 
         val missingRootSentinel = "clipboard-before-missing-root"

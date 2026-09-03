@@ -3,6 +3,9 @@ package com.github.hon454.copyselectioncontext
 enum class GitPermalinkFailureReason {
     MISSING_VCS_ROOT,
     UNRESOLVED_GIT_METADATA,
+    GIT_CONFIG_INCLUDE_IO_FAILURE,
+    GIT_CONFIG_INCLUDE_CYCLE,
+    GIT_CONFIG_INCLUDE_DEPTH_EXCEEDED,
     UNSUPPORTED_REMOTE_HOST,
     OUT_OF_ROOT_FILE,
     IO_FAILURE,
@@ -12,6 +15,7 @@ enum class GitPermalinkFailureReason {
 enum class GitPermalinkOperation {
     LOCATE_VCS_ROOT,
     RESOLVE_GIT_METADATA,
+    EXPAND_GIT_CONFIG_INCLUDES,
     PARSE_REMOTE,
     RELATIVIZE_FILE,
     BUILD_PERMALINK,
