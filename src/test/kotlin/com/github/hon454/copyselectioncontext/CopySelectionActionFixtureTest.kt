@@ -43,15 +43,11 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         )
         settings().enableNotification = true
 
-        val action = RecordingCopySelectionContextAction()
-        perform(action)
+        perform(CopySelectionContextAction())
 
         val expected = "${relativePath()}:1-2"
         assertEquals(expected, clipboardText())
         assertEquals(listOf(expected), historyContents())
-        assertEquals(listOf(expected), action.notificationMessages)
-        assertEquals(listOf(expected), action.statusBarMessages)
-        assertEquals(1, action.successfulCopyRecords)
         assertEquals(1, myFixture.editor.markupModel.allHighlighters.size)
         assertTrue(
             myFixture.editor.markupModel.allHighlighters.single().gutterIconRenderer is
@@ -80,13 +76,11 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         )
         secondCaret.setSelection(document.getLineStartOffset(2), document.getLineEndOffset(2))
 
-        val action = RecordingCopySelectionContextAction()
-        perform(action)
+        perform(CopySelectionContextAction())
 
         val path = relativePath()
         assertEquals("$path:1\n\n$path:3", clipboardText())
         assertEquals(listOf("$path:1\n\n$path:3"), historyContents())
-        assertEquals(1, action.successfulCopyRecords)
     }
 
     fun testEnabledAnalyticsRecordsSingleCaretFormatAndLanguageOnce() {
@@ -134,11 +128,9 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         val before = analytics.snapshot()
         settings().analyticsEnabled = false
 
-        val action = RecordingCopySelectionContextAction()
-        perform(action)
+        perform(CopySelectionContextAction())
 
         assertEquals(before, analytics.snapshot())
-        assertEquals(1, action.successfulCopyRecords)
     }
 
     fun testMainActionIncludesTrimmedCodeWithCustomTemplate() {
@@ -209,6 +201,7 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         secondCaret.setSelection(document.getLineStartOffset(3), document.getLineEndOffset(3))
         val clipboardSentinel = "clipboard-before-permalink"
         CopyPasteManager.getInstance().setContents(StringSelection(clipboardSentinel))
+        settings().analyticsEnabled = true
         val resolvedPermalink =
             "https://github.com/owner/repo/blob/abc123/src/permalink.txt#L2\n\n" +
                 "https://github.com/owner/repo/blob/abc123/src/permalink.txt#L4"
@@ -230,10 +223,13 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         resolvedAction.runUiAction()
 
         assertEquals(resolvedPermalink, clipboardText())
-        assertEquals(listOf(resolvedPermalink), resolvedAction.successMessages)
+        assertEquals(listOf(resolvedPermalink), historyContents())
+        assertEquals(2, myFixture.editor.markupModel.allHighlighters.size)
+        assertEquals(0, CopySelectionAnalytics.getInstance().getTotalCopyCount())
         assertTrue(resolvedAction.failureReasons.isEmpty())
 
         myFixture.configureByText("failed-permalink.txt", "first line\nsecond<caret> line")
+        CopyHistoryService.getInstance(project).clear()
         val failureSentinel = "clipboard-before-failure"
         CopyPasteManager.getInstance().setContents(StringSelection(failureSentinel))
         val failedAction = StubCopyGitPermalinkAction(
@@ -248,9 +244,11 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         failedAction.runUiAction()
 
         assertEquals(failureSentinel, clipboardText())
+        assertTrue(historyContents().isEmpty())
+        assertTrue(myFixture.editor.markupModel.allHighlighters.isEmpty())
+        assertEquals(0, CopySelectionAnalytics.getInstance().getTotalCopyCount())
         assertEquals(listOf(GitPermalinkFailureReason.UNRESOLVED_GIT_METADATA), failedAction.failureReasons)
         assertEquals(1, failedAction.loggedFailures.size)
-        assertTrue(failedAction.successMessages.isEmpty())
 
         val missingRootSentinel = "clipboard-before-missing-root"
         CopyPasteManager.getInstance().setContents(StringSelection(missingRootSentinel))
@@ -262,6 +260,9 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         perform(missingRootAction)
 
         assertEquals(missingRootSentinel, clipboardText())
+        assertTrue(historyContents().isEmpty())
+        assertTrue(myFixture.editor.markupModel.allHighlighters.isEmpty())
+        assertEquals(0, CopySelectionAnalytics.getInstance().getTotalCopyCount())
         assertTrue(missingRootAction.backgroundActions.isEmpty())
         assertEquals(listOf(GitPermalinkFailureReason.MISSING_VCS_ROOT), missingRootAction.failureReasons)
         assertEquals(1, missingRootAction.loggedFailures.size)
@@ -270,7 +271,7 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
     fun testActionReturnsWithoutSideEffectsWhenRequiredDataKeysAreUnavailable() {
         myFixture.configureByText("missing.txt", "content<caret>")
         settings().enableNotification = true
-        val action = RecordingCopySelectionContextAction()
+        val action = CopySelectionContextAction()
         val contexts = listOf(
             actionContext(includeProject = false),
             actionContext(includeEditor = false),
@@ -286,9 +287,45 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
 
             assertEquals(sentinel, clipboardText())
             assertTrue(historyContents().isEmpty())
-            assertTrue(action.notificationMessages.isEmpty())
-            assertTrue(action.statusBarMessages.isEmpty())
         }
+    }
+
+    fun testOlderPermalinkCompletionCannotOverwriteNewerStandardCopy() {
+        myFixture.configureByText("standard-wins.txt", "first line\nsecond<caret> line")
+        val stalePermalink = "https://github.com/owner/repo/blob/old/standard-wins.txt#L2"
+        val permalinkAction = StubCopyGitPermalinkAction(GitPermalinkResult.Success(stalePermalink))
+
+        perform(permalinkAction)
+        perform(CopySelectionContextAction())
+        val standardResult = "${relativePath()}:2"
+
+        permalinkAction.runBackgroundAction()
+        permalinkAction.runUiAction()
+
+        assertEquals(standardResult, clipboardText())
+        assertEquals(listOf(standardResult), historyContents())
+        assertEquals(1, myFixture.editor.markupModel.allHighlighters.size)
+    }
+
+    fun testOlderPermalinkCompletionCannotOverwriteNewerPermalinkAcrossActions() {
+        myFixture.configureByText("permalink-race.txt", "first<caret> line\nsecond line")
+        settings().analyticsEnabled = true
+        val firstValue = "https://github.com/owner/repo/blob/first/permalink-race.txt#L1"
+        val secondValue = "https://github.com/owner/repo/blob/second/permalink-race.txt#L1"
+        val firstAction = StubCopyGitPermalinkAction(GitPermalinkResult.Success(firstValue))
+        val secondAction = StubCopyGitPermalinkAction(GitPermalinkResult.Success(secondValue))
+
+        perform(firstAction)
+        perform(secondAction)
+        firstAction.runBackgroundAction()
+        secondAction.runBackgroundAction()
+        secondAction.runUiAction()
+        firstAction.runUiAction()
+
+        assertEquals(secondValue, clipboardText())
+        assertEquals(listOf(secondValue), historyContents())
+        assertEquals(1, myFixture.editor.markupModel.allHighlighters.size)
+        assertEquals(0, CopySelectionAnalytics.getInstance().getTotalCopyCount())
     }
 
     private fun resetActionState() {
@@ -337,31 +374,12 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         }
     }
 
-    private class RecordingCopySelectionContextAction : CopySelectionContextAction() {
-        val notificationMessages = mutableListOf<String>()
-        val statusBarMessages = mutableListOf<String>()
-        var successfulCopyRecords = 0
-
-        override fun recordSuccessfulCopy(project: Project) {
-            successfulCopyRecords++
-        }
-
-        override fun showNotification(project: Project, content: String) {
-            notificationMessages.add(content)
-        }
-
-        override fun updateStatusBar(project: Project, content: String) {
-            statusBarMessages.add(content)
-        }
-    }
-
     private class StubCopyGitPermalinkAction(
         private val result: GitPermalinkResult<String>,
         private val rootPath: String? = "/fixture-repo",
     ) : CopyGitPermalinkAction() {
         val backgroundActions = mutableListOf<() -> Unit>()
         val uiActions = mutableListOf<() -> Unit>()
-        val successMessages = mutableListOf<String>()
         val failureReasons = mutableListOf<GitPermalinkFailureReason>()
         val loggedFailures = mutableListOf<GitPermalinkResult.Failure>()
         var requestedFilePath: String? = null
@@ -393,10 +411,6 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
 
         override fun logPermalinkFailure(failure: GitPermalinkResult.Failure) {
             loggedFailures.add(failure)
-        }
-
-        override fun showPermalinkSuccess(project: Project, permalink: String) {
-            successMessages.add(permalink)
         }
 
         fun runBackgroundAction() {

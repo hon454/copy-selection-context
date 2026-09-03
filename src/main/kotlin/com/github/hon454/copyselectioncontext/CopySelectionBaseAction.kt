@@ -3,12 +3,8 @@ package com.github.hon454.copyselectioncontext
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
-import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.wm.WindowManager
 import com.intellij.openapi.vfs.VirtualFile
-import java.awt.datatransfer.StringSelection
 
 abstract class CopySelectionBaseAction : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
@@ -19,42 +15,21 @@ abstract class CopySelectionBaseAction : AnAction() {
         val path = getPath(project, file)
         val contexts = CopySelectionUtils.captureSelectionContexts(path, file, editor)
         if (contexts.isEmpty()) return
-        val copyResult = buildCapturedContent(contexts)
-        val result = copyResult.content
+        val capturedContent = buildCapturedContent(contexts)
 
-        copyToClipboard(result)
-
-        val appSettings = CopySelectionSettings.getInstance().state
-        if (appSettings.analyticsEnabled) {
-            CopySelectionAnalytics.getInstance().recordCopy(
-                format = appSettings.outputFormat,
+        copyResultPublisher(project).publish(
+            result = CopyResult(
+                content = capturedContent.content,
+                editor = editor,
+                lineRanges = capturedContent.lineRanges,
                 language = contexts.first().language,
-            )
-        }
-
-        CopySelectionHighlighter.update(editor, copyResult.lineRanges)
-
-        val historyService = project.getService(CopyHistoryService::class.java)
-        val maxSize = CopySelectionSettings.getInstance().state.copyHistorySize
-        historyService?.addEntry(result, maxSize)
-
-        showNotification(project, result)
-        updateStatusBar(project, result)
-        recordSuccessfulCopy(project)
+            ),
+            policy = CopyResultPolicy.STANDARD,
+        )
     }
 
-    protected open fun showNotification(project: Project, content: String) {
-        CopySelectionNotifier.notify(project, content)
-    }
-
-    protected open fun recordSuccessfulCopy(project: Project) {
-        CopySelectionReviewService.getInstance().recordSuccessfulCopy(project)
-    }
-
-    protected open fun updateStatusBar(project: Project, content: String) {
-        val statusBar = WindowManager.getInstance().getStatusBar(project)
-        (statusBar?.getWidget(CopySelectionStatusBarWidget.ID) as? CopySelectionStatusBarWidget)?.update(content)
-    }
+    internal open fun copyResultPublisher(project: Project): CopyResultPublisher =
+        CopyResultPublisher.getInstance(project)
     
     override fun update(e: AnActionEvent) {
         val editor = e.getData(CommonDataKeys.EDITOR)
@@ -83,10 +58,6 @@ abstract class CopySelectionBaseAction : AnAction() {
             null
         }
         return formatter.format(context.toFormatContext(code))
-    }
-    
-    private fun copyToClipboard(content: String) {
-        CopyPasteManager.getInstance().setContents(StringSelection(content))
     }
 }
 

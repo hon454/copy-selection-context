@@ -48,6 +48,8 @@ Source and issue tracker: <a href="https://github.com/hon454/copy-selection-cont
 
         <projectService serviceImplementation="com.github.hon454.copyselectioncontext.CopyHistoryService"/>
 
+        <projectService serviceImplementation="com.github.hon454.copyselectioncontext.CopyResultPublisher"/>
+
         <applicationService serviceImplementation="com.github.hon454.copyselectioncontext.CopySelectionAnalytics"/>
 
         <applicationService serviceImplementation="com.github.hon454.copyselectioncontext.CopySelectionReviewService"/>

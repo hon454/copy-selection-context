@@ -21,7 +21,7 @@ Tired of manually typing file paths and line numbers when sharing code context w
 - **Flexible output formats** — Use Claude Code references, Path:Line output, or a custom template
 - **Code content included** — Optionally include selected code as a markdown code block
 - **Copy history** — `Ctrl+Alt+H` to browse recent copy history
-- **GitHub/GitLab permalink** — Copy a Git permalink for the selected lines
+- **GitHub/GitLab permalink** — Copy a Git permalink with the same local history and copy feedback as standard results
 - **Copy feedback** — Mark the copied lines, show an optional notification, and retain the last copy in the status bar
 - **Respectful review path** — After demonstrated use, offer one honest-review prompt per version plus a passive Marketplace link
 - **Multi-caret context** — Format every caret independently and separate its path/code block with a blank line
@@ -127,15 +127,15 @@ fun calculateTotal(items: List<Item>): Double {
 ```
 ````
 
-The separate **Copy GitHub/GitLab Permalink** action reads normal-repository or linked-worktree metadata on a background thread and builds a commit-specific URL for each caret. Only the latest request can update the clipboard. If the repository remote or commit cannot be resolved, it reports an error and leaves the clipboard unchanged.
+The separate **Copy GitHub/GitLab Permalink** action reads normal-repository or linked-worktree metadata on a background thread and builds a commit-specific URL for each caret. Only the latest standard or permalink request can publish; an older async completion cannot overwrite a newer copy. If the repository remote or commit cannot be resolved, it reports an error and leaves the clipboard unchanged.
 
 ### History, Notifications, and Status
 
-- Standard path/code copy actions prepend entries to project-specific history. `Ctrl+Alt+H` opens the stored entries, and choosing one copies its full content again.
+- Successful standard path/code and Git permalink copies prepend entries to project-specific history. `Ctrl+Alt+H` opens the stored entries, and choosing one copies its full content again.
 - Copy notifications are enabled by default and can be disabled. They are shown after standard path/code copies and Git permalink copies.
 - Only standard copies made while notifications are enabled in a supported UI context advance the review counter; disabled, test, headless, and unsupported contexts leave both counter and prompt state unchanged. The tenth eligible copy in one IDE session may show one non-modal honest-review request for that plugin version. **Review on Marketplace** opens the official [Marketplace review page](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews), **Later** skips the rest of the current version, and **Don't ask again** permanently suppresses prompts. When notifications are disabled, only the passive settings link is available.
 - The exact session count is never persisted. Only `lastPromptedVersion`, permanent suppression choices, and whether the Marketplace page was opened are kept in local, non-roaming `copySelectionReview.xml`; no copied content, file data, analytics, review outcome, telemetry, or automatic network request is involved.
-- A standard copy replaces the gutter markers in the active editor and updates the status-bar widget with a single-line, Unicode-safe, markup-escaped preview capped at 40 characters including its prefix. Click the widget to copy the full last value again.
+- A successful standard or Git permalink copy replaces the gutter markers in the active editor and updates the status-bar widget with a single-line, Unicode-safe, markup-escaped preview capped at 40 characters including its prefix. Click the widget to copy the full latest successful plugin value again. Permalinks never increment local analytics or review-prompt accounting.
 - Optional local usage analytics count successful standard copy actions by output format and detected file language. Settings shows an immutable snapshot of every counter and provides a confirmed reset. Analytics are disabled by default, stored only in local IDE application settings, and never transmitted.
 
 ### Settings

@@ -4,7 +4,7 @@
 
 ### Shared copy-pipeline actions
 
-`CopySelectionBaseAction` extends `AnAction` and owns the standard copy pipeline. Four registered actions inherit that shared behavior:
+`CopySelectionBaseAction` extends `AnAction`, captures and formats standard results, then publishes through the project-scoped `CopyResultPublisher` with the explicit `STANDARD` policy. Four registered actions inherit that shared behavior:
 
 - `CopySelectionContextAction`
 - `CopyRelativePathAction`
@@ -17,7 +17,7 @@ These subclasses implement `getPath()` and may override `buildContent()`.
 
 Two registered actions extend `AnAction` directly because their workflows do not use the standard copy pipeline:
 
-- `CopyGitPermalinkAction` resolves repository metadata on a pooled thread and copies a permalink on the UI thread only when the request is still current. Resolution failure reports an error and leaves the clipboard unchanged.
+- `CopyGitPermalinkAction` resolves repository metadata on a pooled thread and publishes with `GIT_PERMALINK` only when its project-scoped request token is still current. A later standard or permalink action invalidates the token; resolution failure reports an error and leaves the clipboard unchanged.
 - `ShowCopyHistoryAction` opens the project history popup.
 
 The specialized actions override `actionPerformed(AnActionEvent)` themselves, while shared-pipeline actions inherit that implementation from `CopySelectionBaseAction`.
@@ -31,14 +31,11 @@ val editor = e.getData(CommonDataKeys.EDITOR) ?: return
 val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
 ```
 
-The base class pipeline covers path and content formatting, clipboard writes, optional analytics, gutter highlighting, project history, notifications, status-bar updates, and one successful-copy signal to the session-only review policy regardless of caret count.
+The publisher's `STANDARD` policy enables clipboard writes, optional analytics, gutter highlighting, project history, notifications, status-bar updates, and one successful-copy signal to the session-only review policy regardless of caret count. `GIT_PERMALINK` enables clipboard, highlighting, history, notifications, and status while explicitly disabling analytics and review accounting.
 
 ## Clipboard
 
-```kotlin
-val content = StringSelection(formattedText)
-CopyPasteManager.getInstance().setContents(content)
-```
+All successful standard and permalink results reach `CopyResultPublisher`; its production side-effect adapter performs the clipboard write. Do not write the clipboard in either action before request ordering is checked.
 
 ## Notifications
 
