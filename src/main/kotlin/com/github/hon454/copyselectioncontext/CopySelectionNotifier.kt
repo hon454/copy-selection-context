@@ -37,6 +37,12 @@ object CopySelectionNotifier {
         when (reason) {
             GitPermalinkFailureReason.MISSING_VCS_ROOT -> "notification.permalink.failed.missing.vcs.root"
             GitPermalinkFailureReason.UNRESOLVED_GIT_METADATA -> "notification.permalink.failed.git.metadata"
+            GitPermalinkFailureReason.GIT_CONFIG_INCLUDE_IO_FAILURE ->
+                "notification.permalink.failed.git.config.include.io"
+            GitPermalinkFailureReason.GIT_CONFIG_INCLUDE_CYCLE ->
+                "notification.permalink.failed.git.config.include.cycle"
+            GitPermalinkFailureReason.GIT_CONFIG_INCLUDE_DEPTH_EXCEEDED ->
+                "notification.permalink.failed.git.config.include.depth"
             GitPermalinkFailureReason.UNSUPPORTED_REMOTE_HOST -> "notification.permalink.failed.remote.host"
             GitPermalinkFailureReason.OUT_OF_ROOT_FILE -> "notification.permalink.failed.out.of.root"
             GitPermalinkFailureReason.IO_FAILURE -> "notification.permalink.failed.io"

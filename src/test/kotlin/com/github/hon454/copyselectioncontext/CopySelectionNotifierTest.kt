@@ -68,6 +68,8 @@ class CopySelectionNotifierTest {
         messages.values.forEach { message ->
             assertTrue(message.isNotBlank())
             assertFalse(message.contains("notification.permalink.failed"))
+            assertFalse(message.contains("password", ignoreCase = true))
+            assertFalse(message.contains("token", ignoreCase = true))
         }
     }
 
