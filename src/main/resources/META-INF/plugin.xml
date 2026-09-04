@@ -84,6 +84,8 @@ Source and issue tracker: <a href="https://github.com/hon454/copy-selection-cont
                 <keyboard-shortcut keymap="$default" first-keystroke="control alt H"/>
             </action>
 
+            <action id="CopySelectionContext.CopyAllCollection"
+                    class="com.github.hon454.copyselectioncontext.CopyAllContextCollectionAction"/>
             <action id="CopySelectionContext.AddToCollection"
                     class="com.github.hon454.copyselectioncontext.AddToContextCollectionAction"/>
 

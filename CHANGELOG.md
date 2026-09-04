@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Capture immutable, bounded multi-file selections in a project-session context collection with exact deduplication, stable capture identities, source-state tracking and a localized add action (#73)
+- Copy all captured context without an editor using shared bounded output, stable snapshot labels, exact UTF-8 limits and combined confirmations; retain the collection without adding history or gutter markers (#75)
+
+### Changed
+- Order every managed plugin copy across projects, including history/status re-copy, and separate clipboard success from optional feedback failures with at-most-once accounting (#75)
 
 ## [1.4.1] - 2026-09-03
 

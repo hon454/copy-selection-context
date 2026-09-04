@@ -65,6 +65,9 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `OutputFormatter.kt` / `TemplateFormatter.kt` | Built-in Claude Code and Path:Line formats plus custom templates |
 | `ContextCollectionService.kt` / `ContextCollectionStore.kt` / `ContextCollectionItem.kt` | Session-only immutable captures, bounded atomic additions, revisions and mutations |
 | `ContextCollectionSourceTracker.kt` / `ContextCollectionSubscriptions.kt` | Independent source-state revision and disposable listeners without retaining editors/documents |
+| `ContextCollectionFormatter.kt` / `ContextCollectionOutputService.kt` | Bounded pure formatting and shared keyed background output state |
+| `ContextCollectionCopyCommand.kt` / `CopyAllContextCollectionAction.kt` | Shared no-editor copy command, combined confirmation and final EDT input validation |
+| `ClipboardRequestCoordinator.kt` | Application-wide request tokens and atomic final clipboard transaction; no retained payload/project state |
 | `AddToContextCollectionAction.kt` | Add-only editor action; no publisher or copy side effects |
 | `SelectionContext.kt` | Immutable per-caret snapshot of path, file, range, code, language, and filename inputs |
 | `CopySelectionUtils.kt` | Path/language helpers and single-pass selection context capture |
@@ -83,6 +86,8 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `CopySelectionConfigurable.kt` | Settings UI with multiline template editor, preview, validation, passive review link, and analytics view/reset controls |
 
 **Flow**: User trigger -> Action captures/formats a result or begins async permalink resolution -> project-scoped `CopyResultPublisher` applies explicit standard/permalink policy -> clipboard -> optional standard-only analytics -> gutter marker -> project history -> optional notification -> status bar -> optional standard-only review eligibility
+
+Collection copy consumes the current immutable output key/result and validates content/settings revision, actual options and project lifetime on EDT immediately before the application coordinator writes. `COLLECTION` enables opt-in analytics and independent review accounting once, notification preference and status; history and gutter are disabled. `Published(feedbackFailures)` remains successful after optional feedback failure; no effect is retried. Standard, permalink, collection and clipboard-only history/status re-copy all acquire application request tokens. See `docs/development/context-collection-output-contract.md` for #74 integration.
 
 ## Conventions
 

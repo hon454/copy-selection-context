@@ -1,12 +1,10 @@
 package com.github.hon454.copyselectioncontext
 
-import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.awt.RelativePoint
 import java.awt.Point
-import java.awt.datatransfer.StringSelection
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
@@ -39,7 +37,7 @@ object CopyHistoryPopup {
                     service = service,
                     selected = selected,
                     copyContent = { content ->
-                        CopyPasteManager.getInstance().setContents(StringSelection(content))
+                        recopy(project, content)
                     },
                     confirmClear = { confirmClear(project) },
                 )
@@ -64,6 +62,9 @@ object CopyHistoryPopup {
                 content = entry.content,
             )
         } + PopupItem.ClearAll
+
+    internal fun recopy(project: Project, content: String): CopyPublicationOutcome =
+        ClipboardRequestCoordinator.recopy(content) { !project.isDisposed }
 
     internal fun handleSelection(
         service: CopyHistoryService,

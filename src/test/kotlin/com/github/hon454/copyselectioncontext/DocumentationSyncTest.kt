@@ -38,6 +38,8 @@ class DocumentationSyncTest {
     fun `localized readmes document current formats settings and copy feedback`() {
         val requiredContent = listOf(
             "docs/samples/context-collection/README.md",
+            "docs/development/context-collection-output-contract.md",
+            "4 MiB",
             "https://github.com/hon454/copy-selection-context/issues/75",
             "https://github.com/hon454/copy-selection-context/issues/74",
             "`claude`",
@@ -78,6 +80,23 @@ class DocumentationSyncTest {
                 assertTrue(content.contains(required), "$path must document $required")
             }
         }
+    }
+
+    @Test
+    fun `collection copy descriptor and documentation retain output ordering contracts`() {
+        val descriptor = repositoryRoot.resolve("src/main/resources/META-INF/plugin.xml").readText()
+        val action = Regex("""<action id="CopySelectionContext.CopyAllCollection"\s+class="[^"]+"\s*/>""")
+        assertTrue(action.containsMatchIn(descriptor), "Copy All must remain localized and have no default shortcut")
+        val contract = repositoryRoot.resolve("docs/development/context-collection-output-contract.md").readText()
+        listOf("Calculating", "BlankItem", "AboveHardLimit", "262144", "4194304", "Published(feedbackFailures)",
+            "SNAPSHOT_LABELS_ABSENT", "HISTORICAL_CODE_ABSENT", "EDT", "source", "Ctrl/Cmd+C").forEach {
+            assertTrue(contract.contains(it), "output contract must describe $it")
+        }
+        val settings = repositoryRoot.resolve("src/main/kotlin/com/github/hon454/copyselectioncontext/CopySelectionConfigurable.kt").readText()
+        val apply = settings.substringAfter("override fun apply()").substringBefore("override fun reset()")
+        assertTrue(apply.indexOf("dialogPanel?.apply()") < apply.indexOf("settings.outputSettingsCommitted()"))
+        assertFalse(settings.substringAfter("override fun reset()").substringBefore("override fun disposeUIResources()")
+            .contains("outputSettingsCommitted"))
     }
 
     @Test

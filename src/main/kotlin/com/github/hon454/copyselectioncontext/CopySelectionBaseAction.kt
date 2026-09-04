@@ -11,13 +11,16 @@ abstract class CopySelectionBaseAction : AnAction() {
         val project = e.getData(CommonDataKeys.PROJECT) ?: return
         val editor = e.getData(CommonDataKeys.EDITOR) ?: return
         val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
+        val publisher = copyResultPublisher(project)
+        val request = publisher.beginRequest()
 
         val path = getPath(project, file)
         val contexts = CopySelectionUtils.captureSelectionContexts(path, file, editor)
         if (contexts.isEmpty()) return
         val capturedContent = buildCapturedContent(contexts)
 
-        copyResultPublisher(project).publish(
+        publisher.publishIfCurrent(
+            request = request,
             result = CopyResult(
                 content = capturedContent.content,
                 editor = editor,
