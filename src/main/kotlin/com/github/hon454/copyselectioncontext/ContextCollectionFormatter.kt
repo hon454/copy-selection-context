@@ -95,6 +95,8 @@ object ContextCollectionFormatter {
         fun beginItem() { itemHasText = false }
         fun append(text: String) = append(text, 0, text.length)
         fun append(text: String, start: Int, end: Int) {
+            // Empty substitutions still consume template work and must observe supersession.
+            checkCancelled()
             for (index in start until end) {
                 if (index % 4096 == 0) checkCancelled()
                 val char = text[index]

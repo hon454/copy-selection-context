@@ -122,6 +122,21 @@ class ContextCollectionFormatterTest {
         }
     }
 
+    @Test fun `cancellation interrupts repeated empty substitutions independently of output bytes`() {
+        for ((code, includeCode) in listOf("" to true, "retained code" to false)) {
+            var checks = 0
+            assertFailsWith<CancellationException> {
+                ContextCollectionFormatter.format(snapshot(listOf(item(1, code = code)), includeCode),
+                    options.copy(format = "template", template = "{code}".repeat(100000) + "x")) {
+                    if (++checks == 2) throw CancellationException()
+                }
+            }
+            assertEquals(2, checks)
+            assertEquals("x", ready(listOf(item(1, code = code)),
+                options.copy(format = "template", template = "{code}".repeat(100000) + "x"), includeCode).payload)
+        }
+    }
+
     @Test fun `screenshot warning sample has the documented exact raw and final bytes`() {
         val source = item(1, "src/demo/Warning.txt", "x".repeat(262144), "txt")
         val result = ready(listOf(source), options.copy(format = "template", template = "{code}\n"))
