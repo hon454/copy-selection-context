@@ -66,8 +66,13 @@ class ContextCollectionOutputService private constructor(
     }
 
     private fun currentKey(): ContextCollectionOutputKey = collection.snapshot().let {
-        ContextCollectionOutputKey(it.revision, settings.outputSettingsRevision(), settings.currentOutputOptions(), it.includeCode)
+        val (revision, options) = settings.outputSettingsSnapshot()
+        ContextCollectionOutputKey(it.revision, revision, options, it.includeCode)
     }
+
+    /** Serializes background loadState replacement with the final validation/write, never feedback. */
+    internal fun serializePublication(transaction: () -> CopyNotPublishedReason?): CopyNotPublishedReason? =
+        settings.withOutputLock(transaction)
 
     private fun calculate(snapshot: ContextCollectionSnapshot, key: ContextCollectionOutputKey) {
         computation = background {

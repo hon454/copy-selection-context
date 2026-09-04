@@ -193,7 +193,7 @@ class CopySelectionConfigurable internal constructor(
         if (validationMessage != null) {
             throw ConfigurationException(validationMessage)
         }
-        dialogPanel?.apply()
+        settings.withOutputLock { dialogPanel?.apply() }
         settings.outputSettingsCommitted()
         trimOpenProjectHistory(settings.state.copyHistorySize)
     }

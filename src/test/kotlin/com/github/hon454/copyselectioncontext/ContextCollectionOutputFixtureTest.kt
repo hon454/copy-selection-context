@@ -263,6 +263,35 @@ class ContextCollectionOutputFixtureTest : BasePlatformTestCase() {
         } finally { if (!other.isDisposed) ApplicationManager.getApplication().runWriteAction { Disposer.dispose(other) } }
     }
 
+    fun testBackgroundReadActionLoadRestoresSynchronouslyWithoutWaitingForEdtAndInvalidatesBeforeSignalDelivery() {
+        val application = ApplicationManager.getApplication()
+        val initial = application.executeOnPooledThread<CopySelectionSettings> {
+            application.runReadAction<CopySelectionSettings> {
+                CopySelectionSettings().also { it.loadState(CopySelectionSettings.State(outputFormat = "template", customFormatTemplate = "{code}")) }
+            }
+        }.get(5, java.util.concurrent.TimeUnit.SECONDS)
+        assertEquals("template", initial.state.outputFormat)
+        Disposer.dispose(initial)
+
+        capture("A.kt", "A")
+        val harness = Harness()
+        harness.computeAndFlush()
+        val key = harness.output.snapshot().key
+        harness.command.execute()
+        application.executeOnPooledThread {
+            application.runReadAction { settings.loadState(settings.state.copy(codeTrimming = true)) }
+        }.get(5, java.util.concurrent.TimeUnit.SECONDS)
+        assertTrue(settings.state.codeTrimming)
+        assertFalse(harness.output.isCurrent(key))
+        harness.flush() // command dispatch precedes settings observer's queued EDT event
+        assertEquals("sentinel", copied())
+        assertEquals(1, harness.errors.size)
+        com.intellij.testFramework.PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        assertTrue(harness.output.snapshot() is ContextCollectionOutputState.Calculating)
+        harness.computeAndFlush()
+        assertTrue(harness.output.snapshot() is ContextCollectionOutputState.Computed)
+    }
+
     private inner class Harness {
         val jobs = ArrayDeque<FutureTask<Unit>>()
         val ui = ArrayDeque<() -> Unit>()

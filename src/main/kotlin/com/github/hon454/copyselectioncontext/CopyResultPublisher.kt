@@ -120,17 +120,18 @@ internal class CopyResultPublisher private constructor(
         request: CopyResultRequest,
         result: CopyResult,
         policy: CopyResultPolicy,
+        serializeInput: (() -> CopyNotPublishedReason?) -> CopyNotPublishedReason? = { it() },
         validate: () -> Boolean = { true },
     ): CopyPublicationOutcome {
         assertDispatchThread()
         val settings = settingsProvider()
-        val failure = coordinator.writeIfCurrent(request, {
+        val failure = serializeInput { coordinator.writeIfCurrent(request, {
             when {
                 !isAlive() -> CopyNotPublishedReason.DISPOSED
                 !validate() -> CopyNotPublishedReason.INVALIDATED
                 else -> null
             }
-        }, { if (policy.clipboard) sideEffects.writeClipboard(result.content) })
+        }, { if (policy.clipboard) sideEffects.writeClipboard(result.content) }) }
         if (failure != null) return CopyPublicationOutcome.NotPublished(failure)
         val failures = mutableListOf<CopyFeedbackFailure>()
         fun effect(kind: CopyFeedbackEffect, action: () -> Unit) {

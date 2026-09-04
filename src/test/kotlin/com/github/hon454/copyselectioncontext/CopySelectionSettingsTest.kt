@@ -8,6 +8,28 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class CopySelectionSettingsTest {
+    @Test fun `background reload cannot change settings inside a final publication transaction`() {
+        val settings = CopySelectionSettings()
+        val started = java.util.concurrent.CountDownLatch(1)
+        val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+        try {
+            lateinit var reload: java.util.concurrent.Future<*>
+            settings.withOutputLock {
+                reload = executor.submit {
+                    started.countDown()
+                    settings.loadState(CopySelectionSettings.State(outputFormat = "pathline"))
+                }
+                assertTrue(started.await(5, java.util.concurrent.TimeUnit.SECONDS))
+                assertEquals("claude", settings.outputSettingsSnapshot().second.format)
+                // A copy performs validation and the coordinator write before this lock is released.
+                assertEquals(0L, settings.outputSettingsRevision())
+            }
+            reload.get(5, java.util.concurrent.TimeUnit.SECONDS)
+            assertEquals("pathline", settings.outputSettingsSnapshot().second.format)
+            assertEquals(1L, settings.outputSettingsRevision())
+        } finally { executor.shutdownNow(); settings.dispose() }
+    }
+
     @Test
     fun `State has correct default for defaultPathType`() {
         val state = CopySelectionSettings.State()

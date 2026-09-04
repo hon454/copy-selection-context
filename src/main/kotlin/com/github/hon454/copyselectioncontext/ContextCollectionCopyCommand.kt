@@ -56,7 +56,7 @@ class ContextCollectionCopyCommand private constructor(
                 if (result.warnings.isNotEmpty() && !confirm(result)) return@dispatch
                 val outcome = publisher.publishOutcomeIfCurrent(request,
                     CopyResult(result.payload, language = result.language, actualFormat = result.actualFormat),
-                    CopyResultPolicy.COLLECTION, { !disposed && output.isCurrent(key) })
+                    CopyResultPolicy.COLLECTION, output::serializePublication, { !disposed && output.isCurrent(key) })
                 if (outcome is CopyPublicationOutcome.NotPublished && publisher.isCurrent(request)) {
                     when (outcome.reason) {
                         CopyNotPublishedReason.INVALIDATED -> report(CopySelectionBundle.message("collection.copy.invalidated"))
