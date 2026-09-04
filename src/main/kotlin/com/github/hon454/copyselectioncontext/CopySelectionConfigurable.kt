@@ -193,7 +193,8 @@ class CopySelectionConfigurable internal constructor(
         if (validationMessage != null) {
             throw ConfigurationException(validationMessage)
         }
-        dialogPanel?.apply()
+        settings.withOutputLock { dialogPanel?.apply() }
+        settings.outputSettingsCommitted()
         trimOpenProjectHistory(settings.state.copyHistorySize)
     }
 
@@ -304,7 +305,10 @@ class CopySelectionConfigurable internal constructor(
                 appendLine(CopySelectionBundle.message("settings.analytics.statistics.empty"))
                 return
             }
-            usage.toSortedMap().forEach { (key, count) -> appendLine("$key: $count") }
+            usage.toSortedMap().forEach { (key, count) ->
+                val label = if (key == "mixed") CopySelectionBundle.message("settings.analytics.language.mixed") else key
+                appendLine("$label: $count")
+            }
         }
 
         internal fun templateValidationMessage(template: String): String? {

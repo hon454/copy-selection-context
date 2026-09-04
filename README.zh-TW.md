@@ -168,7 +168,7 @@ fun calculateTotal(items: List<Item>): Double {
 
 專案工作階段最多保留 100 個項目，每項原始 UTF-8 程式碼上限為 256 KiB，總量上限為 2 MiB。超限的多游標批次會整批拒絕，不截斷內容，也不自動淘汰舊項目。集合及其獨立且預設啟用的程式碼包含選項不會持久儲存，於專案關閉或外掛程式卸載時捨棄。收集不改變既有複製歷史、狀態列、評論計數或統計。作業系統及外部剪貼簿歷史遵循各自原則。
 
-目前為集合服務與新增動作的第一階段。輸出、複製及管理工具視窗將在 [#75](https://github.com/hon454/copy-selection-context/issues/75) 和 [#74](https://github.com/hon454/copy-selection-context/issues/74) 實作。可使用[範例選取內容](docs/samples/context-collection/README.md)進行驗證。
+無需作用中編輯器即可從子選單或 Find Action 執行 **複製整個上下文集合**，沒有預設快捷鍵。目前格式、範本和空白修剪設定套用於已擷取的路徑與程式碼。內建格式為同一位置的快照加入固定擷取編號與 UTC 時間，自訂範本保留原有替換語意。任何項目輸出為空白都會阻止複製。輸出超過 256 KiB 時需確認，超過 4 MiB 時禁止複製；快照、參照與大小警告在同一對話框確認。複製後保留集合，不新增歷史或 gutter 標記，並遵循通知設定、選用統計與獨立評論條件。跨專案以最新外掛程式複製要求為準，包括歷史與狀態列重新複製；原生 Copy 及外部剪貼簿歷史不在此排序範圍內。請參閱 [#75](https://github.com/hon454/copy-selection-context/issues/75) 的[輸出契約](docs/development/context-collection-output-contract.md)與[範例選取內容](docs/samples/context-collection/README.md)。管理工具視窗與真實截圖將在 [#74](https://github.com/hon454/copy-selection-context/issues/74) 實作。
 
 ## 相容的 IDE
 

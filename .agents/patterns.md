@@ -15,9 +15,10 @@ These subclasses implement `getPath()` and may override `buildContent()`.
 
 ### Specialized direct actions
 
-Three registered actions extend `AnAction` directly because their workflows do not use the standard copy pipeline:
+Four registered actions extend `AnAction` directly because their workflows do not use the standard copy pipeline:
 
-- `CopyGitPermalinkAction` resolves repository metadata on a pooled thread and publishes with `GIT_PERMALINK` only when its project-scoped request token is still current. A later standard or permalink action invalidates the token; resolution failure reports an error and leaves the clipboard unchanged.
+- `CopyGitPermalinkAction` resolves repository metadata on a pooled thread and publishes with `GIT_PERMALINK` only when its application request token is still current. Any later managed plugin copy invalidates the token across projects; current resolution failure reports an error and leaves the clipboard unchanged.
+- `CopyAllContextCollectionAction` invokes the shared `ContextCollectionCopyCommand` without requiring an editor and implements `DumbAware`. The command consumes `ContextCollectionOutputService` state and confirms all warnings together.
 - `AddToContextCollectionAction` captures a bounded atomic batch through `ContextCollectionService`, implements `DumbAware`, and never invokes the publisher.
 - `ShowCopyHistoryAction` opens the project history popup.
 
@@ -36,7 +37,7 @@ The publisher's `STANDARD` policy enables clipboard writes, optional analytics, 
 
 ## Clipboard
 
-All successful standard and permalink results reach `CopyResultPublisher`; its production side-effect adapter performs the clipboard write. Do not write the clipboard in either action before request ordering is checked.
+All successful standard, permalink and collection results reach `CopyResultPublisher`; its production side-effect adapter performs the clipboard write inside `ClipboardRequestCoordinator.writeIfCurrent`. The coordinator owns only application request identity and the atomic final check/write. Acquire the request at invocation, before async work, and keep dialogs outside its monitor. Final collection validation must run on EDT with content/settings mutations. Use `ClipboardRequestCoordinator.recopy` for clipboard-only history/status actions. Never write before ordering is checked. `COLLECTION` disables history/gutter, attributes analytics to prepared actual format and reduced language, and counts review independently. `Published(feedbackFailures)` means the clipboard succeeded even if an optional effect failed; never retry a token or an attempted effect.
 
 ## Notifications
 
@@ -101,3 +102,5 @@ The Java `CustomStatusBarWidgetAdapter` implements the public `CustomStatusBarWi
 ## Collection service integration
 
 Subscribe on EDT using a content-owned disposable, then read the immutable snapshot in the same EDT turn. Read-only background formatting uses that snapshot; mutations and final publication validation stay on EDT. Schedule mutations after notification callbacks return. Content revision changes only for effective list/order/include-code changes; subscribe separately to source status for changed/renamed/unavailable labels. Confirm clear with its original revision and pass it to `clear(expectedRevision)`. See [the shared contract](../docs/development/context-collection-contract.md) for capacity, identity and lifetime rules.
+
+Use `ContextCollectionOutputService.subscribe` plus `snapshot()` for final preview and bytes; disable Copy All and clear stale output claims on `Calculating`. Never calculate output or warnings in the panel. Invoke `ContextCollectionCopyCommand.execute()` for both Find Action and tool-window copies. Call `CopySelectionSettings.outputSettingsCommitted()` after successful Apply, never UI Reset; load replacement also signals. Current tuple checks defend publication from callers omitting the signal. See [the output/copy contract](../docs/development/context-collection-output-contract.md) for typed states and combined confirmation ownership.

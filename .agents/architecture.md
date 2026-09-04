@@ -23,7 +23,7 @@
 2. `CopySelectionBaseAction` resolves the project, editor, and virtual file. `CopySelectionUtils` reads each caret exactly once into an immutable `SelectionContext` containing the captured path, file, filename, selected text or current line, 1-based inclusive line range, and Markdown language tag.
 3. A non-empty selection uses `selectionEnd - 1` as its last included offset, so a selection ending at the next line's start does not include that line. With multiple carets, each captured context is formatted independently and the blocks are joined with a blank line; formatting and post-copy highlighting never re-read mutable editor selection state.
 4. `OutputFormatterFactory` selects the configured Claude Code, Path:Line, or custom template formatter. `CopySelectionContextAction` includes code only when enabled; `CopyWithCodeContentAction` always includes it.
-5. The project-scoped `CopyResultPublisher` atomically makes this standard result the newest plugin copy and applies the explicit `STANDARD` policy. The same publisher owns ordering tokens for async permalink requests, so this standard publication invalidates every older unresolved permalink across action instances.
+5. The project-scoped `CopyResultPublisher` obtains an application `ClipboardRequestCoordinator` token at invocation and applies the explicit `STANDARD` policy only while current. The same application sequence covers async permalinks, collection copies, history and status re-copy across projects.
 6. `CopyPasteManager` writes the complete formatted result to the clipboard.
 7. When analytics are enabled, `CopySelectionAnalytics` increments total, selected-format, and detected-language counters exactly once per standard copy action, including multi-caret copies.
 8. `CopySelectionHighlighter` replaces the previous gutter markers for the active editor ranges, and the project-level `CopyHistoryService` prepends the result using the configured entry-count limit plus UTF-8 content budgets of 256 KiB per entry and 2 MiB per project. A consecutive duplicate refreshes the newest entry's timestamp instead of adding another row. Oversized results remain on the clipboard but are not persisted.
@@ -35,7 +35,7 @@
 
 ## Git Permalink Flow
 
-`CopyGitPermalinkAction` extends `AnAction` directly rather than using standard formatting. It captures the editor ranges and Git root on the UI thread, sorts multiple carets by selection start, obtains a request token from the project-scoped `CopyResultPublisher`, and resolves repository metadata on a pooled thread. Only a token that is still newest after any later standard or permalink request may publish back on the UI thread. Resolution uses typed success/failure results so VCS mapping, metadata, remote-host, path-boundary, I/O, and unexpected failures receive distinct localized guidance. Safe diagnostics record only the failure category, operation, sanitized remote host, and exception class.
+`CopyGitPermalinkAction` extends `AnAction` directly rather than using standard formatting. It captures the editor ranges and Git root on the UI thread, sorts multiple carets by selection start, obtains an application request token through the project-scoped `CopyResultPublisher`, and resolves repository metadata on a pooled thread. Only a token still newest after any managed plugin copy may publish back on the UI thread, across projects. Resolution uses typed success/failure results so VCS mapping, metadata, remote-host, path-boundary, I/O, and unexpected failures receive distinct localized guidance. Safe diagnostics record only the failure category, operation, sanitized remote host, and exception class.
 
 `GitRepositoryMetadataResolver` uses NIO and supports normal repositories and linked worktrees. It follows `.git` and `commondir`, resolves symbolic or detached HEADs from loose or packed refs, and prefers the current branch's tracked remote before `origin` or an unambiguous single remote. `GitConfigIncludeResolver` expands includes inline so the existing first-value remote and branch precedence remains deterministic. Include paths may be absolute, relative to the declaring config file, or `~/`-relative; `~user/` and `%(prefix)/` paths are not supported and fail explicitly rather than being misresolved.
 
@@ -51,6 +51,8 @@ Successful resolution sends one commit-pinned URL per caret, separated by a blan
 `ContextCollectionFixtureTest` joins the isolated `platformTest` partition. The full [shared service contract](../docs/development/context-collection-contract.md) defines EDT mutation, subscription lifetime, source tracking, stable identity and #75/#74 ownership. The [non-sensitive sample](../docs/samples/context-collection/README.md) provides deterministic multi-file selections for later real screenshots.
 
 ## Output Formats
+
+Collection output uses `ContextCollectionFormatter`, `ContextCollectionOutputService` and `ContextCollectionCopyCommand`. The shared [output contract](../docs/development/context-collection-output-contract.md) defines immutable content/settings keys, background cancellation/discard, one current payload, exact bounded UTF-8 construction, fixed UTC snapshot labels and one combined confirmation. `CopyAllContextCollectionAction` works without an editor. The `COLLECTION` publisher policy has opt-in actual-format/language analytics and independent review accounting, notification preference and status, with no history or gutter changes. Final content/settings/lifetime validation and coordinator write are contiguous on EDT. `Published(feedbackFailures)` isolates optional failures after a successful clipboard write; a token never retries an attempted write or effect. Clipboard-only history/status re-copy participates in ordering without adding feedback. The application coordinator retains no project, code or history. OS/external clipboard history and native Copy are outside its scope.
 
 - **Claude Code (`claude`, default)**: ` @src/main/kotlin/MyFile.kt#L15-23 `. When code is included, a language-tagged fenced block follows; the formatter lengthens the fence when leading backtick runs in the code require it.
 - **Path:Line (`pathline`)**: `src/main/kotlin/MyFile.kt:15-23`, with the same optional code-block behavior.
@@ -125,6 +127,11 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `SelectionContext.kt` | Immutable single source of truth for per-caret path, file, range, code, language, and filename inputs |
 | `ShowCopyHistoryAction.kt` | Direct action that opens project copy history |
 | `TemplateFormatter.kt` | Custom variable substitution, presets, and validation |
+| `ClipboardRequestCoordinator.kt` | Application request identity and atomic clipboard transaction |
+| `ContextCollectionFormatter.kt` | Immutable output keys/options/results and bounded pure collection formatting |
+| `ContextCollectionOutputService.kt` | Latest background calculation and disposable computed-state subscriptions |
+| `ContextCollectionCopyCommand.kt` | Shared confirmation, input validation and no-editor collection publication |
+| `CopyAllContextCollectionAction.kt` | Localized no-editor Copy All action |
 
 ## Plugin Registration
 

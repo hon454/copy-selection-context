@@ -8,7 +8,7 @@ An item contains stable session `id`/`captureNumber`, millisecond-capable `Insta
 
 Exact duplicate comparison uses source token, captured URL, filename, language, inclusive range and every raw UTF-16 code unit. Display paths are deliberately excluded. Relative/absolute preference changes alone therefore preserve the existing item, revision, order and display path. Changed code adds a new item with the current display preference. Actual rename changes the captured URL and permits a separate new-location capture. Overlaps are never merged.
 
-#75 groups conflicts by captured source location and line range, uses the frozen `displayPath`, and formats `capturedAt` in fixed UTC millisecond precision. It must never resolve a current source path to format an item. Output, copy commands, computed-output state and application clipboard ordering remain #75's responsibility. #74 owns the tool window, confirmation dialogs, accessible presentation and real screenshots.
+#75 groups conflicts by captured source location and line range, uses the frozen `displayPath`, and formats `capturedAt` in fixed UTC millisecond precision. It must never resolve a current source path to format an item. Output, copy commands, shared confirmation dialogs, computed-output state and application clipboard ordering belong to #75; see [the output contract](context-collection-output-contract.md). #74 owns the tool window, accessible presentation and real screenshots.
 
 ## Revisions and concurrency
 
