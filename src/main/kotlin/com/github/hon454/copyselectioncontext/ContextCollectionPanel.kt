@@ -80,7 +80,6 @@ internal class ContextCollectionPanel(
             })
             add(summary.apply {
                 border = JBUI.Borders.empty(8, 0, 8, 0)
-                foreground = UIUtil.getContextHelpForeground()
                 toolTipText = msg("capacity")
                 accessibleContext.accessibleDescription = msg("capacity")
             })
@@ -98,6 +97,8 @@ internal class ContextCollectionPanel(
 
         itemList.selectionMode = ListSelectionModel.SINGLE_SELECTION
         itemList.visibleRowCount = 3
+        itemList.emptyText.text = msg("empty.title")
+        itemList.emptyText.appendLine(msg("empty.hint"))
         itemList.accessibleContext.accessibleName = msg("list")
         itemList.cellRenderer = object : DefaultListCellRenderer() {
             override fun getListCellRendererComponent(list: JList<*>?, value: Any?, index: Int, selected: Boolean, focus: Boolean): java.awt.Component {
@@ -140,6 +141,7 @@ internal class ContextCollectionPanel(
                 })
                 add(formatLabel.apply { border = JBUI.Borders.empty(4, 0, 4, 0); foreground = UIUtil.getContextHelpForeground() })
                 add(outputStatus)
+                components.forEach { (it as? JComponent)?.alignmentX = LEFT_ALIGNMENT }
             }, BorderLayout.NORTH)
             add(viewerScroll(outputViewer.component))
         }

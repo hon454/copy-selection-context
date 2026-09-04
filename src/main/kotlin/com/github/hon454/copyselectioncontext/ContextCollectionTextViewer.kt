@@ -13,7 +13,7 @@ import javax.swing.text.PlainDocument
 internal class ContextCollectionTextViewer(private val project: Project, name: String) : Disposable {
     val component = JTextArea().apply {
         isEditable = false
-        font = Font(Font.MONOSPACED, Font.PLAIN, 12)
+        font = Font(Font.MONOSPACED, Font.PLAIN, 13)
         accessibleContext.accessibleName = name
         focusTraversalKeysEnabled = true
     }
