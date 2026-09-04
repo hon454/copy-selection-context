@@ -124,7 +124,7 @@ internal class ContextCollectionPanel(
             border = JBUI.Borders.empty(10, 0, 8, 0)
             add(JPanel(BorderLayout(0, 6)).apply {
                 add(heading(msg("captured")), BorderLayout.NORTH)
-                add(metadata)
+                add(labelScroll(metadata, 3))
             }, BorderLayout.NORTH)
             add(viewerScroll(capturedViewer.component))
         }
@@ -139,13 +139,16 @@ internal class ContextCollectionPanel(
                     }, BorderLayout.EAST)
                 })
                 add(formatLabel.apply { border = JBUI.Borders.empty(4, 0, 4, 0) })
-                add(outputStatus)
+                add(labelScroll(outputStatus, 2))
                 components.forEach { (it as? JComponent)?.alignmentX = LEFT_ALIGNMENT }
             }, BorderLayout.NORTH)
             add(viewerScroll(outputViewer.component))
         }
         val viewers = split(captured, finalOutput, 0.32f)
-        val workspace = split(viewerScroll(itemList).apply { border = JBUI.Borders.emptyTop(8) }, viewers, 0.34f)
+        val workspace = split(viewerScroll(itemList).apply {
+            border = JBUI.Borders.emptyTop(8)
+            minimumSize = JBUI.size(100, 80)
+        }, viewers, 0.34f)
         Disposer.register(this, Disposable { workspace.dispose(); viewers.dispose() })
         add(workspace)
         collection.subscribe(this) { if (!disposed) refreshCollection(it) }
@@ -252,14 +255,22 @@ internal class ContextCollectionPanel(
             isContentAreaFilled = false
             preferredSize = JBUI.size(28, 28)
         }
-        private fun viewerScroll(component: JComponent) = JBScrollPane(component).apply { border = null }
+        private fun viewerScroll(component: JComponent) = JBScrollPane(component).apply {
+            border = null
+            minimumSize = JBUI.size(100, 60)
+        }
+        // Wrapped paths and warnings stay fully selectable without consuming the code viewport.
+        private fun labelScroll(label: JTextArea, rows: Int) = JBScrollPane(label.apply { this.rows = rows }).apply {
+            border = null
+            val height = label.getFontMetrics(label.font).height * rows
+            preferredSize = Dimension(100, height)
+            minimumSize = Dimension(100, height)
+        }
         private fun split(top: JComponent, bottom: JComponent, weight: Float) =
             OnePixelSplitter(true, weight).apply {
                 firstComponent = top
                 secondComponent = bottom
                 setHonorComponentsMinimumSize(true)
-                top.minimumSize = Dimension(100, 80)
-                bottom.minimumSize = Dimension(100, 120)
             }
     }
 }

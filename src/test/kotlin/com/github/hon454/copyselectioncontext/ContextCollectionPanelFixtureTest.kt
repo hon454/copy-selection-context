@@ -43,6 +43,38 @@ class ContextCollectionPanelFixtureTest : BasePlatformTestCase() {
     private fun panel(confirm: (Int) -> Boolean = { false }, report: (String) -> Unit = {}, copy: () -> Unit = {}) =
         ContextCollectionPanel(project, collection, output, copy, confirm, report).also { Disposer.register(testRootDisposable, it) }
 
+    fun testNativeIconsRemainAccessibleAndNarrowLongPathKeepsPreviewUsable() {
+        capture("LongProjectComponentName".repeat(6) + ".kt", "original code")
+        val panel = panel()
+        panel.itemList.selectedIndex = 0
+        compute()
+        for (button in listOf(panel.removeButton, panel.upButton, panel.downButton, panel.clearButton)) {
+            assertEquals("", button.text)
+            assertNotNull(button.icon)
+            assertTrue(button.toolTipText.isNotBlank())
+            assertTrue(button.accessibleContext.accessibleName.isNotBlank())
+            assertTrue(button.isFocusable)
+        }
+        fun layoutTree(component: java.awt.Component) {
+            if (component is java.awt.Container) {
+                component.doLayout()
+                component.components.forEach(::layoutTree)
+            }
+        }
+        val unusable = mutableListOf<String>()
+        for (width in listOf(520, 280)) {
+            panel.setSize(width, 650)
+            repeat(8) { layoutTree(panel) }
+            val viewport = javax.swing.SwingUtilities.getAncestorOfClass(javax.swing.JViewport::class.java,
+                panel.capturedViewer.component) as javax.swing.JViewport
+            if (viewport.height <= 0) unusable += "captured width=$width viewport=${viewport.size}"
+            val outputViewport = javax.swing.SwingUtilities.getAncestorOfClass(javax.swing.JViewport::class.java,
+                panel.outputViewer.component) as javax.swing.JViewport
+            if (outputViewport.height <= 0) unusable += "output width=$width viewport=${outputViewport.size}"
+        }
+        assertTrue("Viewers must remain usable: $unusable", unusable.isEmpty())
+    }
+
     fun testEmptyNoEditorActionAndPanelThenCapturePreservesSelectionAndMutationControls() {
         val action = ShowContextCollectionAction()
         val event = TestActionEvent.createTestEvent(action, DataContext { if (it == CommonDataKeys.PROJECT.name) project else null })
