@@ -19,7 +19,7 @@ JetBrains IDE plugin for copying code context (file path, line numbers, optional
 | Gradle | 9.7.1 |
 | IntelliJ Platform Plugin | 2.18.1 |
 | Detekt | 2.0.0-alpha.6 |
-| Kover | 0.9.8 |
+| Kover | 0.9.9 |
 | JVM Toolchain | 21 |
 | Min IDE Version | 2024.3 |
 
@@ -63,6 +63,9 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `CopySelectionContextAction.kt` | Main unified action (`Ctrl+Alt+C` shortcut) |
 | `CopySelectionBaseAction.kt` / `CopyResultPublisher.kt` | Standard formatting plus the project-scoped, policy-driven publisher for clipboard, analytics, highlighting, history, notifications, status, review accounting, and cross-action ordering |
 | `OutputFormatter.kt` / `TemplateFormatter.kt` | Built-in Claude Code and Path:Line formats plus custom templates |
+| `ContextCollectionService.kt` / `ContextCollectionStore.kt` / `ContextCollectionItem.kt` | Session-only immutable captures, bounded atomic additions, revisions and mutations |
+| `ContextCollectionSourceTracker.kt` / `ContextCollectionSubscriptions.kt` | Independent source-state revision and disposable listeners without retaining editors/documents |
+| `AddToContextCollectionAction.kt` | Add-only editor action; no publisher or copy side effects |
 | `SelectionContext.kt` | Immutable per-caret snapshot of path, file, range, code, language, and filename inputs |
 | `CopySelectionUtils.kt` | Path/language helpers and single-pass selection context capture |
 | `CopySelectionHighlighter.kt` | Editor-scoped gutter highlighter lifecycle |

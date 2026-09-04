@@ -15,9 +15,10 @@ These subclasses implement `getPath()` and may override `buildContent()`.
 
 ### Specialized direct actions
 
-Two registered actions extend `AnAction` directly because their workflows do not use the standard copy pipeline:
+Three registered actions extend `AnAction` directly because their workflows do not use the standard copy pipeline:
 
 - `CopyGitPermalinkAction` resolves repository metadata on a pooled thread and publishes with `GIT_PERMALINK` only when its project-scoped request token is still current. A later standard or permalink action invalidates the token; resolution failure reports an error and leaves the clipboard unchanged.
+- `AddToContextCollectionAction` captures a bounded atomic batch through `ContextCollectionService`, implements `DumbAware`, and never invokes the publisher.
 - `ShowCopyHistoryAction` opens the project history popup.
 
 The specialized actions override `actionPerformed(AnActionEvent)` themselves, while shared-pipeline actions inherit that implementation from `CopySelectionBaseAction`.
@@ -96,3 +97,7 @@ class CopySelectionStatusBarWidget : CustomStatusBarWidgetAdapter()
 ```
 
 The Java `CustomStatusBarWidgetAdapter` implements the public `CustomStatusBarWidget` API without Kotlin generating compatibility bridges for deprecated `StatusBarWidget` default methods. The Kotlin widget extends that adapter instead of implementation-only editor widget classes or the obsolete IntelliJ `Consumer` callback. Its Swing label is created lazily, stores the full last-copied content in an `AtomicReference`, shows a bounded single-line preview with a total 40-character budget including its prefix, and copies the full value again when clicked. `CopyPreview` preserves Unicode code points, escapes notification/tooltip markup, and never cuts an escape entity. `CopySelectionStatusBarWidgetFactory` registers the widget through `statusBarWidgetFactory` in `plugin.xml`; standard path/code actions call `update()` after copying.
+
+## Collection service integration
+
+Subscribe on EDT using a content-owned disposable, then read the immutable snapshot in the same EDT turn. Read-only background formatting uses that snapshot; mutations and final publication validation stay on EDT. Schedule mutations after notification callbacks return. Content revision changes only for effective list/order/include-code changes; subscribe separately to source status for changed/renamed/unavailable labels. Confirm clear with its original revision and pass it to `clear(expectedRevision)`. See [the shared contract](../docs/development/context-collection-contract.md) for capacity, identity and lifetime rules.

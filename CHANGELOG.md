@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Capture immutable, bounded multi-file selections in a project-session context collection with exact deduplication, stable capture identities, source-state tracking and a localized add action (#73)
+
 ## [1.4.1] - 2026-09-03
 
 ### Changed
