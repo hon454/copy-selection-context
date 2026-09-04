@@ -38,6 +38,9 @@ class DocumentationSyncTest {
     fun `localized readmes document current formats settings and copy feedback`() {
         val requiredContent = listOf(
             "docs/samples/context-collection/README.md",
+            "docs/images/context-collection-overview.png",
+            "docs/images/context-collection-preview.png",
+            "docs/images/context-collection-size-warning.png",
             "docs/development/context-collection-output-contract.md",
             "4 MiB",
             "https://github.com/hon454/copy-selection-context/issues/75",
@@ -97,6 +100,23 @@ class DocumentationSyncTest {
         assertTrue(apply.indexOf("dialogPanel?.apply()") < apply.indexOf("settings.outputSettingsCommitted()"))
         assertFalse(settings.substringAfter("override fun reset()").substringBefore("override fun disposeUIResources()")
             .contains("outputSettingsCommitted"))
+    }
+
+    @Test
+    fun `collection tool window ships real PNG assets and capture publication guides`() {
+        val descriptor = repositoryRoot.resolve("src/main/resources/META-INF/plugin.xml").readText()
+        assertTrue(descriptor.contains("<toolWindow id=\"Context Collection\" anchor=\"right\""))
+        assertTrue(descriptor.contains("canCloseContents=\"false\""))
+        listOf("overview", "preview", "size-warning").forEach { suffix ->
+            val bytes = Files.readAllBytes(repositoryRoot.resolve("docs/images/context-collection-$suffix.png"))
+            assertEquals(listOf(137, 80, 78, 71, 13, 10, 26, 10), bytes.take(8).map { it.toInt() and 255 })
+            assertTrue(bytes.size > 10000, "Screenshot must be an actual readable asset")
+        }
+        val guide = repositoryRoot.resolve("docs/releases/v1.5.0-context-collection-capture-guide.md").readText()
+        listOf("IDE", "JBR", "SHA", "262145", "JPEG", "PNG").forEach { assertTrue(guide.contains(it)) }
+        val listing = repositoryRoot.resolve("docs/releases/v1.5.0-marketplace-gallery.md").readText()
+        assertTrue(listing.contains("Use data from plugin.xml"))
+        assertTrue(listing.contains("Not published"))
     }
 
     @Test

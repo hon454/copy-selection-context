@@ -168,7 +168,29 @@ Captures freeze the original code, path, filename, language, range, capture numb
 
 The project session retains at most 100 items, 256 KiB of raw UTF-8 code per item and 2 MiB in total. An oversized multi-caret batch is rejected in full; nothing is truncated or evicted. Collection data and its independent, initially enabled code-inclusion option are never persisted. Project close/plugin unload discards them. Collection capture does not modify existing copy history, status, review counters or analytics; OS and external clipboard history have their own policies.
 
-Use **Copy All Context Collection** from the submenu or Find Action without an active editor; it has no default shortcut. The current format, template and trimming settings apply to captured paths and code. Built-in formats label snapshots of the same location with fixed capture numbers and UTC times; custom templates keep their original substitutions. Blank item output blocks copying. Output above 256 KiB requires confirmation and above 4 MiB is blocked; snapshot/reference and size warnings share one confirmation. Copy retains the collection, never adds history or gutter markers, and follows notification preferences, opt-in analytics and independent review eligibility. The newest managed plugin copy wins across projects, including history/status re-copy; native Copy and external clipboard history remain outside this ordering. See the [output contract](docs/development/context-collection-output-contract.md) implemented in [#75](https://github.com/hon454/copy-selection-context/issues/75) and [sample selections](docs/samples/context-collection/README.md). The management tool window and actual screenshots follow in [#74](https://github.com/hon454/copy-selection-context/issues/74).
+Use **Copy All Context Collection** from the submenu or Find Action without an active editor; it has no default shortcut. The current format, template and trimming settings apply to captured paths and code. Built-in formats label snapshots of the same location with fixed capture numbers and UTC times; custom templates keep their original substitutions. Blank item output blocks copying. Output above 256 KiB requires confirmation and above 4 MiB is blocked; snapshot/reference and size warnings share one confirmation. Copy retains the collection, never adds history or gutter markers, and follows notification preferences, opt-in analytics and independent review eligibility. The newest managed plugin copy wins across projects, including history/status re-copy; native Copy and external clipboard history remain outside this ordering. See the [output contract](docs/development/context-collection-output-contract.md) implemented in [#75](https://github.com/hon454/copy-selection-context/issues/75) and [sample selections](docs/samples/context-collection/README.md).
+
+### [Collection workflow and previews](https://github.com/hon454/copy-selection-context/issues/74)
+
+Use **Add to Context Collection** in the editor submenu or Find Action. **Open Context Collection** opens the right tool window even without an editor. Adding keeps editor focus and does not open the window automatically. Assign these actions in Keymap if desired; the existing one-shot shortcut remains separate.
+
+Review the ordered captures by their fixed number, capture time, path and range. Arrow keys select; Move Up/Down preserves the selected capture; Delete removes only when the list has focus. Clear All defaults to Cancel and requires a fresh confirmation if the collection changes. Both read-only viewers support focus, selection and normal text copying.
+
+Toggle **Include code** independently of one-shot settings. **Format Settings…** opens the existing formatter settings. The raw-code and final-output UTF-8 byte counts are separate. Calculating clears stale output; blank item output and output above 4 MiB block Copy All. Warning reasons are shown before the shared confirmation.
+
+Capture-time code stays available after source changes or deletion; source labels describe observed changes, not proof of equality. Copying and hiding the window retain the collection. Project/plugin close discards it. Collections never enter persistent copy history; OS and external clipboard history are separate.
+
+![Context Collection beside the editor with multiple captured files and byte counts](docs/images/context-collection-overview.png)
+
+Multiple files beside the editor with retained raw and final-output byte counts.
+
+![Captured code and final output showing before and after snapshot labels](docs/images/context-collection-preview.png)
+
+Before/after snapshots keep their original code and receive built-in capture labels in the final output.
+
+![Actual size confirmation for one item and 262145 UTF-8 bytes](docs/images/context-collection-size-warning.png)
+
+One 262144-byte capture produces 262145 UTF-8 output bytes; the shared confirmation defaults to Cancel.
 
 ## Compatible IDEs
 

@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+- Add a lazy Context Collection tool window with keyboard organization, capture/source details, full read-only previews, shared output states and five-language accessibility. Include real English IDE screenshot and listing preparation materials.
 - Capture immutable, bounded multi-file selections in a project-session context collection with exact deduplication, stable capture identities, source-state tracking and a localized add action (#73)
 - Copy all captured context without an editor using shared bounded output, stable snapshot labels, exact UTF-8 limits and combined confirmations; retain the collection without adding history or gutter markers (#75)
 
