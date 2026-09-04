@@ -22,6 +22,8 @@
 | 11 | **Shortcut syntax** | Use `"control"` not `"ctrl"` in plugin.xml keyboard-shortcut elements. |
 | 12 | **Plugin metadata** | Read this plugin's build-expanded version resource instead of `PluginManagerCore`; plugin descriptor lookup is internal in 2026.3+. Use the class-aware `DynamicBundle(Class, String)` constructor rather than subclassing it. |
 
+`ContextCollectionToolWindowFactory` also inherits the public `ToolWindowFactory` API through a Java adapter. Direct Kotlin implementation generates bridges to internal `getIcon`, `getAnchor` and `manage` defaults, which fail plugin verification.
+
 ## Build & Deployment
 
 | # | Issue | Detail |

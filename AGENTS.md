@@ -66,6 +66,8 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `ContextCollectionService.kt` / `ContextCollectionStore.kt` / `ContextCollectionItem.kt` | Session-only immutable captures, bounded atomic additions, revisions and mutations |
 | `ContextCollectionSourceTracker.kt` / `ContextCollectionSubscriptions.kt` | Independent source-state revision and disposable listeners without retaining editors/documents |
 | `ContextCollectionFormatter.kt` / `ContextCollectionOutputService.kt` | Bounded pure formatting and shared keyed background output state |
+| `ContextCollectionToolWindowFactory.kt` / `ToolWindowFactoryAdapter.java` / `ContextCollectionPanel.kt` / `ContextCollectionPresentation.kt` / `ContextCollectionTextViewer.kt` | Lazy content-owned collection UI, keyboard organization and full read-only previews |
+| `ShowContextCollectionAction.kt` | Localized no-editor tool-window open action without a default shortcut |
 | `ContextCollectionCopyCommand.kt` / `CopyAllContextCollectionAction.kt` | Shared no-editor copy command, combined confirmation and final EDT input validation |
 | `ClipboardRequestCoordinator.kt` | Application-wide request tokens and atomic final clipboard transaction; no retained payload/project state |
 | `AddToContextCollectionAction.kt` | Add-only editor action; no publisher or copy side effects |
