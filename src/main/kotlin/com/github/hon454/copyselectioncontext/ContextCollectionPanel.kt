@@ -14,7 +14,6 @@ import java.awt.Font
 import com.intellij.icons.AllIcons
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.UIUtil
 import javax.swing.Icon
 import java.awt.event.ActionEvent
 import java.awt.event.FocusAdapter
@@ -125,7 +124,7 @@ internal class ContextCollectionPanel(
             border = JBUI.Borders.empty(10, 0, 8, 0)
             add(JPanel(BorderLayout(0, 6)).apply {
                 add(heading(msg("captured")), BorderLayout.NORTH)
-                add(metadata.apply { foreground = UIUtil.getContextHelpForeground() })
+                add(metadata)
             }, BorderLayout.NORTH)
             add(viewerScroll(capturedViewer.component))
         }
@@ -139,7 +138,7 @@ internal class ContextCollectionPanel(
                         ShowSettingsUtil.getInstance().showSettingsDialog(project, CopySelectionConfigurable::class.java)
                     }, BorderLayout.EAST)
                 })
-                add(formatLabel.apply { border = JBUI.Borders.empty(4, 0, 4, 0); foreground = UIUtil.getContextHelpForeground() })
+                add(formatLabel.apply { border = JBUI.Borders.empty(4, 0, 4, 0) })
                 add(outputStatus)
                 components.forEach { (it as? JComponent)?.alignmentX = LEFT_ALIGNMENT }
             }, BorderLayout.NORTH)
