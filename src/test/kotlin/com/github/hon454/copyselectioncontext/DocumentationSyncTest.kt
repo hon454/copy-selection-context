@@ -37,6 +37,9 @@ class DocumentationSyncTest {
     @Test
     fun `localized readmes document current formats settings and copy feedback`() {
         val requiredContent = listOf(
+            "docs/samples/context-collection/README.md",
+            "https://github.com/hon454/copy-selection-context/issues/75",
+            "https://github.com/hon454/copy-selection-context/issues/74",
             "`claude`",
             "`pathline`",
             "`template`",
@@ -88,6 +91,7 @@ class DocumentationSyncTest {
         val kotlinVersion = capture(buildScript, "id\\(\"org\\.jetbrains\\.kotlin\\.jvm\"\\)\\s+version\\s+\"([^\"]+)\"")
         val intellijPluginVersion = capture(buildScript, "id\\(\"org\\.jetbrains\\.intellij\\.platform\"\\)\\s+version\\s+\"([^\"]+)\"")
         val intellijPlatformVersion = capture(buildScript, "intellijIdeaCommunity\\(\"([^\"]+)\"\\)")
+        val koverVersion = capture(buildScript, "id\\(\"org\\.jetbrains\\.kotlinx\\.kover\"\\)\\s+version\\s+\"([^\"]+)\"")
         val jvmVersion = capture(buildScript, "jvmToolchain\\((\\d+)\\)")
         val minimumBuild = capture(buildScript, "sinceBuild\\.set\\(\"([^\"]+)\"\\)")
         val junitVersion = capture(buildScript, "junit-jupiter-api:([^\"]+)\"")
@@ -104,6 +108,7 @@ class DocumentationSyncTest {
         )
 
         val knowledgeBase = repositoryRoot.resolve("AGENTS.md").readText()
+        assertTableValue(knowledgeBase, "Kover", koverVersion)
         assertTableValue(knowledgeBase, "Kotlin", kotlinVersion)
         assertTableValue(knowledgeBase, "Gradle", gradleVersion)
         assertTableValue(knowledgeBase, "IntelliJ Platform Plugin", intellijPluginVersion)
@@ -111,6 +116,7 @@ class DocumentationSyncTest {
         assertTableValue(knowledgeBase, "Min IDE Version", intellijPlatformVersion)
 
         val architecture = repositoryRoot.resolve(".agents/architecture.md").readText()
+        assertTableValue(architecture, "Kover", koverVersion)
         assertTableValue(architecture, "Kotlin", kotlinVersion)
         assertTableValue(architecture, "Gradle wrapper", gradleVersion)
         assertTableValue(architecture, "IntelliJ Platform Gradle Plugin", intellijPluginVersion)
