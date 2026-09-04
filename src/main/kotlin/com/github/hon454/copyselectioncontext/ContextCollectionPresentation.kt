@@ -3,7 +3,7 @@ package com.github.hon454.copyselectioncontext
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import java.util.Locale
+import com.intellij.DynamicBundle
 
 /** Bounded row text only; full, unescaped captured data belongs in the plain-text details. */
 internal object ContextCollectionPresentation {
@@ -15,8 +15,8 @@ internal object ContextCollectionPresentation {
     }.joinToString(" · ")
 
     fun time(item: ContextCollectionItem, full: Boolean = false): String {
-        val formatter = if (full) DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS VV", Locale.getDefault())
-            else DateTimeFormatter.ofLocalizedTime(FormatStyle.MEDIUM).withLocale(Locale.getDefault())
+        val formatter = if (full) DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS VV", DynamicBundle.getLocale())
+            else DateTimeFormatter.ofLocalizedTime(FormatStyle.MEDIUM).withLocale(DynamicBundle.getLocale())
         return formatter.withZone(ZoneId.systemDefault()).format(item.capturedAt)
     }
 
