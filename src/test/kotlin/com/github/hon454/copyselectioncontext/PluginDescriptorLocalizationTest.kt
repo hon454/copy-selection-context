@@ -81,6 +81,21 @@ class PluginDescriptorLocalizationTest {
         assertEquals("CopySelectionContextGroup", (action.parentNode as org.w3c.dom.Element).getAttribute("id"))
     }
 
+    @Test
+    fun `collection window is lazy right anchored and localized with an assignable open action`() {
+        val windows = descriptor.getElementsByTagName("toolWindow")
+        val window = windows.item(0) as org.w3c.dom.Element
+        assertEquals("Context Collection", window.getAttribute("id"))
+        assertEquals("right", window.getAttribute("anchor"))
+        assertEquals("false", window.getAttribute("canCloseContents"))
+        bundles.forEach { (_, bundle) -> assertTrue(bundle.getProperty("toolwindow.stripe.Context_Collection").isNotBlank()) }
+        val actions = descriptor.getElementsByTagName("action")
+        val open = (0 until actions.length).map { actions.item(it) as org.w3c.dom.Element }
+            .single { it.getAttribute("id") == "CopySelectionContext.ShowCollection" }
+        assertEquals(0, open.getElementsByTagName("keyboard-shortcut").length)
+        assertEquals("CopySelectionContextGroup", (open.parentNode as org.w3c.dom.Element).getAttribute("id"))
+    }
+
     private fun descriptorPresentationKeys(properties: Properties): Set<String> =
         properties.stringPropertyNames().filterTo(mutableSetOf()) { key ->
             (key.startsWith("action.") || key.startsWith("group.")) &&

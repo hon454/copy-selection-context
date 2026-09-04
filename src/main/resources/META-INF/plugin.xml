@@ -15,6 +15,9 @@ One shortcut (<code>Ctrl+Alt+C</code> / <code>Cmd+Alt+C</code>) copies your curr
     <li><strong>One-shortcut copy</strong> — <code>Ctrl+Alt+C</code> (Windows/Linux) / <code>Cmd+Alt+C</code> (macOS) copies path + line numbers based on your settings</li>
     <li><strong>Relative or absolute paths</strong> — choose project-relative or full absolute paths per your workflow</li>
     <li><strong>Code content as markdown</strong> — include the selected code as a fenced markdown code block with language tag</li>
+    <li><strong>Session context collection</strong> — Add selections from several files, open the Context Collection tool window, review frozen code and final output, reorder or remove captures, then Copy All. Collection actions are assignable in Keymap without new default shortcuts.</li>
+    <li><strong>Captured snapshots</strong> — Source edits, renames and deletion do not rewrite captured code. Built-in output labels multiple versions of the same range; custom templates keep their substitutions and may need confirmation.</li>
+    <li><strong>Session privacy and fixed limits</strong> — Collections stay in project memory until project/plugin close, survive tool-window hiding and copying, and never enter persistent copy history. Clear All requires confirmation. Limits: 100 items, 256 KiB raw UTF-8 code per item, 2 MiB raw total; final output above 256 KiB needs confirmation and above 4 MiB is blocked. No truncation. OS and external clipboard history are separate.</li>
     <li><strong>Private copy history</strong> — <code>Ctrl+Alt+H</code> opens locally stored history with clear-all and disable controls</li>
     <li><strong>GitHub/GitLab permalink</strong> — generate a permanent link to the exact lines in your remote repository</li>
     <li><strong>Template-based output formatting</strong> — choose from built-in presets (Claude Code, Path:Line, Custom) or define your own template with variable placeholders</li>
@@ -40,6 +43,10 @@ Source and issue tracker: <a href="https://github.com/hon454/copy-selection-cont
     <resource-bundle>messages.CopySelectionBundle</resource-bundle>
     
     <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="Context Collection" anchor="right"
+                    factoryClass="com.github.hon454.copyselectioncontext.ContextCollectionToolWindowFactory"
+                    icon="/icons/copyContext.svg" canCloseContents="false"/>
+
         <!-- Notification Group -->
         <notificationGroup id="CopySelectionContext" displayType="BALLOON"/>
         
@@ -84,6 +91,8 @@ Source and issue tracker: <a href="https://github.com/hon454/copy-selection-cont
                 <keyboard-shortcut keymap="$default" first-keystroke="control alt H"/>
             </action>
 
+            <action id="CopySelectionContext.ShowCollection"
+                    class="com.github.hon454.copyselectioncontext.ShowContextCollectionAction"/>
             <action id="CopySelectionContext.CopyAllCollection"
                     class="com.github.hon454.copyselectioncontext.CopyAllContextCollectionAction"/>
             <action id="CopySelectionContext.AddToCollection"

@@ -15,11 +15,12 @@ These subclasses implement `getPath()` and may override `buildContent()`.
 
 ### Specialized direct actions
 
-Four registered actions extend `AnAction` directly because their workflows do not use the standard copy pipeline:
+Five registered actions extend `AnAction` directly because their workflows do not use the standard copy pipeline:
 
 - `CopyGitPermalinkAction` resolves repository metadata on a pooled thread and publishes with `GIT_PERMALINK` only when its application request token is still current. Any later managed plugin copy invalidates the token across projects; current resolution failure reports an error and leaves the clipboard unchanged.
 - `CopyAllContextCollectionAction` invokes the shared `ContextCollectionCopyCommand` without requiring an editor and implements `DumbAware`. The command consumes `ContextCollectionOutputService` state and confirms all warnings together.
 - `AddToContextCollectionAction` captures a bounded atomic batch through `ContextCollectionService`, implements `DumbAware`, and never invokes the publisher.
+- `ShowContextCollectionAction` opens the lazy right tool window without requiring an editor or assigning a default shortcut.
 - `ShowCopyHistoryAction` opens the project history popup.
 
 The specialized actions override `actionPerformed(AnActionEvent)` themselves, while shared-pipeline actions inherit that implementation from `CopySelectionBaseAction`.
@@ -104,3 +105,5 @@ The Java `CustomStatusBarWidgetAdapter` implements the public `CustomStatusBarWi
 Subscribe on EDT using a content-owned disposable, then read the immutable snapshot in the same EDT turn. Read-only background formatting uses that snapshot; mutations and final publication validation stay on EDT. Schedule mutations after notification callbacks return. Content revision changes only for effective list/order/include-code changes; subscribe separately to source status for changed/renamed/unavailable labels. Confirm clear with its original revision and pass it to `clear(expectedRevision)`. See [the shared contract](../docs/development/context-collection-contract.md) for capacity, identity and lifetime rules.
 
 Use `ContextCollectionOutputService.subscribe` plus `snapshot()` for final preview and bytes; disable Copy All and clear stale output claims on `Calculating`. Never calculate output or warnings in the panel. Invoke `ContextCollectionCopyCommand.execute()` for both Find Action and tool-window copies. Call `CopySelectionSettings.outputSettingsCommitted()` after successful Apply, never UI Reset; load replacement also signals. Current tuple checks defend publication from callers omitting the signal. See [the output/copy contract](../docs/development/context-collection-output-contract.md) for typed states and combined confirmation ownership.
+
+Use `Content.setDisposer(panel)` for tool-window resources. Select list entries by stable ID; do not select/focus new captures while the user is editing. Restrict Delete to the list input map. Plain-text viewers must remain read-only, focusable and independent of the Copy All command. Populate detached documents off EDT, apply only a current generation through ToolWindowManager.invokeLater and clear their references on disposal.
