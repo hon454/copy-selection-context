@@ -11,6 +11,8 @@ import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.GridLayout
 import java.awt.event.ActionEvent
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
 import javax.swing.AbstractAction
@@ -78,6 +80,7 @@ internal class ContextCollectionPanel(
         top.add(summary)
         top.add(formatLabel)
         top.add(outputStatus)
+        top.components.forEach { (it as? JComponent)?.alignmentX = LEFT_ALIGNMENT }
         add(top, BorderLayout.NORTH)
 
         itemList.selectionMode = ListSelectionModel.SINGLE_SELECTION
@@ -207,6 +210,7 @@ internal class ContextCollectionPanel(
         }
         private fun textLabel(name: String) = JTextArea().apply {
             isEditable = false; isOpaque = false; lineWrap = true; wrapStyleWord = true
+            font = javax.swing.UIManager.getFont("Label.font")
             accessibleContext.accessibleName = name
             focusTraversalKeysEnabled = true
         }
@@ -216,6 +220,15 @@ internal class ContextCollectionPanel(
                 top.minimumSize = Dimension(100, 60)
                 bottom.minimumSize = Dimension(100, 80)
                 border = null
+                addComponentListener(object : ComponentAdapter() {
+                    private var initialized = false
+                    override fun componentResized(e: ComponentEvent?) {
+                        if (!initialized && height > 0) {
+                            initialized = true
+                            setDividerLocation(weight)
+                        }
+                    }
+                })
             }
     }
 }
