@@ -1,8 +1,6 @@
 package com.github.hon454.copyselectioncontext
 
-import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.wm.StatusBar
-import java.awt.datatransfer.StringSelection
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.util.concurrent.atomic.AtomicReference
@@ -18,6 +16,7 @@ class CopySelectionStatusBarWidget : CustomStatusBarWidgetAdapter() {
 
     private val lastCopied = AtomicReference("")
     private var statusBar: StatusBar? = null
+    private var disposed = false
     private val label: JLabel by lazy {
         JLabel().apply {
             text = getText()
@@ -52,6 +51,8 @@ class CopySelectionStatusBarWidget : CustomStatusBarWidgetAdapter() {
     }
 
     override fun dispose() {
+        disposed = true
+        lastCopied.set("")
         statusBar = null
     }
 
@@ -65,7 +66,7 @@ class CopySelectionStatusBarWidget : CustomStatusBarWidgetAdapter() {
     private fun copyLastValue() {
         val content = lastCopied.get()
         if (content.isNotBlank()) {
-            CopyPasteManager.getInstance().setContents(StringSelection(content))
+            ClipboardRequestCoordinator.recopy(content) { !disposed }
         }
     }
 }

@@ -1,6 +1,8 @@
 package com.github.hon454.copyselectioncontext
 
 import com.intellij.openapi.ide.CopyPasteManager
+import com.intellij.openapi.application.Application
+import com.intellij.openapi.application.ApplicationManager
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -40,7 +42,11 @@ class CopySelectionStatusBarWidgetTest {
         val manager = mockk<CopyPasteManager>()
         val copied = slot<Transferable>()
         mockkStatic(CopyPasteManager::class)
+        mockkStatic(ApplicationManager::class)
         try {
+            val application = mockk<Application>(relaxed = true)
+            every { ApplicationManager.getApplication() } returns application
+            every { application.getService(ClipboardRequestCoordinator::class.java) } returns ClipboardRequestCoordinator()
             every { CopyPasteManager.getInstance() } returns manager
             every { manager.setContents(capture(copied)) } just runs
 
@@ -54,6 +60,7 @@ class CopySelectionStatusBarWidgetTest {
             assertEquals(content, copied.captured.getTransferData(DataFlavor.stringFlavor))
         } finally {
             unmockkStatic(CopyPasteManager::class)
+            unmockkStatic(ApplicationManager::class)
         }
     }
 }

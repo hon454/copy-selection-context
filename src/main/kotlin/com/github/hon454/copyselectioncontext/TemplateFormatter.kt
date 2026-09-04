@@ -22,7 +22,12 @@ class TemplateFormatter(private val template: String) : OutputFormatter {
     override val displayName: String
         get() = CopySelectionBundle.message("settings.format.template")
 
-    override fun format(context: FormatContext): String {
+    override fun format(context: FormatContext): String = buildString {
+        appendTo(context) { text, start, end -> append(text, start, end) }
+    }
+
+    /** Streams the same single-pass substitutions to a bounded collection sink. */
+    internal fun appendTo(context: FormatContext, append: (String, Int, Int) -> Unit) {
         val replacements = mapOf(
             "path" to context.path.replace("\\", "/"),
             "line" to context.startLine.toString(),
@@ -31,9 +36,15 @@ class TemplateFormatter(private val template: String) : OutputFormatter {
             "lang" to context.language,
             "filename" to context.filename,
         )
-        return VARIABLE_REGEX.replace(template) { match ->
-            replacements[match.groupValues[1]] ?: match.value
+        var offset = 0
+        for (match in VARIABLE_REGEX.findAll(template)) {
+            append(template, offset, match.range.first)
+            val replacement = replacements[match.groupValues[1]]
+            if (replacement == null) append(template, match.range.first, match.range.last + 1)
+            else append(replacement, 0, replacement.length)
+            offset = match.range.last + 1
         }
+        append(template, offset, template.length)
     }
 
     companion object {

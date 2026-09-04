@@ -1,6 +1,7 @@
 package com.github.hon454.copyselectioncontext
 
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
@@ -9,9 +10,10 @@ import java.awt.datatransfer.StringSelection
 
 internal data class CopyResult(
     val content: String,
-    val editor: Editor,
-    val lineRanges: List<Pair<Int, Int>>,
+    val editor: Editor? = null,
+    val lineRanges: List<Pair<Int, Int>> = emptyList(),
     val language: String = "",
+    val actualFormat: String? = null,
 )
 
 internal enum class CopyResultPolicy(
@@ -41,9 +43,8 @@ internal enum class CopyResultPolicy(
         statusBar = true,
         reviewAccounting = false,
     ),
+    COLLECTION(true, true, false, false, true, true, true),
 }
-
-internal class CopyResultRequest internal constructor(internal val id: Long)
 
 internal data class CopyResultSettings(
     val analyticsEnabled: Boolean,
@@ -60,9 +61,9 @@ internal interface CopyResultSideEffects {
 
     fun addToHistory(content: String, maxSize: Int)
 
-    fun showNotification(content: String)
+    fun showNotification(content: String, isCurrent: () -> Boolean)
 
-    fun updateStatusBar(content: String)
+    fun updateStatusBar(content: String, isCurrent: () -> Boolean)
 
     fun recordReviewEligibleCopy()
 }
@@ -71,9 +72,10 @@ internal interface CopyResultSideEffects {
 internal class CopyResultPublisher private constructor(
     private val sideEffects: CopyResultSideEffects,
     private val settingsProvider: () -> CopyResultSettings,
+    private val coordinator: ClipboardRequestCoordinator,
+    private val isAlive: () -> Boolean,
+    private val assertDispatchThread: () -> Unit,
 ) {
-    private val requestLock = Any()
-    private var latestRequestId = 0L
 
     constructor(project: Project) : this(
         sideEffects = IntelliJCopyResultSideEffects(project),
@@ -86,53 +88,69 @@ internal class CopyResultPublisher private constructor(
                 )
             }
         },
+        coordinator = ClipboardRequestCoordinator.getInstance(),
+        isAlive = { !project.isDisposed },
+        assertDispatchThread = { ApplicationManager.getApplication().assertIsDispatchThread() },
     )
 
-    fun beginRequest(): CopyResultRequest = synchronized(requestLock) {
-        CopyResultRequest(nextRequestId())
+    fun beginRequest(): CopyResultRequest {
+        assertDispatchThread()
+        return coordinator.beginRequest()
     }
 
-    fun publish(result: CopyResult, policy: CopyResultPolicy) {
-        synchronized(requestLock) {
-            nextRequestId()
-            publishSideEffects(result, policy)
-        }
-    }
+    fun publish(result: CopyResult, policy: CopyResultPolicy): CopyPublicationOutcome =
+        publishOutcomeIfCurrent(beginRequest(), result, policy)
 
     fun publishIfCurrent(
         request: CopyResultRequest,
         result: CopyResult,
         policy: CopyResultPolicy,
-    ): Boolean = synchronized(requestLock) {
-        if (request.id != latestRequestId) return@synchronized false
-        publishSideEffects(result, policy)
-        true
-    }
+    ): Boolean = publishOutcomeIfCurrent(request, result, policy) is CopyPublicationOutcome.Published
 
-    fun runIfCurrent(request: CopyResultRequest, action: () -> Unit): Boolean = synchronized(requestLock) {
-        if (request.id != latestRequestId) return@synchronized false
+    fun isCurrent(request: CopyResultRequest): Boolean = isAlive() && coordinator.isCurrent(request)
+
+    fun runIfCurrent(request: CopyResultRequest, action: () -> Unit): Boolean {
+        assertDispatchThread()
+        if (!isCurrent(request)) return false
         action()
-        true
+        return true
     }
 
-    private fun nextRequestId(): Long {
-        latestRequestId++
-        return latestRequestId
-    }
-
-    private fun publishSideEffects(result: CopyResult, policy: CopyResultPolicy) {
+    fun publishOutcomeIfCurrent(
+        request: CopyResultRequest,
+        result: CopyResult,
+        policy: CopyResultPolicy,
+        validate: () -> Boolean = { true },
+    ): CopyPublicationOutcome {
+        assertDispatchThread()
         val settings = settingsProvider()
-        if (policy.clipboard) sideEffects.writeClipboard(result.content)
+        val failure = coordinator.writeIfCurrent(request, {
+            when {
+                !isAlive() -> CopyNotPublishedReason.DISPOSED
+                !validate() -> CopyNotPublishedReason.INVALIDATED
+                else -> null
+            }
+        }, { if (policy.clipboard) sideEffects.writeClipboard(result.content) })
+        if (failure != null) return CopyPublicationOutcome.NotPublished(failure)
+        val failures = mutableListOf<CopyFeedbackFailure>()
+        fun effect(kind: CopyFeedbackEffect, action: () -> Unit) {
+            // A successful collection write owns its accounting even if an effect starts another copy.
+            if (policy != CopyResultPolicy.COLLECTION && !isCurrent(request)) return
+            try { action() } catch (failure: Exception) {
+                failures += CopyFeedbackFailure(kind, failure.javaClass.simpleName)
+            }
+        }
         if (policy.analytics && settings.analyticsEnabled) {
-            sideEffects.recordAnalytics(settings.outputFormat, result.language)
+            effect(CopyFeedbackEffect.ANALYTICS) { sideEffects.recordAnalytics(result.actualFormat ?: settings.outputFormat, result.language) }
         }
-        if (policy.gutterHighlight) {
-            sideEffects.updateGutterHighlight(result.editor, result.lineRanges)
+        if (policy.gutterHighlight && result.editor != null) {
+            effect(CopyFeedbackEffect.GUTTER) { sideEffects.updateGutterHighlight(result.editor, result.lineRanges) }
         }
-        if (policy.history) sideEffects.addToHistory(result.content, settings.historySize)
-        if (policy.notification) sideEffects.showNotification(result.content)
-        if (policy.statusBar) sideEffects.updateStatusBar(result.content)
-        if (policy.reviewAccounting) sideEffects.recordReviewEligibleCopy()
+        if (policy.history) effect(CopyFeedbackEffect.HISTORY) { sideEffects.addToHistory(result.content, settings.historySize) }
+        if (policy.notification) effect(CopyFeedbackEffect.NOTIFICATION) { sideEffects.showNotification(result.content) { isCurrent(request) } }
+        if (policy.statusBar) effect(CopyFeedbackEffect.STATUS) { sideEffects.updateStatusBar(result.content) { isCurrent(request) } }
+        if (policy.reviewAccounting) effect(CopyFeedbackEffect.REVIEW) { sideEffects.recordReviewEligibleCopy() }
+        return CopyPublicationOutcome.Published(java.util.Collections.unmodifiableList(failures))
     }
 
     companion object {
@@ -141,8 +159,10 @@ internal class CopyResultPublisher private constructor(
 
         internal fun createForTest(
             sideEffects: CopyResultSideEffects,
+            coordinator: ClipboardRequestCoordinator = ClipboardRequestCoordinator(),
+            isAlive: () -> Boolean = { true },
             settingsProvider: () -> CopyResultSettings,
-        ): CopyResultPublisher = CopyResultPublisher(sideEffects, settingsProvider)
+        ): CopyResultPublisher = CopyResultPublisher(sideEffects, settingsProvider, coordinator, isAlive, {})
     }
 }
 
@@ -163,16 +183,20 @@ private class IntelliJCopyResultSideEffects(private val project: Project) : Copy
         CopyHistoryService.getInstance(project).addEntry(content, maxSize)
     }
 
-    override fun showNotification(content: String) {
+    override fun showNotification(content: String, isCurrent: () -> Boolean) {
+        if (!isCurrent()) return
         CopySelectionNotifier.notify(project, content)
     }
 
-    override fun updateStatusBar(content: String) {
+    override fun updateStatusBar(content: String, isCurrent: () -> Boolean) {
+        if (!isCurrent()) return
         val statusBar = WindowManager.getInstance().getStatusBar(project)
+        if (!isCurrent()) return
         (statusBar?.getWidget(CopySelectionStatusBarWidget.ID) as? CopySelectionStatusBarWidget)?.update(content)
     }
 
     override fun recordReviewEligibleCopy() {
+        if (project.isDisposed) return
         CopySelectionReviewService.getInstance().recordSuccessfulCopy(project)
     }
 }

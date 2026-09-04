@@ -168,7 +168,7 @@ fun calculateTotal(items: List<Item>): Double {
 
 프로젝트 세션은 최대 100개 항목, 항목당 원문 UTF-8 256 KiB, 원문 합계 2 MiB를 보관합니다. 한도를 넘는 다중 커서 배치는 전체 거부하며 잘라내거나 기존 항목을 자동 삭제하지 않습니다. 컬렉션 데이터와 기본값이 켜짐인 독립 코드 포함 옵션은 영구 저장하지 않으며, 프로젝트 종료·플러그인 해제 시 폐기합니다. 수집은 기존 복사 히스토리, 상태 표시줄, 리뷰 카운터, 통계를 변경하지 않습니다. OS와 외부 클립보드 히스토리에는 별도 정책이 적용됩니다.
 
-현재는 컬렉션 서비스와 추가 액션을 구현한 첫 단계입니다. 출력·복사와 관리 도구 창은 [#75](https://github.com/hon454/copy-selection-context/issues/75), [#74](https://github.com/hon454/copy-selection-context/issues/74)에서 이어집니다. 검증에 사용할 [예제 선택 영역](docs/samples/context-collection/README.md)을 제공합니다.
+활성 에디터 없이 하위 메뉴나 Find Action에서 **컨텍스트 컬렉션 전체 복사**를 실행하세요. 기본 단축키는 없습니다. 현재 형식·템플릿·공백 정리 설정을 캡처된 경로와 코드에 적용합니다. 기본 형식은 같은 위치의 스냅샷에 고정 캡처 번호와 UTC 시각을 붙이며, 사용자 템플릿은 기존 치환을 유지합니다. 항목 출력이 비면 복사를 막습니다. 출력이 256 KiB를 넘으면 확인하고 4 MiB를 넘으면 차단하며, 스냅샷·참조·크기 경고를 한 번에 확인합니다. 복사 후에도 컬렉션을 유지하고 히스토리나 gutter 표식을 추가하지 않습니다. 알림 설정, 선택적 통계, 독립 리뷰 조건은 적용합니다. 히스토리·상태 재복사를 포함해 프로젝트 간 가장 나중 플러그인 복사 요청이 우선하며, 기본 Copy와 외부 클립보드 히스토리는 이 순서 조정 범위 밖입니다. [#75](https://github.com/hon454/copy-selection-context/issues/75)의 [출력 계약](docs/development/context-collection-output-contract.md)과 [예제 선택 영역](docs/samples/context-collection/README.md)을 참고하세요. 관리 도구 창과 실제 스크린샷은 [#74](https://github.com/hon454/copy-selection-context/issues/74)에서 이어집니다.
 
 ## 호환 IDE
 
