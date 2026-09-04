@@ -91,7 +91,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `ContextCollectionPresentation.kt` | Bounded escaped rows, localized source/time metadata and stable selection helpers |
 | `ContextCollectionTextViewer.kt` | Content-owned read-only Swing documents prepared off EDT and discarded on supersession/disposal |
 | `ContextCollectionPanel.kt` | Keyboard-accessible collection management consuming shared snapshots/output/copy |
-| `ContextCollectionToolWindowFactory.kt` | Lazy right tool window with one non-closeable content and its disposable |
+| `ContextCollectionToolWindowFactory.kt` / `ToolWindowFactoryAdapter.java` | Lazy right tool window with one non-closeable content and its disposable; public Java adapter avoids Kotlin bridges to internal platform defaults |
 | `ShowContextCollectionAction.kt` | No-editor, assignable localized open action with no default shortcut |
 | `ContextCollectionItem.kt` | Immutable captures, source locations, snapshots and typed add results |
 | `ContextCollectionStore.kt` | Pure bounded capture transaction and session mutation engine |

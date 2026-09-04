@@ -3,9 +3,8 @@ package com.github.hon454.copyselectioncontext
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
-import com.intellij.openapi.wm.ToolWindowFactory
 
-class ContextCollectionToolWindowFactory : ToolWindowFactory, DumbAware {
+class ContextCollectionToolWindowFactory : ToolWindowFactoryAdapter(), DumbAware {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         if (toolWindow.contentManager.contentCount != 0) return
         val panel = ContextCollectionPanel(project)
