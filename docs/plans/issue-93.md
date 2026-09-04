@@ -24,3 +24,10 @@ Use a restrained native JetBrains tool-window design: consistent insets and alig
 Continue in the existing #74 implementation task/worktree and PR #92, since this polishes the same tool-window feature before merge. The implementation owner retains exclusive IDE/browser access until handback. Reuse the independent reviewer for the final code and visual evidence; preliminary approval of an earlier source head is not final acceptance.
 
 The earlier overview PNG and preview-design-baseline JPEG are intermediate QA evidence, not final release assets. Publication remains subject to the existing separate user approval boundary.
+
+
+## Post-merge verification status
+
+PR #92 merged at `b70f8e27227f278adee6a30d60982542ad32b660` after independent repository source/assets/docs approval of `39edac08552a8e7dd6fecd4cc4c3af60be0b269b` and CI33864526229 SUCCESS. The issue was automatically closed by that merge.
+
+Final integrated-main actual IDE verification is still pending. Preserve unchecked acceptance items and the in-progress label until that evidence is recorded. The native warning modal upload suitability also remains unverified. Automatic approval review rejected the attempted all-checkbox completion update for overstating completion while these checks remain outstanding; the remote issue body was not changed by that rejected operation.
