@@ -71,6 +71,16 @@ class PluginDescriptorLocalizationTest {
         }
     }
 
+    @Test
+    fun `collection add is registered without a default shortcut`() {
+        val actions = descriptor.getElementsByTagName("action")
+        val action = (0 until actions.length).map { actions.item(it) as org.w3c.dom.Element }
+            .single { it.getAttribute("id") == "CopySelectionContext.AddToCollection" }
+        assertEquals("com.github.hon454.copyselectioncontext.AddToContextCollectionAction", action.getAttribute("class"))
+        assertEquals(0, action.getElementsByTagName("keyboard-shortcut").length)
+        assertEquals("CopySelectionContextGroup", (action.parentNode as org.w3c.dom.Element).getAttribute("id"))
+    }
+
     private fun descriptorPresentationKeys(properties: Properties): Set<String> =
         properties.stringPropertyNames().filterTo(mutableSetOf()) { key ->
             (key.startsWith("action.") || key.startsWith("group.")) &&

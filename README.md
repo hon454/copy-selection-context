@@ -160,6 +160,16 @@ Copy history may contain copied code. It is stored only in the IDE's local, non-
 
 Configure path type, output and templates, code handling, notifications, review access, history, and local analytics from one place.
 
+### Session context collection (Unreleased)
+
+Use **Add to Context Collection** in the editor's Copy Selection Context submenu or Find Action to collect selections from several files. Every caret captures its selection or current line, including unsaved text, without changing the clipboard or moving editor focus. The action has no default shortcut and can be assigned in Keymap.
+
+Captures freeze the original code, path, filename, language, range, capture number and time. Unchanged recaptures are skipped; changed code creates a separate snapshot. Switching relative/absolute path preferences alone remains a duplicate and preserves the original display path. Rename/delete status is tracked separately from captured content.
+
+The project session retains at most 100 items, 256 KiB of raw UTF-8 code per item and 2 MiB in total. An oversized multi-caret batch is rejected in full; nothing is truncated or evicted. Collection data and its independent, initially enabled code-inclusion option are never persisted. Project close/plugin unload discards them. Collection capture does not modify existing copy history, status, review counters or analytics; OS and external clipboard history have their own policies.
+
+The collection service and add action are the first implementation stage. Output/copy and the management tool window follow in [#75](https://github.com/hon454/copy-selection-context/issues/75) and [#74](https://github.com/hon454/copy-selection-context/issues/74). The [sample selections](docs/samples/context-collection/README.md) support their verification.
+
 ## Compatible IDEs
 
 Works with all IDEs based on IntelliJ Platform 2024.3+:

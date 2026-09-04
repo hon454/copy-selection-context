@@ -8,7 +8,7 @@
 | Gradle wrapper | 9.7.1 |
 | IntelliJ Platform Gradle Plugin | 2.18.1 |
 | Detekt | 2.0.0-alpha.6 |
-| Kover | 0.9.8 |
+| Kover | 0.9.9 |
 | IntelliJ IDEA Community test platform | 2024.3 |
 | JVM toolchain and target | 21 |
 | Minimum IDE build | 243 (2024.3) |
@@ -42,6 +42,13 @@
 Conditional includes support `gitdir`, case-insensitive `gitdir/i`, and `onbranch`, including Git's `*`, `?`, `**/`, `/**`, character-class, trailing-slash, config-relative `./`, and home-relative `~/` matching rules relevant to repository-local resolution. Git-directory matching checks both normalized and real paths. Other conditions, including `hasconfig:remote.*.url`, are deliberately unsupported and treated as non-matching. Recursive expansion detects active-file cycles and permits at most 10 include edges. Missing, unreadable, invalid-path, cyclic, and over-depth includes return dedicated typed failures; diagnostics retain only safe operation, reason, and exception-type metadata, never config values or filesystem paths. `GitPermalinkGenerator` accepts supported GitHub/GitLab HTTPS and SSH forms and percent-encodes every repository-relative path segment.
 
 Successful resolution sends one commit-pinned URL per caret, separated by a blank line, through the publisher's explicit `GIT_PERMALINK` policy. That policy updates the clipboard, active-editor gutter markers, project history, optional notification, and status bar, but deliberately disables analytics and review-prompt accounting. Any missing VCS root, unsupported remote, unresolved commit, out-of-root path, or stale request produces no success-side effects and leaves the clipboard unchanged; current failures show a localized error. Because both policy paths share project ordering, the status bar always represents the latest successful plugin copy.
+
+
+## Session Context Collection
+
+`ContextCollectionService` is a project light service with no persistence. Additions retain exact unsaved code and frozen capture paths/ranges, with stable capture numbers/time, source identity separate from display paths, and all-or-nothing UTF-8 budgets (100 items, 256 KiB per item, 2 MiB total). Immutable snapshots and disposable notifications have a content revision independent of source status. Source-only document/VFS events never change frozen output or invalidate a prepared payload. Capture does not call `CopyResultPublisher` and leaves clipboard, history, status, gutter, analytics and review accounting alone.
+
+`ContextCollectionFixtureTest` joins the isolated `platformTest` partition. The full [shared service contract](../docs/development/context-collection-contract.md) defines EDT mutation, subscription lifetime, source tracking, stable identity and #75/#74 ownership. The [non-sensitive sample](../docs/samples/context-collection/README.md) provides deterministic multi-file selections for later real screenshots.
 
 ## Output Formats
 
@@ -79,6 +86,12 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 
 | File | Responsibility |
 |------|----------------|
+| `ContextCollectionItem.kt` | Immutable captures, source locations, snapshots and typed add results |
+| `ContextCollectionStore.kt` | Pure bounded capture transaction and session mutation engine |
+| `ContextCollectionService.kt` | Project-only session service and editor capture adapter |
+| `ContextCollectionSourceTracker.kt` | Stable live-source identity and separate immutable status revision |
+| `ContextCollectionSubscriptions.kt` | Disposable snapshot listeners with safe callback failure isolation |
+| `AddToContextCollectionAction.kt` | Localized add-only action without copy effects |
 | `CustomStatusBarWidgetAdapter.java` | Public custom-widget bridge that avoids Kotlin-generated deprecated status API methods |
 | `CopyAbsolutePathAction.kt` | Context-menu action with an absolute path |
 | `CopyGitPermalinkAction.kt` | Asynchronous, latest-request-wins Git permalink action |
