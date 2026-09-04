@@ -24,8 +24,9 @@ internal object ContextCollectionPresentation {
         else "${item.startLine}–${item.endLine}"
 
     fun row(item: ContextCollectionItem, source: ContextCollectionSourceStatus?): String =
-        "<html>#${item.captureNumber} · ${time(item)} &nbsp; ${CopyPreview.create(item.displayPath, 160)}:${range(item)}" +
-            "<br>${CopyPreview.create(item.code, 100)}<br>${status(source)}</html>"
+        "<html><b>#${item.captureNumber} &nbsp; ${CopyPreview.create(item.displayPath, 160)}:${range(item)}</b>" +
+            "<br><span style=\"font-family:monospace\">${CopyPreview.create(item.code, 100)}</span>" +
+            "<br><small>${time(item)} · ${status(source)}</small></html>"
 
     fun details(item: ContextCollectionItem, source: ContextCollectionSourceStatus?): String =
         CopySelectionBundle.message("collection.ui.metadata", item.captureNumber, time(item, true), item.displayPath,

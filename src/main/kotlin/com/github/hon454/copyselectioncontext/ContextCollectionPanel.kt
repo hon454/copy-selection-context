@@ -9,14 +9,17 @@ import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import java.awt.BorderLayout
 import java.awt.Dimension
-import java.awt.GridLayout
+import java.awt.FlowLayout
+import java.awt.Font
+import com.intellij.icons.AllIcons
+import com.intellij.ui.OnePixelSplitter
+import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
+import javax.swing.Icon
 import java.awt.event.ActionEvent
-import java.awt.event.ComponentAdapter
-import java.awt.event.ComponentEvent
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
 import javax.swing.AbstractAction
-import javax.swing.BorderFactory
 import javax.swing.BoxLayout
 import javax.swing.DefaultListCellRenderer
 import javax.swing.DefaultListModel
@@ -26,7 +29,6 @@ import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JList
 import javax.swing.JPanel
-import javax.swing.JSplitPane
 import javax.swing.JTextArea
 import javax.swing.KeyStroke
 import javax.swing.ListSelectionModel
@@ -53,34 +55,45 @@ internal class ContextCollectionPanel(
     private val formatLabel = JLabel()
     internal val includeCode = JCheckBox(msg("include"))
     internal val copyButton = button("copy", copy)
-    internal val removeButton = button("remove", ::removeSelected)
-    internal val upButton = button("up") { selected()?.let { collection.moveUp(it.id) } }
-    internal val downButton = button("down") { selected()?.let { collection.moveDown(it.id) } }
-    internal val clearButton = button("clear", ::clearAll)
+    internal val removeButton = iconButton("remove", AllIcons.General.Remove, ::removeSelected)
+    internal val upButton = iconButton("up", AllIcons.Actions.MoveUp) { selected()?.let { collection.moveUp(it.id) } }
+    internal val downButton = iconButton("down", AllIcons.Actions.MoveDown) { selected()?.let { collection.moveDown(it.id) } }
+    internal val clearButton = iconButton("clear", AllIcons.Actions.GC, ::clearAll)
     private var snapshot = collection.snapshot()
     private var rebuilding = false
     private var disposed = false
     private var shownId: Long? = null
 
     init {
-        border = BorderFactory.createEmptyBorder(6, 6, 6, 6)
-        preferredSize = Dimension(560, 650)
-        minimumSize = Dimension(260, 250)
+        border = JBUI.Borders.empty(12)
+        preferredSize = Dimension(520, 650)
+        minimumSize = Dimension(280, 300)
         Disposer.register(this, capturedViewer)
         Disposer.register(this, outputViewer)
-        val top = JPanel().apply { layout = BoxLayout(this, BoxLayout.Y_AXIS) }
-        top.add(JPanel(GridLayout(2, 3, 4, 4)).apply {
-            add(copyButton); add(removeButton); add(clearButton); add(upButton); add(downButton)
-            add(button("settings") { ShowSettingsUtil.getInstance().showSettingsDialog(project, CopySelectionConfigurable::class.java) })
-        })
+        copyButton.icon = AllIcons.Actions.Copy
+        copyButton.font = copyButton.font.deriveFont(Font.BOLD)
+        val top = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            add(JPanel(BorderLayout()).apply {
+                add(heading(msg("list")), BorderLayout.WEST)
+                add(copyButton, BorderLayout.EAST)
+            })
+            add(summary.apply {
+                border = JBUI.Borders.empty(8, 0, 8, 0)
+                foreground = UIUtil.getContextHelpForeground()
+                toolTipText = msg("capacity")
+                accessibleContext.accessibleDescription = msg("capacity")
+            })
+            add(JPanel(BorderLayout(6, 0)).apply {
+                add(JPanel(FlowLayout(FlowLayout.LEADING, 2, 0)).apply {
+                    add(removeButton); add(upButton); add(downButton); add(clearButton)
+                }, BorderLayout.WEST)
+                add(includeCode, BorderLayout.EAST)
+            })
+        }
         includeCode.accessibleContext.accessibleName = msg("include")
         includeCode.toolTipText = msg("include.hint")
         includeCode.addActionListener { if (!rebuilding) collection.setIncludeCode(includeCode.isSelected) }
-        top.add(includeCode)
-        top.add(summary)
-        top.add(formatLabel)
-        top.add(outputStatus)
-        top.components.forEach { (it as? JComponent)?.alignmentX = LEFT_ALIGNMENT }
         add(top, BorderLayout.NORTH)
 
         itemList.selectionMode = ListSelectionModel.SINGLE_SELECTION
@@ -93,7 +106,7 @@ internal class ContextCollectionPanel(
                 val status = collection.sourceTracker.snapshot().statuses[item.id]
                 label.text = ContextCollectionPresentation.row(item, status)
                 label.accessibleContext.accessibleName = ContextCollectionPresentation.details(item, status)
-                label.border = BorderFactory.createEmptyBorder(4, 4, 4, 4)
+                label.border = JBUI.Borders.empty(8, 8)
                 return label
             }
         }
@@ -107,16 +120,33 @@ internal class ContextCollectionPanel(
         itemList.actionMap.put("removeCapture", object : AbstractAction() {
             override fun actionPerformed(e: ActionEvent?) = removeSelected()
         })
-        val captured = JPanel(BorderLayout(0, 3)).apply {
-            add(JPanel(BorderLayout()).apply { add(JLabel(msg("captured")), BorderLayout.NORTH); add(metadata) }, BorderLayout.NORTH)
-            add(JBScrollPane(capturedViewer.component))
+        val captured = JPanel(BorderLayout(0, 8)).apply {
+            border = JBUI.Borders.empty(10, 0, 8, 0)
+            add(JPanel(BorderLayout(0, 6)).apply {
+                add(heading(msg("captured")), BorderLayout.NORTH)
+                add(metadata.apply { foreground = UIUtil.getContextHelpForeground() })
+            }, BorderLayout.NORTH)
+            add(viewerScroll(capturedViewer.component))
         }
-        val finalOutput = JPanel(BorderLayout()).apply {
-            add(JLabel(msg("output")), BorderLayout.NORTH)
-            add(JBScrollPane(outputViewer.component))
+        val finalOutput = JPanel(BorderLayout(0, 8)).apply {
+            border = JBUI.Borders.empty(10, 0, 0, 0)
+            add(JPanel().apply {
+                layout = BoxLayout(this, BoxLayout.Y_AXIS)
+                add(JPanel(BorderLayout()).apply {
+                    add(heading(msg("output")), BorderLayout.WEST)
+                    add(iconButton("settings", AllIcons.General.Settings) {
+                        ShowSettingsUtil.getInstance().showSettingsDialog(project, CopySelectionConfigurable::class.java)
+                    }, BorderLayout.EAST)
+                })
+                add(formatLabel.apply { border = JBUI.Borders.empty(4, 0, 4, 0); foreground = UIUtil.getContextHelpForeground() })
+                add(outputStatus)
+            }, BorderLayout.NORTH)
+            add(viewerScroll(outputViewer.component))
         }
-        val viewers = split(captured, finalOutput, 0.40)
-        add(split(JBScrollPane(itemList), viewers, 0.35))
+        val viewers = split(captured, finalOutput, 0.32f)
+        val workspace = split(viewerScroll(itemList).apply { border = JBUI.Borders.emptyTop(8) }, viewers, 0.34f)
+        Disposer.register(this, Disposable { workspace.dispose(); viewers.dispose() })
+        add(workspace)
         collection.subscribe(this) { if (!disposed) refreshCollection(it) }
         collection.sourceTracker.subscribe(this) { if (!disposed) { itemList.repaint(); refreshMetadata() } }
         output.subscribe(this) { if (!disposed) refreshOutput(it) }
@@ -214,21 +244,21 @@ internal class ContextCollectionPanel(
             accessibleContext.accessibleName = name
             focusTraversalKeysEnabled = true
         }
-        private fun split(top: JComponent, bottom: JComponent, weight: Double) =
-            JSplitPane(JSplitPane.VERTICAL_SPLIT, top, bottom).apply {
-                resizeWeight = weight
-                top.minimumSize = Dimension(100, 60)
-                bottom.minimumSize = Dimension(100, 80)
-                border = null
-                addComponentListener(object : ComponentAdapter() {
-                    private var initialized = false
-                    override fun componentResized(e: ComponentEvent?) {
-                        if (!initialized && height > 0) {
-                            initialized = true
-                            setDividerLocation(weight)
-                        }
-                    }
-                })
+        private fun heading(text: String) = JLabel(text).apply { font = font.deriveFont(Font.BOLD) }
+        private fun iconButton(key: String, icon: Icon, action: () -> Unit) = button(key, action).apply {
+            text = ""
+            this.icon = icon
+            isContentAreaFilled = false
+            preferredSize = JBUI.size(28, 28)
+        }
+        private fun viewerScroll(component: JComponent) = JBScrollPane(component).apply { border = null }
+        private fun split(top: JComponent, bottom: JComponent, weight: Float) =
+            OnePixelSplitter(true, weight).apply {
+                firstComponent = top
+                secondComponent = bottom
+                setHonorComponentsMinimumSize(true)
+                top.minimumSize = Dimension(100, 80)
+                bottom.minimumSize = Dimension(100, 120)
             }
     }
 }
