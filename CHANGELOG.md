@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-09-06
+
 ### Added
 
 - Add a lazy Context Collection tool window with keyboard organization, capture/source details, full read-only previews, shared output states and five-language accessibility. Include real English IDE screenshot and listing preparation materials.
