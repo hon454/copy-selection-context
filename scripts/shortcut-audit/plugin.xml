@@ -1,0 +1,16 @@
+<idea-plugin>
+    <id>com.github.hon454.copy-selection-context.audit</id>
+    <name>Copy Selection Context Audit Harness</name>
+    <version>1</version>
+    <vendor>Local audit</vendor>
+    <idea-version since-build="243"/>
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.github.hon454.copy-selection-context</depends>
+    <extensions defaultExtensionNs="com.intellij">
+        <appStarter id="csc-keymap-audit" implementation="audit.KeymapAuditStarter"/>
+    </extensions>
+    <actions>
+        <action id="CopySelectionContext.Audit.Export" class="audit.ExportKeymapAuditAction"
+                text="Export CSC Keymap Audit" description="Export effective keymap data to the explicit test evidence directory"/>
+    </actions>
+</idea-plugin>

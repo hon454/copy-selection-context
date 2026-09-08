@@ -1,0 +1,291 @@
+# Shortcut audit runbook
+
+This is the reproducible procedure for #132. Preparing a profile, querying a
+distribution, running a fixture and sending real keys are separate activities.
+Only observed results belong in the evidence sections of the
+[audit](../plans/shortcut-keymap-audit.md) and
+[migration contract](shortcut-migration-contract.md).
+
+## Scope and verdicts
+
+The user limited real keyboard, UI and upgrade execution to **macOS** on
+2026-09-08. Windows and Linux GNOME/KDE real execution is **excluded by user
+scope**, never PASS or N/A. Windows/macOS/Linux automated CI and the effective
+keymaps for every OS family remain required.
+
+Use `PASS`, `FAIL`, `NOT RUN`, `BLOCKED`, `N/A (specific unavailable combination)`
+or `EXCLUDED BY USER SCOPE`. A missing distribution, license or GUI driver is
+BLOCKED/NOT RUN, not evidence that its keymap is absent. An absent Rider family
+can be N/A only after recording the loaded distribution's full keymap inventory.
+Any outstanding required macOS row prevents issue/milestone completion.
+
+The final candidate must be the same integrated main SHA and ZIP SHA-256 used
+by the final CI/Verifier run, after #128–#131 have merged and their required CI
+has passed. The plugin version alone does not identify that candidate: this
+work does not bump the version or publish a release. Re-record affected results
+when code or ZIP changes. Never present earlier draft or v1.6.0 probe results as
+candidate verification.
+
+## Distribution inventory
+
+Refresh versions at execution time. Record the official source URL and UTC
+retrieval time, downloaded file hash, `product-info.json`, actual IDE build,
+loaded plugin inventory, architecture and profile paths.
+
+The JetBrains [release API](https://data.services.jetbrains.com/products/releases?code=IIU,RD,PY,WS,PS,GO,CL,DG,RM&latest=true&type=release)
+reported these stable releases on 2026-09-08. Android's
+[stable release page](https://developer.android.com/studio/releases) reported
+Quail 4. These are distribution selection data, not runtime test results.
+
+| Product | Stable version selected for preparation | Build from official release data | Required execution |
+| --- | --- | --- | --- |
+| IntelliJ IDEA Community minimum | 2024.3 | IC-243.21565.193 (installed distribution) | Effective keymaps and macOS real input/UI/upgrade |
+| IntelliJ IDEA latest | 2026.2.2 | 262.10315.125 | Effective keymaps and macOS real input/UI/upgrade |
+| Rider latest | 2026.2.1 | 262.9437.287 | Effective keymaps and macOS real input/UI/upgrade |
+| PyCharm | 2026.2.2 | 262.10315.174 | Effective keymaps |
+| WebStorm | 2026.2.2 | 262.10315.144 | Effective keymaps |
+| PhpStorm | 2026.2.2 | 262.10315.130 | Effective keymaps |
+| GoLand | 2026.2.2.1 | 262.10315.160 | Effective keymaps |
+| CLion | 2026.2.2 | 262.10315.131 | Effective keymaps |
+| DataGrip | 2026.2.5 | 262.10315.132 | Effective keymaps |
+| RubyMine | 2026.2.2 | 262.10315.129 | Effective keymaps |
+| Android Studio | Quail 4 / 2026.1.4 | AI-261.26222.65.2614.16204760 (downloaded distribution) | Effective keymaps |
+
+For each product enumerate every loaded keymap, including Windows/Linux and
+macOS variants; record ID, parent chain and bundled/selected third-party
+contributions. In Rider explicitly locate IntelliJ, Visual Studio, Visual Studio
+2022, ReSharper and VS Code families and their OS variants. Do not infer IDs from
+the visible name or a reference card. Keep the exact raw inventory even when
+summarizing equivalent inheritance chains.
+
+## Isolated tooling
+
+`scripts/shortcut-audit/audit.py` uses Python 3.9+ and a JDK 21 to package a small
+**separate diagnostic plugin**. It does not build or change the product ZIP,
+download IDEs, discover personal profiles, change shortcuts, call product
+`actionPerformed`, or access accounts. Use fresh output paths. It refuses to
+overwrite profiles, archives or evidence. Run only one Gradle/IDE process at a
+time when the coordinator has assigned the execution slot.
+
+The diagnostic reads registered actions including lazy action stubs, unions
+their IDs with every keymap and ancestor's action IDs, then reads effective
+shortcuts through the platform keymap API. It inspects the entire first stroke,
+including single strokes and chords with different second keys. It dumps both
+`control alt shift G` and `meta alt shift G`, and all Ctrl/Meta+Alt+C/H comparisons.
+Only the nine exact product IDs are excluded when classifying external prefix
+occupancy. Dormant mappings remain visible with `registered=false`. Owner plugin
+IDs, bundled flags and the loaded plugin inventory distinguish contributions.
+
+The headless application starter exports data after application startup. Because
+project startup or optional plugins can register additional actions, repeat the
+export in the GUI after the audit project finishes loading, using Find Action →
+**Export CSC Keymap Audit**. The export action has no shortcut. Compare the
+registered action counts and occupancy; retain both snapshots. A headless dump
+does not certify project-dependent or real key behavior. Do not instantiate
+every IDE action to force lazy initialization: registered stubs already carry
+their keymap data and plugin identity.
+
+Example (replace every uppercase placeholder with an absolute path/value):
+
+```bash
+python3 scripts/shortcut-audit/audit.py build-harness \
+  --ide-home IDE_APP_CONTENTS --jdk JDK21_HOME --output NEW_HARNESS_DIRECTORY
+python3 scripts/shortcut-audit/audit.py prepare \
+  --zip PRODUCT_ZIP --sha256 PRODUCT_SHA256 --output NEW_AUDIT_PROFILE
+python3 scripts/shortcut-audit/audit.py audit \
+  --ide-home IDE_APP_CONTENTS --profile NEW_AUDIT_PROFILE \
+  --harness NEW_HARNESS_DIRECTORY/csc-keymap-audit --timeout 120
+```
+
+The starter is invoked with the distribution's own JBR, boot classpath and
+runtime arguments from `product-info.json`. Config, system, plugins, logs and
+error dumps are scoped to the new profile. This runner currently launches
+macOS arm64 distributions; it still enumerates their installed OS-family
+keymaps. Run other host distributions separately if their bundled contributions
+differ. Never label macOS-hosted keymap data as Windows/Linux runtime evidence.
+
+Output includes the exact launch argv and product identity (`audit-command.json`),
+`audit-console.log`, the complete `keymaps.tsv` and `summary.json`. A nonzero IDE
+exit, absent completion marker, zero keymaps or missing product action is a
+failure. A complete export containing external G-prefix occupancy is evidence
+of a conflict, not a passing audit. Report it for a product decision; do not
+choose replacement keys or unbind external actions.
+
+For GUI export, install only the candidate and the audit harness in a fresh
+test plugin directory, and add `csc.audit.output=EVIDENCE_DIRECTORY` to its
+`idea.properties`. The nine-key behavioral run should also be repeated without
+the diagnostic harness. A harness action invocation is only a data export.
+
+## Native GUI launch and input precautions
+
+Use an intact signed `.app` from the official distribution. Do not rewrite
+Info.plist, replace the native launcher, or reconstruct a bundle around the
+Gradle Java process. Pass the test `idea.properties` through the product's
+`IDEA_PROPERTIES`/`RIDER_PROPERTIES` environment variable and use a private
+VM-options file for crash/heap dumps. All four paths must point at the test
+profile. Confirm them in `idea.log` before any UI changes.
+
+In this host's restricted execution boundary, the native IC launcher failed at
+`DirectoryLock` with `UnixDomainSockets.bind: Operation not permitted`, followed
+by SIGABRT/134. The same native bundle and explicit profile started successfully
+outside that boundary. An empty older log and reported exit137 do not establish
+the same cause. The earlier Gradle Java GUI log ended with SIGTERM/143.
+
+The GUI tool can automatically start a stopped app. Confirm the prepared process
+is alive first, then target its bundle identifier; never let an inspection call
+silently start the app with default user paths. Do not access or import personal
+IDE settings, accounts, licenses or keymaps. Finish by terminating only the
+process started for the allocated test profile.
+
+Use actual separate key events: press the prefix, release **all** modifiers,
+then press a plain second letter. Record US/QWERTY and Korean input source IDs
+and actual delivered modifier behavior. A driver that cannot hold/release keys,
+switch focus or observe OS interception cannot certify those timing/global
+cases. Record that precise limitation and obtain operator evidence for those
+rows. Clipboard verification must inspect the actual result, including spaces
+and newlines, rather than rely only on the success balloon.
+
+## macOS real execution matrix
+
+Run these rows for IC 2024.3, the selected latest IDEA and latest Rider, with
+US/QWERTY and Korean input. In Rider repeat across every installed required
+keymap family. Prefix expectations follow the **active keymap lineage**, so a
+Windows-style keymap selected on macOS keeps Ctrl+Alt+Shift+G. A native macOS
+keymap uses Cmd+Option+Shift+G.
+
+Prepare a local committed Git repository containing `example.txt` with exactly
+`alpha\nbeta\ngamma\n`, an HTTPS GitHub fixture remote and a recorded HEAD SHA.
+No remote writes or network Git operations are necessary. Use a valid project
+base and select exactly line 2 without its following newline. Start with default
+Claude output, absolute path and include-code disabled. Record the absolute
+fixture path as `FILE`.
+
+| Row | Real action/steps | Expected observation |
+| --- | --- | --- |
+| K-C | Prefix, release, C | Clipboard is exactly ` @FILE#L2 `; history/status update once |
+| K-R | Prefix, release, R | Clipboard is exactly ` @example.txt#L2 `, including leading/trailing spaces |
+| K-P | Prefix, release, P | Clipboard is exactly ` @FILE#L2 `, including leading/trailing spaces |
+| K-B | Prefix, release, B | Existing path/range plus fenced `beta` text; inspect full clipboard |
+| K-L | Prefix, release, L on clean committed text | Commit-pinned fixture URL with `#L2`; unchanged existing permalink publication contract |
+| K-L-dirty | Change line 2, run L, cancel; repeat and confirm | Cancel preserves clipboard; confirm uses captured HEAD/range; no duplicate write |
+| K-A | Seed a known clipboard value, prefix/release/A | One collection capture, clipboard/history/status unchanged |
+| K-H | Prepare history, close every editor, prefix/release/H | History opens; re-copy selected item produces its exact payload |
+| K-O | Close every editor, prefix/release/O | Collection tool window opens with the saved capture |
+| K-F | With no editor, prefix/release/F | Existing combined collection payload copied once; compare preview/full clipboard |
+| K-release | Prefix with modifiers held, varied release timing, then letter | Record platform behavior and verify the documented all-released/plain-letter path |
+| K-Escape | Prefix, Escape, then type a sentinel | No product action; normal typing resumes |
+| K-timeout | Prefix, wait beyond observed platform timeout, then type | No stuck chord state or unintended product action; record actual timeout |
+| K-wrong | Prefix, unused second letter, then type | Record platform handling; subsequent normal input works |
+| K-disabled | No selection/editor/project as applicable | Disabled editor actions do not copy; no-editor actions retain their contracts |
+| K-focus | Prefix, move focus between editor/tool window/settings/another app | No stale context action or trapped typing after cancellation |
+| K-indexing | Trigger while indexing; cancel and resume typing | Dumb-aware action behavior is preserved; no index dependency exception |
+
+## Settings matrix
+
+Run each row in the three required macOS IDEs. Use independent cloned profiles
+for scenarios that mutate bindings. Capture dialog bounds and actual displayed
+current/default shortcuts, including multi-shortcut, long Unicode labels and
+unassigned rows. Check EN/KO/JA/zh-CN/zh-TW at normal and increased IDE scale;
+record the scale and any unavailable localization combination.
+
+| Row | Scenario | Expected observation |
+| --- | --- | --- |
+| S-list | Open plugin settings on default/custom/unassigned keymaps | Nine current/default rows and Keymap navigation reflect the active scheme |
+| S-confirm | Restore then decline/close confirmation | No pending plan or active keymap change |
+| S-pending | Confirm restore, inspect before Apply | Pending state visible; source identity/shortcuts unchanged |
+| S-apply | Apply pending restore | One uniquely named derived scheme active; original preserved |
+| S-ok | Confirm then OK | Same transaction as Apply and settings close |
+| S-repeat | Apply again; reopen settings | No duplicate derivation; displayed current values refreshed |
+| S-cancel | Confirm then Cancel; repeat with Reset/disposal | Pending plan discarded; no keymap mutation |
+| S-template | Invalid custom template with pending restore, Apply/OK | Validation fails before keymap transaction |
+| S-prefix-single | Give an external action the first stroke alone | Restore blocked with action ID; external action unchanged |
+| S-prefix-chord | Give an external action same prefix with different second key | Restore blocked, even when all nine exact chords are free |
+| S-stale-map | Confirm, switch active scheme, Apply | Stale plan rejected; no derived scheme |
+| S-stale-binding | Confirm, change any of the nine keyboard/mouse lists, Apply | Stale plan rejected |
+| S-stale-conflict | Confirm, introduce new external prefix occupant, Apply | New conflict rejected |
+| S-preserve | Apply with unrelated edits, mouse shortcut, explicit IDE deletion | Only nine keyboard lists replaced; source and other assignments unchanged |
+| S-return | Restart, then select original scheme | Derived scheme persists; original values restored by selecting original |
+| S-layout | Long/multiple shortcuts, translations, increased scale | Rows and confirmation buttons remain readable and reachable |
+
+Some stale-plan scenarios may require an independent test session or a second
+settings window. Record exactly how the intervening change was made. Automated
+fixtures cover concurrency boundaries separately and do not fill a real-UI row.
+
+## Six v1.6.0 upgrade profiles
+
+Use the official released v1.6.0 ZIP, verify its release-asset digest and prepare
+each case with `prepare --case CASE --native-mac --parent OBSERVED_KEYMAP_ID`.
+For `removed-ide`, supply `--removed-action ID` from an actual baseline collision
+dump. For `explicit-old`, supply `--old-copy KEYSTROKE --old-history KEYSTROKE`
+from its effective runtime bindings. The tool writes **seed XML**, not a record of IDE acceptance. Start v1.6.0,
+verify the selected keymap/values in UI and runtime export, quit cleanly, then
+take a config snapshot. Only that accepted baseline is ready for cloning.
+
+| Case | Baseline | Required candidate result before explicit restore |
+| --- | --- | --- |
+| pristine | Inherited defaults, no custom scheme | Only inherited defaults move to B |
+| unrelated-only | Derived scheme edits another action only | Plugin defaults follow inheritance; unrelated edit remains |
+| explicit-old | Explicit old Copy/History bindings | Explicit C/H choices remain; no automatic aliases added |
+| custom | Different Copy/History keys and a mouse binding | Custom keyboard and mouse shortcuts remain |
+| unassigned | Explicit empty Copy/History entries | Commands stay unassigned |
+| removed-ide | Explicitly remove observed conflicting IDE action | IDE removal remains before/after restore; no full reset |
+
+v1.6.0 declares History only on `$default` (`control alt H`), but IC 243's actual
+`Mac OS X 10.5+` runtime maps it to **`meta alt H`** through platform inheritance.
+The same dump maps Copy to `meta alt C`, while the IDE's CallHierarchy remains
+`control alt H`. Thus descriptor text alone does not establish the effective old
+binding or a collision. Use the observed values for each Rider/IDE lineage.
+
+```bash
+python3 scripts/shortcut-audit/audit.py snapshot BASELINE_PROFILE BEFORE_JSON
+python3 scripts/shortcut-audit/audit.py clone-upgrade \
+  --source BASELINE_PROFILE --output NEW_CANDIDATE_PROFILE \
+  --zip CANDIDATE_ZIP --sha256 CANDIDATE_SHA256 --commit INTEGRATED_MAIN_SHA
+```
+
+The clone copies only the baseline config and installs the candidate product ZIP
+in a new plugin directory; mutable system/cache/log directories are new. Preserve
+the original baseline. Run S-preserve/S-return in each case and compare exact
+source keymap XML and effective shortcuts before/after restore. Repeat the six
+cases across required macOS IC/IDEA/Rider, recording the selected lineage.
+
+For each fresh/candidate profile, record these introduction scenarios separately
+from shortcut restoration. A second project is a separate local fixture project.
+
+| Row | Scenario | Expected observation |
+| --- | --- | --- |
+| I-new | Fresh candidate profile, first valid project | One introduction; wording does not claim an upgrade |
+| I-upgrade | Each of the six accepted v1.6.0 baselines, first candidate project | One introduction describing actual current bindings |
+| I-custom | Explicit old/custom bindings, including long/markup-like display text | Bounded escaped display, no claim that defaults are active |
+| I-unassigned | Explicit empty Copy/History | Current unassigned state shown accurately |
+| I-projects | Open a second project immediately and after initial notification | No second introduction in the same application profile |
+| I-restart | Quit cleanly and restart with introduced state | No repeated introduction |
+| I-copy-notification | Disable success-copy notifications before first startup | Introduction policy remains independent |
+| I-group | Disable the IDE notification group in a fresh profile | Normal IDE notification controls remain respected |
+| I-settings | Introduction's settings button | Opens the nine-shortcut settings list |
+| I-keymap | Introduction's Keymap button | Opens IDE Keymap settings without changing assignments |
+| I-dismiss | Close/dismiss introduction | Balloon expires; no repeat on next project/restart |
+| I-disposed | Close originating project before queued display/action | No display/claim or settings access through a disposed project |
+| I-state | Inspect persisted state and service fixture evidence | Local `copySelectionShortcuts.xml` state, copied state/atomic claim and `RoamingType.DISABLED` accounted for separately |
+| I-sync | Dedicated test account/profile Settings Sync, if available | Record original/derived keymap synchronization independently from non-roaming introduction state |
+
+Settings Sync is exercised only with a dedicated test account/profile when
+available. If unavailable, record the missing environment and leave this
+scenario NOT RUN; never use a personal account or treat local restart as sync.
+
+## Evidence and operator handoff
+
+Each executed row needs: row ID, performer, UTC timestamp, main SHA, candidate
+ZIP SHA-256, plugin version, IDE product/build, OS/build/desktop, architecture,
+IME/input source, keymap ID/parent chain, baseline/profile identity, procedure,
+expected result, actual result, verdict, logs and required screenshots. Include
+clipboard bytes or an escaped exact value when relevant. Keep executable argv,
+exit codes, actual test counts and CI URLs/artifact identity alongside the run.
+Do not commit local profiles, logs or personal data to the product repository.
+
+If GUI access fails, provide the operator the prepared profile, candidate hash,
+native launcher command, project fixture and remaining row IDs. Ask for the
+actual result and screenshot/clipboard evidence for each pending row, including
+IME and modifier release details. Preserve the failure log and exact failed
+operation. Leave those rows BLOCKED/NOT RUN until evidence arrives; a fixture,
+Verifier result or success balloon alone is not a replacement.
