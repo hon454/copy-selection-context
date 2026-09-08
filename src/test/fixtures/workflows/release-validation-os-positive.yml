@@ -1,4 +1,4 @@
-name: Skipped Windows validation
+name: Complete OS validation
 on: push
 jobs:
   os-tests:
@@ -17,6 +17,6 @@ jobs:
       - if: matrix.os == 'macos-latest'
         shell: bash
         run: ./gradlew allTests --continue --stacktrace --console=plain
-      - if: matrix.os == 'macos-latest'
+      - if: matrix.os == 'windows-latest'
         shell: pwsh
         run: .\gradlew.bat allTests --continue --stacktrace --console=plain

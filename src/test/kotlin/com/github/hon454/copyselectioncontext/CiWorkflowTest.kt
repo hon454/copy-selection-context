@@ -317,6 +317,23 @@ class CiWorkflowTest {
                 ),
             )
         }
+        assertFailsWith<AssertionError>("A conditionally skipped Plugin Verifier must fail closed") {
+            assertLinuxCompatibilityJob(
+                readYamlMapping(
+                    Path.of("src", "test", "fixtures", "workflows", "release-validation-skipped-verifier.yml"),
+                ),
+            )
+        }
+        assertOsMatrixTestCoverage(
+            readYamlMapping(
+                Path.of("src", "test", "fixtures", "workflows", "release-validation-os-positive.yml"),
+            ),
+        )
+        assertLinuxCompatibilityJob(
+            readYamlMapping(
+                Path.of("src", "test", "fixtures", "workflows", "release-validation-compatibility-positive.yml"),
+            ),
+        )
     }
 
     @Test
