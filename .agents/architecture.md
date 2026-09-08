@@ -120,9 +120,9 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `CopySelectionAnalytics.kt` | Thread-safe opt-in application-local counters and immutable snapshots |
 | `CopySelectionBaseAction.kt` | Dumb-aware shared standard-copy lifecycle with BGT updates and EDT post-copy integrations |
 | `CopySelectionBundle.kt` | Localized message lookup through the public class-aware `DynamicBundle` constructor |
-| `CopySelectionConfigurable.kt` | Tools settings UI, multiline template editor, preview, validation, and local analytics controls |
+| `CopySelectionConfigurable.kt` | Tools settings UI, template validation, analytics, current/default shortcut list, and confirmation staged until Apply/OK; Reset, Cancel and disposal discard pending restoration |
 | `CopySelectionContextAction.kt` | Settings-driven primary action |
-| `CopySelectionShortcuts.kt` | Shared nine-command G-prefix defaults and active-keymap lineage selection |
+| `CopySelectionShortcuts.kt` | Shared nine-command defaults and active-keymap lineage selection, effective shortcut display, prefix-conflict checks, and source-preserving keyboard restoration through a validated derived keymap |
 | `CopySelectionGutterIconRenderer.kt` | Gutter icon and safe tooltip preview |
 | `CopySelectionHighlighter.kt` | Editor-scoped multi-range gutter marker lifecycle |
 | `CopySelectionNotifier.kt` | Settings-aware success, guarded clipboard-failure and localized permalink-failure balloons |

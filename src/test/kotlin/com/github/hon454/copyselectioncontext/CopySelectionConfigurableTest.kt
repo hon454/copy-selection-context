@@ -1,20 +1,183 @@
 package com.github.hon454.copyselectioncontext
 
 import com.intellij.openapi.options.ConfigurationException
+import com.intellij.openapi.keymap.Keymap
 import com.intellij.ui.components.ActionLink
+import io.mockk.every
+import io.mockk.mockk
 import java.awt.Component
 import java.awt.Container
 import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JTextArea
 import kotlin.test.Test
+import kotlin.test.AfterTest
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.test.assertSame
 
 class CopySelectionConfigurableTest {
+    private val fixtures = mutableListOf<Fixture>()
+
+    @AfterTest
+    fun disposeFixtures() = onEdt {
+        fixtures.forEach {
+            it.configurable.disposeUIResources()
+            it.settings.dispose()
+        }
+    }
+
+    @Test
+    fun `confirm only stages restore and apply consumes it once`() = onEdt {
+        val plan = restorePlan()
+        val applied = mutableListOf<ShortcutRestorePlan>()
+        val fixture = createFixture(prepareShortcutRestore = { plan }, applyShortcutRestore = applied::add)
+
+        assertFalse(fixture.configurable.isModified())
+        fixture.shortcutRestore.doClick()
+        assertTrue(fixture.configurable.isModified())
+        assertTrue(applied.isEmpty())
+
+        fixture.configurable.apply()
+        assertEquals(1, applied.size)
+        assertSame(plan, applied.single())
+        assertFalse(fixture.configurable.isModified())
+        fixture.configurable.apply()
+        fixture.configurable.cancel()
+        fixture.configurable.reset()
+        fixture.configurable.disposeUIResources()
+        assertEquals(1, applied.size)
+    }
+
+    @Test
+    fun `cancelled confirmation also discards an earlier pending restore`() = onEdt {
+        val plan = restorePlan()
+        var confirmed = false
+        var restores = 0
+        val fixture = createFixture(
+            prepareShortcutRestore = { plan.takeIf { confirmed } },
+            applyShortcutRestore = { restores++ },
+        )
+        fixture.shortcutRestore.doClick()
+        assertFalse(fixture.configurable.isModified())
+        confirmed = true
+        fixture.shortcutRestore.doClick()
+        assertTrue(fixture.configurable.isModified())
+        confirmed = false
+        fixture.shortcutRestore.doClick()
+        assertFalse(fixture.configurable.isModified())
+        fixture.configurable.apply()
+        assertEquals(0, restores)
+    }
+
+    @Test
+    fun `reset cancel and disposal discard pending restore`() = onEdt {
+        val discard: List<(CopySelectionConfigurable) -> Unit> = listOf(
+            { it.reset() }, { it.cancel() }, { it.disposeUIResources() },
+        )
+        discard.forEach { operation ->
+            var restores = 0
+            val fixture = createFixture(
+                prepareShortcutRestore = { restorePlan() },
+                applyShortcutRestore = { restores++ },
+            )
+            fixture.shortcutRestore.doClick()
+            operation(fixture.configurable)
+            assertFalse(fixture.configurable.isModified())
+            fixture.configurable.apply()
+            assertEquals(0, restores)
+        }
+    }
+
+    @Test
+    fun `invalid template leaves pending restore and settings untouched until corrected`() = onEdt {
+        var restores = 0
+        val fixture = createFixture(
+            prepareShortcutRestore = { restorePlan() },
+            applyShortcutRestore = { restores++ },
+        )
+        fixture.shortcutRestore.doClick()
+        fixture.outputFormat.selectedItem = OutputFormatOption.TEMPLATE
+        fixture.editor.text = "{unknown}"
+        assertFailsWith<ConfigurationException> { fixture.configurable.apply() }
+        assertEquals(0, restores)
+        assertEquals("claude", fixture.settings.state.outputFormat)
+        assertTrue(fixture.configurable.isModified())
+
+        fixture.editor.text = "{path}:{range}"
+        fixture.configurable.apply()
+        assertEquals(1, restores)
+        assertEquals("template", fixture.settings.state.outputFormat)
+    }
+
+    @Test
+    fun `restore validation failure refreshes view without committing output settings`() = onEdt {
+        var summary = "before"
+        var failure = true
+        val fixture = createFixture(
+            shortcutSummary = { summary },
+            prepareShortcutRestore = { restorePlan() },
+            applyShortcutRestore = {
+                if (failure) throw ConfigurationException("changed")
+            },
+        )
+        fixture.shortcutRestore.doClick()
+        fixture.outputFormat.selectedItem = OutputFormatOption.TEMPLATE
+        fixture.editor.text = "{path}"
+        summary = "after"
+        assertFailsWith<ConfigurationException> { fixture.configurable.apply() }
+        assertEquals("after", fixture.shortcutSummary.text)
+        assertEquals("claude", fixture.settings.state.outputFormat)
+        assertTrue(fixture.configurable.isModified())
+
+        fixture.configurable.reset()
+        assertFalse(fixture.configurable.isModified())
+        failure = false
+        fixture.shortcutRestore.doClick()
+        fixture.configurable.apply()
+        assertFalse(fixture.configurable.isModified())
+    }
+
+    @Test
+    fun `return from keymap refreshes accessible summary without applying pending restore`() = onEdt {
+        var summary = "before"
+        var restores = 0
+        val fixture = createFixture(
+            shortcutSummary = { summary },
+            openKeymap = { summary = "changed in Keymap" },
+            prepareShortcutRestore = { restorePlan() },
+            applyShortcutRestore = { restores++ },
+        )
+        fixture.shortcutRestore.doClick()
+        fixture.keymapButton.doClick()
+        assertEquals("changed in Keymap", fixture.shortcutSummary.text)
+        assertEquals(0, restores)
+        assertTrue(fixture.configurable.isModified())
+        assertEquals(CopySelectionShortcuts.commands.size, fixture.shortcutSummary.rows)
+        assertFalse(fixture.shortcutSummary.isEditable)
+        assertTrue(fixture.shortcutSummary.isFocusable)
+        assertTrue(fixture.shortcutSummary.lineWrap)
+        assertTrue(fixture.shortcutSummary.accessibleContext.accessibleDescription.isNotBlank())
+    }
+
+    @Test
+    fun `recreating disposed settings does not retain the old restore`() = onEdt {
+        var restores = 0
+        val fixture = createFixture(
+            prepareShortcutRestore = { restorePlan() },
+            applyShortcutRestore = { restores++ },
+        )
+        fixture.shortcutRestore.doClick()
+        fixture.configurable.disposeUIResources()
+        fixture.configurable.createComponent()
+        assertFalse(fixture.configurable.isModified())
+        fixture.configurable.apply()
+        assertEquals(0, restores)
+    }
+
     @Test
     fun `multiline preset populates editor and preview without flattening line breaks`() = onEdt {
         val fixture = createFixture()
@@ -162,6 +325,10 @@ class CopySelectionConfigurableTest {
         analytics: CopySelectionAnalytics = CopySelectionAnalytics(),
         openMarketplaceReviewPage: () -> Unit = {},
         confirmAnalyticsReset: () -> Boolean = { false },
+        shortcutSummary: () -> String = { "test shortcuts" },
+        openKeymap: () -> Unit = {},
+        prepareShortcutRestore: () -> ShortcutRestorePlan? = { null },
+        applyShortcutRestore: (ShortcutRestorePlan) -> Unit = {},
     ): Fixture {
         val settings = CopySelectionSettings()
         val configurable = CopySelectionConfigurable(
@@ -170,6 +337,10 @@ class CopySelectionConfigurableTest {
             analytics = analytics,
             openMarketplaceReviewPage = openMarketplaceReviewPage,
             confirmAnalyticsReset = confirmAnalyticsReset,
+            shortcutSummary = shortcutSummary,
+            openKeymap = openKeymap,
+            prepareShortcutRestore = prepareShortcutRestore,
+            applyShortcutRestore = applyShortcutRestore,
         )
         val component = configurable.createComponent()
         val comboBoxes = descendantsOfType<JComboBox<*>>(component)
@@ -203,7 +374,20 @@ class CopySelectionConfigurableTest {
             analyticsSummary = assertNotNull(analyticsSummary),
             analyticsReset = assertNotNull(analyticsReset),
             reviewLink = assertNotNull(reviewLink),
-        )
+            shortcutSummary = textAreas.single {
+                it.accessibleContext.accessibleName == CopySelectionBundle.message("shortcuts.title")
+            },
+            shortcutRestore = buttons.single { it.text == CopySelectionBundle.message("shortcuts.restore.button") },
+            keymapButton = buttons.single { it.text == CopySelectionBundle.message("shortcuts.keymap") },
+        ).also(fixtures::add)
+    }
+
+    private fun restorePlan(): ShortcutRestorePlan {
+        val source = mockk<Keymap>()
+        every { source.name } returns "Unit test keymap"
+        every { source.parent } returns null
+        every { source.getShortcuts(any()) } returns emptyArray()
+        return ShortcutRestorePlan(source)
     }
 
     private fun JComboBox<*>.items(): List<Any?> =
@@ -239,5 +423,8 @@ class CopySelectionConfigurableTest {
         val analyticsSummary: JTextArea,
         val analyticsReset: JButton,
         val reviewLink: ActionLink,
+        val shortcutSummary: JTextArea,
+        val shortcutRestore: JButton,
+        val keymapButton: JButton,
     )
 }

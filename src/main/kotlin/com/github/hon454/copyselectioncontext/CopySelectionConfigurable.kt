@@ -5,6 +5,8 @@ import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.dsl.builder.*
+import java.awt.event.HierarchyEvent
+import java.awt.event.HierarchyListener
 import javax.swing.JComponent
 import javax.swing.JComboBox
 import javax.swing.JTextArea
@@ -24,6 +26,10 @@ class CopySelectionConfigurable internal constructor(
             Messages.getQuestionIcon(),
         ) == Messages.YES
     },
+    private val shortcutSummary: () -> String = { CopySelectionShortcuts.summary() },
+    private val openKeymap: () -> Unit = { CopySelectionShortcuts.openKeymap() },
+    private val prepareShortcutRestore: () -> ShortcutRestorePlan? = { CopySelectionShortcuts.prepareRestore() },
+    private val applyShortcutRestore: (ShortcutRestorePlan) -> Unit = { CopySelectionShortcuts.applyRestore(it) },
 ) : Configurable {
     constructor() : this(CopySelectionSettings.getInstance())
 
@@ -33,6 +39,10 @@ class CopySelectionConfigurable internal constructor(
     private var templateTextArea: JTextArea? = null
     private var previewTextArea: JTextArea? = null
     private var analyticsTextArea: JTextArea? = null
+    private var shortcutsTextArea: JTextArea? = null
+    private var shortcutsPendingRow: Row? = null
+    private var shortcutsShowingListener: HierarchyListener? = null
+    private var pendingShortcutRestore: ShortcutRestorePlan? = null
     private var updatingPresetSelection = false
 
     override fun getDisplayName() = CopySelectionBundle.message("settings.title")
@@ -40,6 +50,43 @@ class CopySelectionConfigurable internal constructor(
     override fun createComponent(): JComponent {
         val state = settings.state
         val panel = panel {
+            group(CopySelectionBundle.message("shortcuts.title")) {
+                row { text(CopySelectionBundle.message("shortcuts.instructions")) }
+                row {
+                    textArea()
+                        .rows(CopySelectionShortcuts.commands.size)
+                        .columns(TEMPLATE_COLUMNS)
+                        .align(AlignX.FILL)
+                        .resizableColumn()
+                        .accessibleName(CopySelectionBundle.message("shortcuts.title"))
+                        .accessibleDescription(CopySelectionBundle.message("shortcuts.summary.description"))
+                        .applyToComponent {
+                            isEditable = false
+                            isFocusable = true
+                            lineWrap = true
+                            wrapStyleWord = true
+                        }
+                        .also { shortcutsTextArea = it.component }
+                }.resizableRow()
+                row {
+                    button(CopySelectionBundle.message("shortcuts.keymap")) {
+                        openKeymap()
+                        updateShortcuts()
+                    }
+                }
+                row {
+                    button(CopySelectionBundle.message("shortcuts.restore.button")) {
+                        pendingShortcutRestore = null
+                        updateShortcuts()
+                        pendingShortcutRestore = prepareShortcutRestore()
+                        updateShortcuts()
+                    }
+                }
+                shortcutsPendingRow = row {
+                    text(CopySelectionBundle.message("shortcuts.restore.pending"))
+                }.visible(false)
+                row { comment(CopySelectionBundle.message("shortcuts.restore.applied")) }
+            }
             group(CopySelectionBundle.message("settings.path.type")) {
                 buttonsGroup {
                     row { radioButton(CopySelectionBundle.message("settings.path.absolute"), PathType.ABSOLUTE) }
@@ -175,6 +222,12 @@ class CopySelectionConfigurable internal constructor(
             }
         }
         dialogPanel = panel
+        shortcutsShowingListener = HierarchyListener { event ->
+            if (event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() != 0L && panel.isShowing) {
+                updateShortcuts()
+            }
+        }.also(panel::addHierarchyListener)
+        updateShortcuts()
         updatePresetSelection()
         updatePreview()
         updateTemplateControls()
@@ -182,7 +235,7 @@ class CopySelectionConfigurable internal constructor(
         return panel
     }
 
-    override fun isModified() = dialogPanel?.isModified() ?: false
+    override fun isModified() = pendingShortcutRestore != null || (dialogPanel?.isModified() ?: false)
 
     override fun apply() {
         val validationMessage = if (isTemplateFormatSelected()) {
@@ -193,12 +246,22 @@ class CopySelectionConfigurable internal constructor(
         if (validationMessage != null) {
             throw ConfigurationException(validationMessage)
         }
+        pendingShortcutRestore?.let { plan ->
+            try {
+                applyShortcutRestore(plan)
+                pendingShortcutRestore = null
+            } finally {
+                updateShortcuts()
+            }
+        }
         settings.withOutputLock { dialogPanel?.apply() }
         settings.outputSettingsCommitted()
         trimOpenProjectHistory(settings.state.copyHistorySize)
     }
 
     override fun reset() {
+        pendingShortcutRestore = null
+        updateShortcuts()
         dialogPanel?.reset()
         updatePresetSelection()
         updatePreview()
@@ -206,7 +269,17 @@ class CopySelectionConfigurable internal constructor(
         updateAnalyticsSummary()
     }
 
+    override fun cancel() {
+        pendingShortcutRestore = null
+        updateShortcuts()
+    }
+
     override fun disposeUIResources() {
+        shortcutsShowingListener?.let { dialogPanel?.removeHierarchyListener(it) }
+        shortcutsShowingListener = null
+        shortcutsTextArea = null
+        shortcutsPendingRow = null
+        pendingShortcutRestore = null
         dialogPanel = null
         outputFormatCombo = null
         presetCombo = null
@@ -257,6 +330,12 @@ class CopySelectionConfigurable internal constructor(
     private fun updateAnalyticsSummary() {
         analyticsTextArea?.text = renderAnalyticsSummary(analytics.snapshot())
         analyticsTextArea?.caretPosition = 0
+    }
+
+    private fun updateShortcuts() {
+        shortcutsTextArea?.text = shortcutSummary()
+        shortcutsTextArea?.caretPosition = 0
+        shortcutsPendingRow?.visible(pendingShortcutRestore != null)
     }
 
     private fun isTemplateFormatSelected() =

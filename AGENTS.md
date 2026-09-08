@@ -91,7 +91,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `CopySelectionReviewService.kt` / `CopySelectionReviewNotifier.kt` | Session-threshold Marketplace review prompt, local suppression state, and balloon actions |
 | `CopySelectionStatusBarWidget.kt` / `CopySelectionStatusBarWidgetFactory.kt` | Last-copy status display and click-to-copy behavior |
 | `CopySelectionSettings.kt` | Settings persistence (`@Service` + `@State`) |
-| `CopySelectionConfigurable.kt` | Settings UI with multiline template editor, preview, validation, passive review link, and analytics view/reset controls |
+| `CopySelectionConfigurable.kt` | Settings UI with template validation, review/analytics controls, and current/default shortcut display with confirmed Apply-time restoration through `CopySelectionShortcuts` |
 
 **Flow**: User trigger -> Action captures/formats a result or begins async permalink resolution -> project-scoped `CopyResultPublisher` applies explicit standard/permalink policy -> clipboard -> optional standard-only analytics -> gutter marker -> project history -> optional notification -> status bar -> optional standard-only review eligibility
 
