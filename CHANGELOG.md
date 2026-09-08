@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Honor the last branch remote value from ordered Git config includes when selecting permalink remotes (#105)
 
+### Changed
+
+- Explicitly keep opt-in usage counters in non-roaming IDE storage while preserving existing analytics state compatibility (#107)
+
 ## [1.5.0] - 2026-09-06
 
 ### Added

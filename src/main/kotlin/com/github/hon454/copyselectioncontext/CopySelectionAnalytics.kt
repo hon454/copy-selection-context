@@ -2,19 +2,23 @@ package com.github.hon454.copyselectioncontext
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent
+import com.intellij.openapi.components.RoamingType
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import java.util.Collections
 
 @Service(Service.Level.APP)
-@State(name = "CopySelectionAnalytics", storages = [Storage("copySelectionAnalytics.xml")])
+@State(
+    name = "CopySelectionAnalytics",
+    storages = [Storage("copySelectionAnalytics.xml", roamingType = RoamingType.DISABLED)],
+)
 class CopySelectionAnalytics : PersistentStateComponent<CopySelectionAnalytics.State> {
 
     data class State(
         var totalCopyCount: Int = 0,
-        val formatUsage: MutableMap<String, Int> = mutableMapOf(),
-        val languageUsage: MutableMap<String, Int> = mutableMapOf()
+        var formatUsage: MutableMap<String, Int> = mutableMapOf(),
+        var languageUsage: MutableMap<String, Int> = mutableMapOf(),
     )
 
     data class Snapshot(
