@@ -103,6 +103,7 @@ val platformStateTestClasses = listOf(
     "com.github.hon454.copyselectioncontext.ContextCollectionFixtureTest",
     "com.github.hon454.copyselectioncontext.CopyHistoryPersistenceTest",
     "com.github.hon454.copyselectioncontext.CopySelectionActionFixtureTest",
+    "com.github.hon454.copyselectioncontext.CopySelectionDumbModeFixtureTest",
 )
 
 intellijPlatformTesting.testIde.register("platformTest") {

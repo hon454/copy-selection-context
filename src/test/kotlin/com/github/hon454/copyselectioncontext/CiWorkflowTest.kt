@@ -544,6 +544,7 @@ class CiWorkflowTest {
             buildScript.contains("intellijPlatformTesting.testIde.register(\"platformTest\")") &&
                 buildScript.contains("CopyHistoryPersistenceTest") &&
                 buildScript.contains("CopySelectionActionFixtureTest") &&
+                buildScript.contains("CopySelectionDumbModeFixtureTest") &&
                 buildScript.contains("forkEvery = 0") &&
                 buildScript.contains("forkEvery = 1") &&
                 buildScript.contains("register(\"allTests\")"),

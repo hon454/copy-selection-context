@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Honor the last branch remote value from ordered Git config includes when selecting permalink remotes (#105)
+- Keep standard copy, history, and Git permalink actions available while IDE indexing is in progress (#106)
 
 ## [1.5.0] - 2026-09-06
 

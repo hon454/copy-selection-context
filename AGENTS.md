@@ -61,7 +61,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | File | Role |
 |------|------|
 | `CopySelectionContextAction.kt` | Main unified action (`Ctrl+Alt+C` shortcut) |
-| `CopySelectionBaseAction.kt` / `CopyResultPublisher.kt` | Standard formatting plus the project-scoped, policy-driven publisher for clipboard, analytics, highlighting, history, notifications, status, review accounting, and cross-action ordering |
+| `CopySelectionBaseAction.kt` / `CopyResultPublisher.kt` | Dumb-aware standard formatting with BGT presentation updates plus the project-scoped, policy-driven publisher for clipboard, analytics, highlighting, history, notifications, status, review accounting, and cross-action ordering |
 | `OutputFormatter.kt` / `TemplateFormatter.kt` | Built-in Claude Code and Path:Line formats plus custom templates |
 | `ContextCollectionService.kt` / `ContextCollectionStore.kt` / `ContextCollectionItem.kt` | Session-only immutable captures, bounded atomic additions, revisions and mutations |
 | `ContextCollectionSourceTracker.kt` / `ContextCollectionSubscriptions.kt` | Independent source-state revision and disposable listeners without retaining editors/documents |
@@ -77,8 +77,8 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `CopyRelativePathAction.kt` | Relative path (context menu only) |
 | `CopyAbsolutePathAction.kt` | Absolute path (context menu only) |
 | `CopyWithCodeContentAction.kt` | Path + markdown code block (context menu only) |
-| `CopyGitPermalinkAction.kt` / `GitRepositoryMetadataResolver.kt` / `GitPermalinkGenerator.kt` | Async, worktree-safe GitHub/GitLab permalink generation published through the shared result boundary |
-| `CopyHistoryService.kt` / `CopyHistoryPopup.kt` | Local non-roaming project history, migration, re-copy, and clear-all |
+| `CopyGitPermalinkAction.kt` / `GitRepositoryMetadataResolver.kt` / `GitPermalinkGenerator.kt` | Dumb-aware async, worktree-safe GitHub/GitLab permalink generation with BGT presentation updates, published through the shared result boundary |
+| `ShowCopyHistoryAction.kt` / `CopyHistoryService.kt` / `CopyHistoryPopup.kt` | Dumb-aware history opening with BGT presentation updates plus local non-roaming project history, migration, re-copy, and clear-all |
 | `CopyPreview.kt` | Bounded, single-line, Unicode-safe, markup-escaped previews |
 | `CopySelectionAnalytics.kt` | Thread-safe opt-in, local-only usage counters and immutable UI snapshots |
 | `CopySelectionNotifier.kt` | Toast notifications (BALLOON) |
