@@ -240,7 +240,9 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         )
 
         perform(failedAction)
+        failedAction.assertValidCapture("after capture")
         failedAction.runBackgroundAction()
+        failedAction.assertValidCapture("after lookup")
         failedAction.runUiAction()
 
         assertEquals(failureSentinel, clipboardText())
@@ -384,6 +386,25 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
         val loggedFailures = mutableListOf<GitPermalinkResult.Failure>()
         var requestedFilePath: String? = null
         var requestedLineRanges: List<Pair<Int, Int>>? = null
+        private var lifetime: GitPermalinkLifetime? = null
+        private var capturedFile: VirtualFile? = null
+        private var capturedStamp: Long = -1
+
+        override fun requestLifetime(project: Project, editor: com.intellij.openapi.editor.Editor, file: VirtualFile): GitPermalinkLifetime =
+            super.requestLifetime(project, editor, file).also {
+                lifetime = it
+                capturedFile = file
+                capturedStamp = editor.document.modificationStamp
+            }
+
+        fun assertValidCapture(stage: String) {
+            val capture = requireNotNull(lifetime)
+            val editor = capture.editor()
+            val documentFile = editor?.let { com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getFile(it.document) }
+            assertTrue("$stage: alive=${capture.isAlive()}, editorDisposed=${editor?.isDisposed}, " +
+                "stamp=$capturedStamp/${editor?.document?.modificationStamp}, " +
+                "sameFile=${documentFile === capturedFile}, equalFile=${documentFile == capturedFile}", capture.matchesCapture())
+        }
 
         override fun resolveGitRootPath(project: Project, file: VirtualFile): String? = rootPath
 

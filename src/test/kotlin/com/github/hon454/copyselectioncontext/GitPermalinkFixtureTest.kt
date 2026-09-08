@@ -18,6 +18,7 @@ import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.datatransfer.DataFlavor
@@ -51,7 +52,8 @@ class GitPermalinkFixtureTest : BasePlatformTestCase() {
         CopySelectionSettings.getInstance().loadState(CopySelectionSettings.State(enableNotification = false, analyticsEnabled = true))
         CopySelectionAnalytics.getInstance().reset()
         CopyHistoryService.getInstance(project).clear()
-        directory = Files.createTempDirectory("copy-selection-head-fixture-")
+        directory = Files.createTempDirectory("copy-selection-head-fixture-").toRealPath()
+        VfsRootAccess.allowRootAccess(testRootDisposable, directory.toString())
         repository = LocalGitRepository(directory)
         baseSha = repository.commit("source.txt", ORIGINAL)
         openFile("source.txt")
@@ -66,7 +68,9 @@ class GitPermalinkFixtureTest : BasePlatformTestCase() {
             CopySelectionSettings.getInstance().loadState(oldSettings)
             oldClipboard?.let { CopyPasteManager.getInstance().setContents(it) }
         } finally {
-            try { super.tearDown() } finally { directory.toFile().deleteRecursively() }
+            // The platform clears fixture fields during super.tearDown().
+            val repositoryDirectory = directory
+            try { super.tearDown() } finally { repositoryDirectory.toFile().deleteRecursively() }
         }
     }
 
