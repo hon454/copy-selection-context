@@ -69,11 +69,24 @@ def parse_inventory(audit_path):
         expected |= {(name, action) for action in ids}
     require(set(actions) == expected, "inventory missing/extra effective action rows")
     counts = {name: [0, 0, 0] for name in maps}
-    values = {}
+    values, owners = {}, {}
     for (name, action), row in actions.items():
         require(row[4] in {"true", "false"} and row[6] in {"true", "false", "unknown"}
                 and bool(row[5]), "inventory ownership fields")
-        require(action not in registered or row[4] == "true", "registered inventory action missing at capture")
+        require((action in registered) == (row[4] == "true"), "inventory registered snapshot mismatch")
+        owner = tuple(row[4:7])
+        require(action not in owners or owners[action] == owner, "inconsistent inventory action ownership")
+        owners[action] = owner
+        if row[4] == "false":
+            # The exporter obtains ownership from the resolved action/stub, so
+            # a missing action has neither an owner nor a bundled claim.
+            require(row[5:7] == ["unknown", "unknown"], "dormant inventory action claims ownership")
+        else:
+            # Unknown descriptors can be represented by the exporter, but they
+            # cannot certify a registered action's contribution in this audit.
+            require(row[5] != "unknown" and row[5] in data["plugins"],
+                    "registered inventory owner missing from plugin inventory")
+            require(row[6] == data["plugins"][row[5]][3], "inventory owner/plugin bundled mismatch")
         # Some platform actions return identical entries (for example IC 243's
         # CommentByBlockComment on macOS). Keep the full API list and its counts.
         items = shortcuts(row[3], allow_duplicates=True)

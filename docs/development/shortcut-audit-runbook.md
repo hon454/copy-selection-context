@@ -90,6 +90,19 @@ and final counts are checked, as are the original nine/watched bindings and
 all six original probe occupancies and ownership fields. A missing companion,
 missing action/ancestor row or mismatched export is an error, never a zero.
 
+Every companion action's `registered` flag must match the registered-ID snapshot
+in both directions, and its `(registered, owner, bundled)` tuple must be identical
+across keymaps, matching the exporter's per-action cache. The exporter resolves
+an action/stub and derives its descriptor through the stub or platform class
+lookup; absent actions therefore require both owner and bundled to be `unknown`.
+For registered actions, complete-evidence acceptance requires a known owner in
+the original `PLUGIN` inventory and the same bundled flag. Although the exporter
+can represent a missing descriptor as `unknown`, such a registered contribution
+cannot be attributed and is rejected for this audit. A registration snapshot
+disagreement is likewise rejected, never repaired or silently marked dormant.
+These checks apply to every effective action, including actions outside the
+original six probes.
+
 ```bash
 python3 scripts/shortcut-audit/audit.py launch-gui \
   --app IDE_APP --profile FRESH_OBSERVATION_PROFILE --project FIXTURE_PROJECT \

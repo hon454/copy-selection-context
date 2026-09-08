@@ -72,6 +72,8 @@ class StrokeInventoryTest(unittest.TestCase):
             "MouseOnly": [{"kind": "mouse", "button": 2, "modifiers": 128, "clickCount": 1}],
         }
         audit_rows = fixture.export_rows(extra=extras)
+        audit_rows.append(["PLUGIN", "com.intellij", "test", "false", "test/platform"])
+        audit_rows = test_audit.recount(audit_rows)
         # Candidate Q on an exact product ID must be listed separately; a merely
         # prefix-matching external ID above must still block Q.
         for row in audit_rows:
@@ -102,6 +104,40 @@ class StrokeInventoryTest(unittest.TestCase):
 
     def write(self, rows):
         self.path.write_text(encode_rows(rows))
+
+    def test_registered_snapshot_must_match_in_both_directions(self):
+        for action, claimed in [("DormantChord", "true"), ("ExternalSingle", "false")]:
+            rows = [row.copy() for row in self.rows]
+            next(row for row in rows if row[:3] == ["ACTION", "$default", action])[4] = claimed
+            self.write(rows)
+            with self.subTest(action=action), self.assertRaisesRegex(ValueError, "registered snapshot mismatch"):
+                parse_inventory(self.audit_path)
+
+    def test_non_probe_owner_must_exist_in_original_plugin_inventory(self):
+        rows = [row.copy() for row in self.rows]
+        row = next(row for row in rows if row[:3] == ["ACTION", "$default", "ExternalSingle"])
+        row[5:7] = ["invented.plugin", "true"]
+        self.write(rows)
+        with self.assertRaisesRegex(ValueError, "owner missing from plugin inventory"):
+            compare_prefixes([self.audit_path], ["J"])
+
+    def test_registered_owner_requires_known_matching_bundled_value(self):
+        for owner, bundled in [("com.intellij", "true"), ("com.intellij", "unknown"),
+                               ("unknown", "unknown"), ("unknown", "false")]:
+            rows = [row.copy() for row in self.rows]
+            next(row for row in rows if row[:3] == ["ACTION", "$default", "ExternalSingle"])[5:7] = [owner, bundled]
+            self.write(rows)
+            with self.subTest(owner=owner, bundled=bundled), self.assertRaises(ValueError):
+                parse_inventory(self.audit_path)
+
+    def test_dormant_action_requires_both_unknown_fields(self):
+        for owner, bundled in [("com.intellij", "false"), ("com.intellij", "unknown"),
+                               ("unknown", "true"), ("unknown", "false")]:
+            rows = [row.copy() for row in self.rows]
+            next(row for row in rows if row[:3] == ["ACTION", "$default", "DormantChord"])[5:7] = [owner, bundled]
+            self.write(rows)
+            with self.subTest(owner=owner, bundled=bundled), self.assertRaisesRegex(ValueError, "dormant.*claims ownership"):
+                parse_inventory(self.audit_path)
 
     def test_changed_product_source_is_rejected_before_policy_claim(self):
         changed = self.root / "CopySelectionShortcuts.kt"
@@ -169,7 +205,7 @@ class StrokeInventoryTest(unittest.TestCase):
         self.assertEqual(single["occurrencesInApiList"], 2)
         self.assertEqual(len(single["allShortcuts"]), 2)
 
-    def test_inherited_dormant_mapping_is_required_in_child_even_without_local_id(self):
+    def add_child_inventory(self):
         rows = [row.copy() for row in self.audit_rows]
         rows += [["KEYMAP", "Child", "true", json.dumps(["Child", "$default"])]]
         for row in self.audit_rows:
@@ -188,6 +224,19 @@ class StrokeInventoryTest(unittest.TestCase):
                 copied[1] = "Child"
                 inventory.append(copied)
         self.write(recount_inventory(inventory))
+        return inventory
+
+    def test_same_action_owner_tuple_must_match_across_keymaps(self):
+        inventory = self.add_child_inventory()
+        # Both owners exist with the same bundled flag, so per-row plugin
+        # validation alone cannot reject this non-probe attribution change.
+        next(row for row in inventory if row[:3] == ["ACTION", "Child", "ExternalSingle"])[5] = "com.github.hon454.copy-selection-context"
+        self.write(recount_inventory(inventory))
+        with self.assertRaisesRegex(ValueError, "inconsistent inventory action ownership"):
+            parse_inventory(self.audit_path)
+
+    def test_inherited_dormant_mapping_is_required_in_child_even_without_local_id(self):
+        inventory = self.add_child_inventory()
         candidate = compare_prefixes([self.audit_path], ["F13"])["candidates"][0]
         self.assertEqual(candidate["occupiedKeymaps"], 2)
         self.write(recount_inventory([row for row in inventory if row[:3] != ["ACTION", "Child", "DormantChord"]]))
@@ -249,7 +298,7 @@ class StrokeInventoryTest(unittest.TestCase):
 
     def test_ownership_disagreement_with_original_probe_fails(self):
         rows = [row.copy() for row in self.rows]
-        next(row for row in rows if row[:3] == ["ACTION", "$default", "ExternalG"])[5] = "wrong.owner"
+        next(row for row in rows if row[:3] == ["ACTION", "$default", "ExternalG"])[5] = "com.github.hon454.copy-selection-context"
         self.write(rows)
         with self.assertRaisesRegex(ValueError, "owner/list mismatch"):
             parse_inventory(self.audit_path)
