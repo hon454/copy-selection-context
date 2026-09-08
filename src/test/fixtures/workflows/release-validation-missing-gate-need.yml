@@ -1,0 +1,15 @@
+name: Missing compatibility gate need
+on: push
+jobs:
+  validation-gate:
+    if: always()
+    needs:
+      - os-tests
+    steps:
+      - env:
+          OS_TESTS_RESULT: ${{ needs.os-tests.result }}
+          IDE_COMPATIBILITY_RESULT: success
+        run: |
+          if [ "$OS_TESTS_RESULT" != "success" ] || [ "$IDE_COMPATIBILITY_RESULT" != "success" ]; then
+            exit 1
+          fi

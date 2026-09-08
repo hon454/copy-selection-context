@@ -41,6 +41,7 @@ cmd //c "gradlew.bat publishPlugin"  # Publish to Marketplace (requires PUBLISH_
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
 | `build.yml` | Push/PR to `main` | Build verification + artifact upload |
+| `release-validation.yml` | Called by release, manual dispatch, or `codex/verify-*` push | Three-OS tests plus one Linux IDE compatibility pass; never publishes |
 | `release.yml` | Push `v*` tag | Build → GitHub Release (ZIP attached) → Marketplace publish (conditional) |
 
 ### Release Process
@@ -49,8 +50,9 @@ cmd //c "gradlew.bat publishPlugin"  # Publish to Marketplace (requires PUBLISH_
 2. Bump `version` in `build.gradle.kts`, then run `cmd //c "gradlew.bat patchChangelog"`
 3. Commit the version and changelog, tag (`v<major>.<minor>.<patch>`), and push
 4. `release.yml` uses `scripts/generate-release-notes.sh` to initialize Gradle separately, then captures only the matching `CHANGELOG.md` section from `getChangelog`
-5. The GitHub Actions-built release ZIP is canonical: signed and signature-verified when both signing credentials are configured, otherwise explicitly unsigned; the workflow then verifies `SHA256SUMS` and GitHub provenance for that exact ZIP before upload
-6. JetBrains Marketplace publishing runs only when `PUBLISH_TOKEN`, `CERTIFICATE_CHAIN`, and `PRIVATE_KEY` are all non-empty, and uploads the same canonical signed ZIP without rebuilding or re-signing it
+5. The reusable release validation must pass unit/platform tests on Linux, macOS, and Windows plus Detekt, project/structure checks, and the explicit IC/latest IDEA/latest Rider Plugin Verifier targets once on Linux
+6. The GitHub Actions-built release ZIP is canonical: the gated Linux release job signs and signature-verifies it when both signing credentials are configured, otherwise leaves it explicitly unsigned; the workflow then verifies `SHA256SUMS` and GitHub provenance for that exact ZIP before upload
+7. JetBrains Marketplace publishing runs only when `PUBLISH_TOKEN`, `CERTIFICATE_CHAIN`, and `PRIVATE_KEY` are all non-empty, and uploads the same canonical signed ZIP without rebuilding or re-signing it
 
 **Version rule**: Tag version must match `build.gradle.kts` `version` — workflow fails on mismatch.
 

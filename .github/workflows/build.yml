@@ -76,7 +76,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: validation-reports
+          name: linux-validation-reports
           path: |
             build/reports/tests/test/
             build/test-results/test/
@@ -92,7 +92,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: plugin-artifact
+          name: linux-plugin-artifact
           path: build/distributions/*.zip
           if-no-files-found: error
           retention-days: 30

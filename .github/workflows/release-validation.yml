@@ -1,0 +1,166 @@
+name: Release Validation
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'codex/verify-*'
+
+permissions:
+  contents: read
+
+jobs:
+  os-tests:
+    name: Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          java-version: '21'
+          distribution: 'zulu'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Ensure gradlew is executable
+        if: runner.os != 'Windows'
+        run: chmod +x ./gradlew
+
+      - name: Check Unix Bash prerequisites
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v bash mktemp dirname find sort basename mv rm
+          command -v sha256sum || command -v shasum
+
+      - name: Check Windows Bash prerequisites
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          bash --version
+          where.exe bash
+          bash -c "command -v bash mktemp dirname find sort basename mv rm && (command -v sha256sum || command -v shasum)"
+
+      - name: Run Linux test suite and generate Kotlin coverage
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: >-
+          ./gradlew
+          allTests
+          koverXmlReport
+          koverHtmlReport
+          --continue
+          --stacktrace
+          --console=plain
+
+      - name: Run macOS test suite
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: ./gradlew allTests --continue --stacktrace --console=plain
+
+      - name: Run Windows test suite
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: .\gradlew.bat allTests --continue --stacktrace --console=plain
+
+      - name: Upload OS validation reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-validation-${{ matrix.os }}
+          path: |
+            build/reports/tests/test/
+            build/test-results/test/
+            build/reports/tests/platformTest/
+            build/test-results/platformTest/
+            build/reports/kover/
+            build/reports/problems/
+          if-no-files-found: warn
+          retention-days: 14
+
+  linux-compatibility:
+    name: Linux source and IDE compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Maximize Build Space
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
+        with:
+          tool-cache: false
+          large-packages: false
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          java-version: '21'
+          distribution: 'zulu'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Ensure gradlew is executable
+        run: chmod +x ./gradlew
+
+      - name: Run Kotlin static analysis
+        run: ./gradlew detekt --stacktrace --console=plain
+
+      - name: Verify plugin project and structure
+        run: >-
+          ./gradlew
+          verifyPluginProjectConfiguration
+          verifyPluginStructure
+          --stacktrace
+          --console=plain
+
+      - name: Verify plugin compatibility
+        run: ./gradlew verifyPlugin --stacktrace --console=plain
+
+      - name: Upload IDE compatibility reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-validation-linux-ide-compatibility
+          path: |
+            build/reports/detekt/
+            build/reports/pluginVerifier/
+            build/reports/problems/
+          if-no-files-found: warn
+          retention-days: 14
+
+  validation-gate:
+    name: Require every release validation
+    if: always()
+    needs:
+      - os-tests
+      - linux-compatibility
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Require successful OS and IDE validation
+        env:
+          OS_TESTS_RESULT: ${{ needs.os-tests.result }}
+          IDE_COMPATIBILITY_RESULT: ${{ needs.linux-compatibility.result }}
+        run: |
+          if [ "$OS_TESTS_RESULT" != "success" ] || [ "$IDE_COMPATIBILITY_RESULT" != "success" ]; then
+            echo "::error::Release validation did not complete successfully."
+            exit 1
+          fi

@@ -6,13 +6,22 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
-  id-token: write
-  attestations: write
+  contents: read
 
 jobs:
+  validation:
+    uses: ./.github/workflows/release-validation.yml
+    permissions:
+      contents: read
+
   release:
+    needs: validation
+    if: needs.validation.result == 'success'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
 
     steps:
       - name: Maximize Build Space
@@ -50,31 +59,6 @@ jobs:
           bash scripts/generate-release-notes.sh \
             "$RELEASE_VERSION" \
             "$RELEASE_TAG"
-
-      - name: Run Kotlin static analysis
-        run: ./gradlew detekt --stacktrace --console=plain
-
-      - name: Run test suite and generate Kotlin coverage
-        if: ${{ !cancelled() }}
-        run: >-
-          ./gradlew
-          allTests
-          koverXmlReport
-          koverHtmlReport
-          --continue
-          --stacktrace
-          --console=plain
-
-      - name: Verify plugin project and structure
-        run: >-
-          ./gradlew
-          verifyPluginProjectConfiguration
-          verifyPluginStructure
-          --stacktrace
-          --console=plain
-
-      - name: Verify plugin compatibility
-        run: ./gradlew verifyPlugin --stacktrace --console=plain
 
       - name: Build plugin
         run: ./gradlew buildPlugin --stacktrace --console=plain
@@ -141,19 +125,12 @@ jobs:
           --source-digest "$GITHUB_SHA"
           --source-ref "$GITHUB_REF"
 
-      - name: Upload validation reports
+      - name: Upload release build diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: validation-reports
+          name: release-linux-build-diagnostics
           path: |
-            build/reports/tests/test/
-            build/test-results/test/
-            build/reports/tests/platformTest/
-            build/test-results/platformTest/
-            build/reports/detekt/
-            build/reports/kover/
-            build/reports/pluginVerifier/
             build/reports/problems/
           if-no-files-found: warn
           retention-days: 14

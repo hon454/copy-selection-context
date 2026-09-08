@@ -1,4 +1,5 @@
 import org.jetbrains.changelog.Changelog
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.PublishPluginTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -14,6 +15,36 @@ plugins {
 
 group = "com.github.hon454"
 version = "1.5.1"
+
+data class PluginVerificationTarget(
+    val label: String,
+    val type: IntelliJPlatformType,
+    val version: String,
+    val buildNumber: String,
+)
+
+val minimumSupportedIdeVersion = "2024.3"
+val pluginVerificationTargets =
+    listOf(
+        PluginVerificationTarget(
+            label = "minimum-intellij-idea-community",
+            type = IntelliJPlatformType.IntellijIdeaCommunity,
+            version = minimumSupportedIdeVersion,
+            buildNumber = "243.21565.193",
+        ),
+        PluginVerificationTarget(
+            label = "latest-intellij-idea",
+            type = IntelliJPlatformType.IntellijIdea,
+            version = "2026.2.2",
+            buildNumber = "262.10315.125",
+        ),
+        PluginVerificationTarget(
+            label = "latest-rider",
+            type = IntelliJPlatformType.Rider,
+            version = "2026.2.1",
+            buildNumber = "262.9437.287",
+        ),
+    )
 
 repositories {
     mavenCentral()
@@ -34,7 +65,7 @@ dependencies {
     }
 
     intellijPlatform {
-        intellijIdeaCommunity("2024.3")
+        intellijIdeaCommunity(minimumSupportedIdeVersion)
         testFramework(TestFrameworkType.Bundled)
     }
 }
@@ -76,7 +107,9 @@ intellijPlatform {
     
     pluginVerification {
         ides {
-            recommended()
+            pluginVerificationTargets.forEach { target ->
+                create(target.type, target.version)
+            }
         }
     }
     
