@@ -12,11 +12,13 @@ import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.nio.file.Files
 import java.time.Instant
 
 class ContextCollectionSourceFixtureTest : BasePlatformTestCase() {
     fun testUnrelatedRealDocumentsVisitAllocateAndScheduleNothingAtEveryCapacityAndProjectCount() {
-        val otherProject = requireNotNull(ProjectManager.getInstance().createProject("source-other", "${myFixture.tempDirPath}/other"))
+        val otherProjectPath = Files.createTempDirectory("copy-selection-context-source-other-")
+        val otherProject = requireNotNull(ProjectManager.getInstance().createProject("source-other", otherProjectPath.toString()))
         val otherFile = LightVirtualFile("unrelated.txt", "other")
         val document = requireNotNull(FileDocumentManager.getInstance().getDocument(otherFile))
         val editor = EditorFactory.getInstance().createEditor(document, otherProject)
@@ -53,6 +55,7 @@ class ContextCollectionSourceFixtureTest : BasePlatformTestCase() {
         } finally {
             EditorFactory.getInstance().releaseEditor(editor)
             ApplicationManager.getApplication().runWriteAction { Disposer.dispose(otherProject) }
+            otherProjectPath.toFile().deleteRecursively()
         }
     }
 
