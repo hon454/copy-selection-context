@@ -19,7 +19,7 @@ version = "1.5.1"
 data class PluginVerificationTarget(
     val label: String,
     val type: IntelliJPlatformType,
-    val version: String,
+    val ideVersion: String,
     val buildNumber: String,
 )
 
@@ -29,19 +29,19 @@ val pluginVerificationTargets =
         PluginVerificationTarget(
             label = "minimum-intellij-idea-community",
             type = IntelliJPlatformType.IntellijIdeaCommunity,
-            version = minimumSupportedIdeVersion,
+            ideVersion = minimumSupportedIdeVersion,
             buildNumber = "243.21565.193",
         ),
         PluginVerificationTarget(
             label = "latest-intellij-idea",
             type = IntelliJPlatformType.IntellijIdea,
-            version = "2026.2.2",
+            ideVersion = "2026.2.2",
             buildNumber = "262.10315.125",
         ),
         PluginVerificationTarget(
             label = "latest-rider",
             type = IntelliJPlatformType.Rider,
-            version = "2026.2.1",
+            ideVersion = "2026.2.1",
             buildNumber = "262.9437.287",
         ),
     )
@@ -108,7 +108,7 @@ intellijPlatform {
     pluginVerification {
         ides {
             pluginVerificationTargets.forEach { target ->
-                create(target.type, target.version)
+                create(target.type, target.ideVersion)
             }
         }
     }

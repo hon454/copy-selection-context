@@ -222,7 +222,7 @@ class CiWorkflowTest {
         expectedTargets.flatten().forEach { marker ->
             assertTrue(buildScript.contains(marker), "Missing explicit verification target marker: $marker")
         }
-        assertTrue(buildScript.contains("create(target.type, target.version)"))
+        assertTrue(buildScript.contains("create(target.type, target.ideVersion)"))
         assertFalse(buildScript.contains("recommended()"), "Verifier targets must not drift with an implicit recommendation")
 
         assertFailsWith<AssertionError>("A matrix row without a runnable Windows test must fail closed") {
