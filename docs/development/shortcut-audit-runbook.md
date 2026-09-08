@@ -13,8 +13,19 @@ The user limited real keyboard, UI and upgrade execution to **macOS** on
 scope**, never PASS or N/A. Windows/macOS/Linux automated CI and the effective
 keymaps for every OS family remain required.
 
+On 2026-09-09 KST, the user additionally excluded actual effective-keymap/runtime
+measurements for **CLion, DataGrip, GoLand, PhpStorm, RubyMine and WebStorm** after
+their license-blocked attempts. Record those products as `USER-EXCLUDED` and
+preserve their exit-7 evidence as history, not PASS or N/A. They are no longer
+completion gates. No broader account or license use was authorized.
+
+Required runtime coverage is now minimum IC, latest IDEA, latest Rider, PyCharm
+and Android Studio, with their applicable OS keymap families. The macOS
+IC/IDEA/Rider real input/UI/upgrade matrix, US and Korean input, installed Rider
+families, three-OS automated CI and three-IDE Plugin Verifier remain required.
+
 Use `PASS`, `FAIL`, `NOT RUN`, `BLOCKED`, `N/A (specific unavailable combination)`
-or `EXCLUDED BY USER SCOPE`. A missing distribution, license or GUI driver is
+or `USER-EXCLUDED` (`EXCLUDED BY USER SCOPE`). A missing distribution, license or GUI driver is
 BLOCKED/NOT RUN, not evidence that its keymap is absent. An absent Rider family
 can be N/A only after recording the loaded distribution's full keymap inventory.
 Any outstanding required macOS row prevents issue/milestone completion.
@@ -43,15 +54,15 @@ Quail 4. These are distribution selection data, not runtime test results.
 | IntelliJ IDEA latest | 2026.2.2 | 262.10315.125 | Effective keymaps and macOS real input/UI/upgrade |
 | Rider latest | 2026.2.1 | 262.9437.287 | Effective keymaps and macOS real input/UI/upgrade |
 | PyCharm | 2026.2.2 | 262.10315.174 | Effective keymaps |
-| WebStorm | 2026.2.2 | 262.10315.144 | Effective keymaps |
-| PhpStorm | 2026.2.2 | 262.10315.130 | Effective keymaps |
-| GoLand | 2026.2.2.1 | 262.10315.160 | Effective keymaps |
-| CLion | 2026.2.2 | 262.10315.131 | Effective keymaps |
-| DataGrip | 2026.2.5 | 262.10315.132 | Effective keymaps |
-| RubyMine | 2026.2.2 | 262.10315.129 | Effective keymaps |
+| WebStorm | 2026.2.2 | 262.10315.144 | USER-EXCLUDED; preserve attempted license failure |
+| PhpStorm | 2026.2.2 | 262.10315.130 | USER-EXCLUDED; preserve attempted license failure |
+| GoLand | 2026.2.2.1 | 262.10315.160 | USER-EXCLUDED; preserve attempted license failure |
+| CLion | 2026.2.2 | 262.10315.131 | USER-EXCLUDED; preserve attempted license failure |
+| DataGrip | 2026.2.5 | 262.10315.132 | USER-EXCLUDED; preserve attempted license failure |
+| RubyMine | 2026.2.2 | 262.10315.129 | USER-EXCLUDED; preserve attempted license failure |
 | Android Studio | Quail 4 / 2026.1.4 | AI-261.26222.65.2614.16204760 (downloaded distribution) | Effective keymaps |
 
-For each product enumerate every loaded keymap, including Windows/Linux and
+For each retained product enumerate every loaded keymap, including Windows/Linux and
 macOS variants; record ID, parent chain and bundled/selected third-party
 contributions. In Rider explicitly locate IntelliJ, Visual Studio, Visual Studio
 2022, ReSharper and VS Code families and their OS variants. Do not infer IDs from
@@ -278,8 +289,10 @@ and newlines, rather than rely only on the success balloon.
 Run these rows for IC 2024.3, the selected latest IDEA and latest Rider, with
 US/QWERTY and Korean input. In Rider repeat across every installed required
 keymap family. Prefix expectations follow the **active keymap lineage**, so a
-Windows-style keymap selected on macOS keeps Ctrl+Alt+Shift+G. A native macOS
-keymap uses Cmd+Option+Shift+G.
+Windows-style keymap selected on macOS keeps Ctrl+Alt+Shift plus the recorded
+candidate first key. A native macOS keymap uses Cmd+Option+Shift plus that key.
+Z is the current validation candidate; record its exact source/ZIP and keep
+candidate testing separate from final prefix approval.
 
 Prepare a local committed Git repository containing `example.txt` with exactly
 `alpha\nbeta\ngamma\n`, an HTTPS GitHub fixture remote and a recorded HEAD SHA.
