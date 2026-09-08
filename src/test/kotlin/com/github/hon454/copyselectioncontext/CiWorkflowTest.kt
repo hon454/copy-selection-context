@@ -16,6 +16,77 @@ import kotlin.test.assertTrue
 
 class CiWorkflowTest {
     @Test
+    fun `release credentials are scoped to only the steps that consume them`() {
+        val workflow = readWorkflowMapping("release.yml")
+        val job = workflow.mappingForKey("jobs").mappingForKey("release")
+        assertTrue(workflow.valueForKey("env") == null, "Release must not inherit workflow credentials")
+        assertTrue(job.valueForKey("env") == null, "Release must not inherit job credentials")
+        val expected = mapOf(
+            "Resolve release mode" to setOf("PUBLISH_TOKEN", "CERTIFICATE_CHAIN", "PRIVATE_KEY"),
+            "Sign and verify canonical release ZIP" to
+                setOf("CERTIFICATE_CHAIN", "PRIVATE_KEY", "PRIVATE_KEY_PASSWORD"),
+            "Publish to JetBrains Marketplace" to setOf("PUBLISH_TOKEN"),
+        )
+        val steps = workflowSteps("release.yml")
+        expected.keys.forEach { steps.stepNamed(it) }
+        steps.forEach { step ->
+            val name = step.scalarForKey("name")
+            val env = step.valueForKey("env") as? MappingNode
+            val secrets = env?.value.orEmpty().filter { entry ->
+                (entry.valueNode as ScalarNode).value.contains("secrets.")
+            }.associate { entry ->
+                (entry.keyNode as ScalarNode).value to (entry.valueNode as ScalarNode).value
+            }
+            assertEquals(
+                expected[name].orEmpty().associateWith { "${'$'}{{ secrets.$it }}" },
+                secrets,
+                "$name must receive only its required credentials",
+            )
+            step.value.filter { (it.keyNode as ScalarNode).value != "env" }.forEach {
+                assertFalse(it.valueNode.toString().contains("secrets."), "$name must inject secrets only via env")
+            }
+        }
+    }
+
+    @Test
+    fun `release shell sources never interpolate workflow expressions`() {
+        workflowSteps("release.yml").forEach { step ->
+            val command = step.valueForKey("run") as? ScalarNode
+            assertFalse(
+                command?.value.orEmpty().contains("${'$'}{{"),
+                "${step.scalarForKey("name")} must pass workflow values through env instead of shell source",
+            )
+        }
+    }
+
+    @Test
+    fun `release env inputs preserve validated outputs and canonical artifact bindings`() {
+        val steps = workflowSteps("release.yml")
+        val expected = mapOf(
+            "Generate release notes from changelog" to mapOf(
+                "RELEASE_VERSION" to "${'$'}{{ steps.version.outputs.version }}",
+                "RELEASE_TAG" to "${'$'}{{ steps.version.outputs.tag }}",
+            ),
+            "Select canonical release ZIP" to mapOf("RELEASE_SIGNED" to "${'$'}{{ steps.release-mode.outputs.signed }}"),
+            "Generate and verify release checksum" to mapOf("RELEASE_ARCHIVE" to "${'$'}{{ steps.release-artifact.outputs.path }}"),
+            "Verify release ZIP attestation" to mapOf(
+                "RELEASE_ARCHIVE" to "${'$'}{{ steps.release-artifact.outputs.path }}",
+                "ATTESTATION_BUNDLE" to "${'$'}{{ steps.attestation.outputs.bundle-path }}",
+                "GH_TOKEN" to "${'$'}{{ github.token }}",
+            ),
+            "Publish to JetBrains Marketplace" to mapOf("RELEASE_ARCHIVE" to "${'$'}{{ steps.release-artifact.outputs.path }}"),
+        )
+        expected.forEach { (name, bindings) ->
+            val env = steps.stepNamed(name).mappingForKey("env")
+            bindings.forEach { (key, value) -> assertEquals(value, env.scalarForKey(key), "$name: $key") }
+        }
+        val version = steps.stepNamed("Verify version matches build.gradle.kts")
+        assertEquals("version", version.scalarForKey("id"))
+        assertTrue(version.valueForKey("if") == null, "Version validation must always gate the release")
+        assertTrue(version.valueForKey("continue-on-error") == null, "Version errors must fail closed")
+    }
+
+    @Test
     fun `build validates before packaging and artifact upload`() {
         assertValidationPipeline(
             workflowName = "build.yml",
@@ -60,7 +131,7 @@ class CiWorkflowTest {
         )
         assertTrue(
             workflow.contains("bash scripts/select-release-artifact.sh") &&
-                workflow.contains("\"${'$'}{{ steps.release-mode.outputs.signed }}\"") &&
+                workflow.contains("\"${'$'}RELEASE_SIGNED\"") &&
                 workflow.contains("\"${'$'}GITHUB_OUTPUT\""),
             "release.yml must select the canonical ZIP through the fail-closed selector",
         )
@@ -69,9 +140,9 @@ class CiWorkflowTest {
             "the attestation must identify the exact ZIP selected for publication",
         )
         assertTrue(
-            workflow.contains("--bundle \"${'$'}{{ steps.attestation.outputs.bundle-path }}\"") &&
-                workflow.contains("--source-digest \"${'$'}{{ github.sha }}\"") &&
-                workflow.contains("--source-ref \"${'$'}{{ github.ref }}\""),
+            workflow.contains("--bundle \"${'$'}ATTESTATION_BUNDLE\"") &&
+                workflow.contains("--source-digest \"${'$'}GITHUB_SHA\"") &&
+                workflow.contains("--source-ref \"${'$'}GITHUB_REF\""),
             "release.yml must verify the generated attestation against the triggering commit and tag",
         )
         assertTrue(
@@ -84,7 +155,7 @@ class CiWorkflowTest {
         )
         assertTrue(
             workflow.contains("if: steps.release-mode.outputs.publish == 'true'") &&
-                workflow.contains("-PcanonicalPluginArchive=\"${'$'}{{ steps.release-artifact.outputs.path }}\""),
+                workflow.contains("-PcanonicalPluginArchive=\"${'$'}RELEASE_ARCHIVE\""),
             "Marketplace publication must receive the exact canonical ZIP selected for release",
         )
         assertTrue(
@@ -110,8 +181,8 @@ class CiWorkflowTest {
         )
         val generationCommand =
             "bash scripts/generate-release-notes.sh \\\n" +
-                "            \"${'$'}{{ steps.version.outputs.version }}\" \\\n" +
-                "            \"${'$'}{{ steps.version.outputs.tag }}\""
+                "            \"${'$'}RELEASE_VERSION\" \\\n" +
+                "            \"${'$'}RELEASE_TAG\""
         assertTrue(
             workflow.contains(generationCommand),
             "release.yml must delegate deterministic note generation to the tested script",

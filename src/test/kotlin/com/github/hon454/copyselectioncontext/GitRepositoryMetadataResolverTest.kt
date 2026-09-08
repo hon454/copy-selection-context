@@ -183,6 +183,169 @@ class GitRepositoryMetadataResolverTest {
     }
 
     @Test
+    fun `last branch remote value in the same config selects its URL`() {
+        val root = repository("repeated-branch-remote")
+        write(
+            root.resolve(".git/config"),
+            """
+                [remote "origin"]
+                    url = https://github.com/owner/origin.git
+                [remote "upstream"]
+                    url = https://github.com/owner/upstream.git
+                [branch "main"]
+                    remote = origin
+                    remote = upstream
+            """.trimIndent(),
+        )
+
+        val result = success(GitRepositoryMetadataResolver.resolve(root))
+
+        assertEquals("https://github.com/owner/upstream.git", result.remoteUrl)
+    }
+
+    @Test
+    fun `branch remote overrides follow inline include order`() {
+        val includeFirstRoot = repository("branch-include-first")
+        write(
+            includeFirstRoot.resolve(".git/config"),
+            """
+                [remote "origin"]
+                    url = https://github.com/owner/origin.git
+                [remote "upstream"]
+                    url = https://github.com/owner/upstream.git
+                [include]
+                    path = branch.conf
+                [branch "main"]
+                    remote = origin
+            """.trimIndent(),
+        )
+        write(
+            includeFirstRoot.resolve(".git/branch.conf"),
+            """
+                [branch "main"]
+                    remote = upstream
+            """.trimIndent(),
+        )
+
+        val includeLastRoot = repository("branch-include-last")
+        write(
+            includeLastRoot.resolve(".git/config"),
+            """
+                [remote "origin"]
+                    url = https://github.com/owner/origin.git
+                [remote "upstream"]
+                    url = https://github.com/owner/upstream.git
+                [branch "main"]
+                    remote = origin
+                [include]
+                    path = branch.conf
+            """.trimIndent(),
+        )
+        write(
+            includeLastRoot.resolve(".git/branch.conf"),
+            """
+                [branch "main"]
+                    remote = upstream
+            """.trimIndent(),
+        )
+
+        assertEquals(
+            "https://github.com/owner/origin.git",
+            success(GitRepositoryMetadataResolver.resolve(includeFirstRoot)).remoteUrl,
+        )
+        assertEquals(
+            "https://github.com/owner/upstream.git",
+            success(GitRepositoryMetadataResolver.resolve(includeLastRoot)).remoteUrl,
+        )
+    }
+
+    @Test
+    fun `nested include uses its later branch remote value`() {
+        val root = repository("nested-branch-include")
+        write(
+            root.resolve(".git/config"),
+            """
+                [remote "origin"]
+                    url = https://github.com/owner/origin.git
+                [remote "upstream"]
+                    url = https://github.com/owner/upstream.git
+                [branch "main"]
+                    remote = origin
+                [include]
+                    path = includes/outer.conf
+            """.trimIndent(),
+        )
+        write(root.resolve(".git/includes/outer.conf"), "[include]\n    path = inner.conf\n")
+        write(
+            root.resolve(".git/includes/inner.conf"),
+            """
+                [branch "main"]
+                    remote = upstream
+            """.trimIndent(),
+        )
+
+        val result = success(GitRepositoryMetadataResolver.resolve(root))
+
+        assertEquals("https://github.com/owner/upstream.git", result.remoteUrl)
+    }
+
+    @Test
+    fun `matching onbranch include overrides branch remote and non-match keeps it`() {
+        val matchingRoot = repository("matching-onbranch-remote", branchName = "feature/topic")
+        write(
+            matchingRoot.resolve(".git/config"),
+            """
+                [remote "origin"]
+                    url = https://github.com/owner/origin.git
+                [remote "upstream"]
+                    url = https://github.com/owner/upstream.git
+                [branch "feature/topic"]
+                    remote = origin
+                [includeIf "onbranch:feature/**"]
+                    path = branch.conf
+            """.trimIndent(),
+        )
+        write(
+            matchingRoot.resolve(".git/branch.conf"),
+            """
+                [branch "feature/topic"]
+                    remote = upstream
+            """.trimIndent(),
+        )
+
+        val nonMatchingRoot = repository("non-matching-onbranch-remote")
+        write(
+            nonMatchingRoot.resolve(".git/config"),
+            """
+                [remote "origin"]
+                    url = https://github.com/owner/origin.git
+                [remote "upstream"]
+                    url = https://github.com/owner/upstream.git
+                [branch "main"]
+                    remote = origin
+                [includeIf "onbranch:release/**"]
+                    path = branch.conf
+            """.trimIndent(),
+        )
+        write(
+            nonMatchingRoot.resolve(".git/branch.conf"),
+            """
+                [branch "main"]
+                    remote = upstream
+            """.trimIndent(),
+        )
+
+        assertEquals(
+            "https://github.com/owner/upstream.git",
+            success(GitRepositoryMetadataResolver.resolve(matchingRoot)).remoteUrl,
+        )
+        assertEquals(
+            "https://github.com/owner/origin.git",
+            success(GitRepositoryMetadataResolver.resolve(nonMatchingRoot)).remoteUrl,
+        )
+    }
+
+    @Test
     fun `resolve nested relative includes from each including config file`() {
         val root = repository("relative-include")
         val gitDir = root.resolve(".git")
