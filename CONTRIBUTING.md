@@ -17,22 +17,23 @@ and test requirement only. Plugin users do not need Bash or these tools to
 install or use the plugin.
 
 Git for Windows with Git Bash is one example of an environment that provides
-these tools. From Windows Command Prompt (`cmd.exe`) or PowerShell, first
-locate Bash, then check the tools inside that Bash environment before starting
-Gradle:
+these tools. From the same Windows Command Prompt (`cmd.exe`) that will launch
+Gradle, check the tools inside the Bash environment before starting Gradle:
 
 ```text
 bash --version
 where.exe bash
-bash -lc "for tool in bash mktemp dirname find sort basename mv rm sha256sum shasum; do printf '%s=' \"\$tool\"; command -v \"\$tool\" || exit 1; done"
+bash -c "command -v bash mktemp dirname find sort basename mv rm && (command -v sha256sum || command -v shasum)"
 ```
 
 `where.exe bash` confirms which Bash a Windows shell would start, while
 `command -v` checks the Unix tools in Bash rather than Windows `find` or
-`sort` commands. The check should find every required tool except that at
-least one of `sha256sum` or `shasum` must be available. If a command is not found,
-install or enable a Bash distribution that provides the required Unix tools,
-then open a new terminal with that distribution's `bin` directory on `PATH`.
+`sort` commands. Confirm that the printed paths point into the Bash
+distribution's Unix tools, not Windows `System32` binaries. The check should
+find every required tool and at least one of `sha256sum` or `shasum`. If a
+command is not found, install or enable a Bash distribution that provides the
+required Unix tools, then open a new terminal with that distribution's `bin`
+directory on `PATH`.
 The important detail is that `bash` and those tools must be discoverable by the
 Gradle process itself, not only by a separate Git Bash window. Re-run the
 checks in the terminal where `gradlew.bat` will be invoked; this guide does
