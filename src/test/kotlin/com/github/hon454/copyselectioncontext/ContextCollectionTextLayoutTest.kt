@@ -19,11 +19,19 @@ import kotlin.test.assertTrue
 class ContextCollectionTextLayoutTest {
     private val font = Font(Font.MONOSPACED, Font.PLAIN, 13)
     private val context = FontRenderContext(AffineTransform(), true, false)
-    private fun reference(text: String) = TextLayout(AttributedString(text).apply {
+    private fun reference(text: String, renderContext: FontRenderContext = context) = TextLayout(AttributedString(text).apply {
         addAttribute(TextAttribute.FONT, font)
         addAttribute(TextAttribute.RUN_DIRECTION, TextAttribute.RUN_DIRECTION_LTR)
-    }.iterator, context)
+    }.iterator, renderContext)
     private fun prepare(text: String) = ContextCollectionTextLayout.prepare(text, font, context) {}
+    private fun nativeContext(): FontRenderContext {
+        lateinit var result: FontRenderContext
+        javax.swing.SwingUtilities.invokeAndWait {
+            val area = javax.swing.JTextArea().apply { font = this@ContextCollectionTextLayoutTest.font }
+            result = area.getFontMetrics(font).fontRenderContext
+        }
+        return result
+    }
     private fun visualHits(layout: TextLayout): List<TextHitInfo> {
         var first = layout.hitTestChar(0f, 0f)
         while (true) first = layout.getNextLeftHit(first) ?: break
@@ -218,11 +226,12 @@ class ContextCollectionTextLayoutTest {
     @Test
     @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
     fun `native line action keys use indexed boundaries instead of scanning the row`() {
+        val nativeContext = nativeContext()
         val names = listOf("caret-begin-line", "caret-end-line", "selection-begin-line", "selection-end-line",
             "caret-begin-line-and-up", "caret-end-line-and-down", "select-line")
         // Preserve native action semantics on small inputs, including repeated up/down edge moves.
         for (text in listOf("first\nsecond\nlast", "abc\nאבג\nمرحبا", "abcdefghij\nאבג", "a\tb\nאבג")) {
-            val geometry = prepare(text)
+            val geometry = ContextCollectionTextLayout.prepare(text, font, nativeContext) {}
             javax.swing.SwingUtilities.invokeAndWait {
                 val reference = javax.swing.JTextArea(text).apply { font = this@ContextCollectionTextLayoutTest.font; setSize(500, 300) }
                 val candidate = ContextCollectionTextArea().apply {
@@ -282,10 +291,13 @@ class ContextCollectionTextLayoutTest {
 
     @Test
     fun `arrows cross cell boundaries without an extra logical or physical stop`() {
+        val nativeContext = nativeContext()
         for (text in listOf("x".repeat(1024), "ا".repeat(1024), "abc " + "שלום".repeat(300) + " xyz", "123 שלום abc",
             "a" + "\u0301".repeat(1536) + "b", "א" + "\u05B0".repeat(1536) + "ב", "ا" + "\u064B".repeat(1536) + "ب")) {
-            val geometry = prepare(text)
-            val reference = reference(text)
+            // Production captures this FRC from the component. A fixed synthetic AA setting can
+            // change fallback-font advances on Linux while native Swing uses another setting.
+            val geometry = ContextCollectionTextLayout.prepare(text, font, nativeContext) {}
+            val reference = reference(text, nativeContext)
             val hits = visualHits(reference)
             javax.swing.SwingUtilities.invokeAndWait {
                 val area = ContextCollectionTextArea().apply {
@@ -308,6 +320,8 @@ class ContextCollectionTextLayoutTest {
                         font = this@ContextCollectionTextLayoutTest.font
                         setSize(area.width, area.height)
                     }
+                    assertEquals(nativeContext, native.getFontMetrics(font).fontRenderContext)
+                    assertEquals(nativeContext, area.getFontMetrics(font).fontRenderContext)
                     val nativeGraphics = image.createGraphics()
                     try { nativeGraphics.clipRect(0, 0, 500, 300); native.paint(nativeGraphics) } finally { nativeGraphics.dispose() }
                     val initial = ordered.first()
