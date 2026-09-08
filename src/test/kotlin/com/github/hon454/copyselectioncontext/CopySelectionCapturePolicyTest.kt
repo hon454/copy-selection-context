@@ -116,6 +116,28 @@ class CopySelectionCapturePolicyTest {
         }
     }
 
+    @Test
+    fun `custom template without code does not suppress an enabled code snapshot`() {
+        val settings = CopySelectionSettings.State(
+            defaultPathType = PathType.ABSOLUTE,
+            includeCodeContent = true,
+            outputFormat = "template",
+            customFormatTemplate = "{path}:{range}",
+        )
+        withSettings(settings) {
+            val fixture = actionFixture()
+
+            CopySelectionContextAction().actionPerformed(fixture.event)
+
+            assertEquals(
+                "/project/src/App.kt:1-2\n\n/project/src/App.kt:5",
+                fixture.published.captured.content,
+            )
+            verify(exactly = 1) { fixture.selectedCaret.selectedText }
+            verify(exactly = 1) { fixture.document.getText(TextRange(40, 48)) }
+        }
+    }
+
     private fun actionFixture(
         selectedCode: String = "first()",
         currentLineCode: String = "second()",
