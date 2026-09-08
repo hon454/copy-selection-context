@@ -131,6 +131,7 @@ changelog {
 }
 
 val platformStateTestClasses = listOf(
+    "com.github.hon454.copyselectioncontext.CopySelectionShortcutFixtureTest",
     "com.github.hon454.copyselectioncontext.ContextCollectionSourceFixtureTest",
     "com.github.hon454.copyselectioncontext.ClipboardFailureFixtureTest",
     "com.github.hon454.copyselectioncontext.GitPermalinkFixtureTest",

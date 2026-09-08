@@ -72,12 +72,11 @@ class PluginDescriptorLocalizationTest {
     }
 
     @Test
-    fun `collection add is registered without a default shortcut`() {
+    fun `collection add remains registered in the copy selection group`() {
         val actions = descriptor.getElementsByTagName("action")
         val action = (0 until actions.length).map { actions.item(it) as org.w3c.dom.Element }
             .single { it.getAttribute("id") == "CopySelectionContext.AddToCollection" }
         assertEquals("com.github.hon454.copyselectioncontext.AddToContextCollectionAction", action.getAttribute("class"))
-        assertEquals(0, action.getElementsByTagName("keyboard-shortcut").length)
         assertEquals("CopySelectionContextGroup", (action.parentNode as org.w3c.dom.Element).getAttribute("id"))
     }
 
@@ -92,8 +91,46 @@ class PluginDescriptorLocalizationTest {
         val actions = descriptor.getElementsByTagName("action")
         val open = (0 until actions.length).map { actions.item(it) as org.w3c.dom.Element }
             .single { it.getAttribute("id") == "CopySelectionContext.ShowCollection" }
-        assertEquals(0, open.getElementsByTagName("keyboard-shortcut").length)
         assertEquals("CopySelectionContextGroup", (open.parentNode as org.w3c.dom.Element).getAttribute("id"))
+    }
+
+    @Test
+    fun `descriptor and shared command table declare the same g prefix defaults`() {
+        val actions = descriptor.getElementsByTagName("action")
+        val registered = (0 until actions.length)
+            .map { actions.item(it) as org.w3c.dom.Element }
+            .associateBy { it.getAttribute("id") }
+        assertEquals(CopySelectionShortcuts.commands.keys, registered.keys)
+        assertEquals(9, CopySelectionShortcuts.commands.values.toSet().size)
+
+        CopySelectionShortcuts.commands.forEach { (actionId, secondKey) ->
+            val shortcuts = registered.getValue(actionId).getElementsByTagName("keyboard-shortcut")
+            val declared = (0 until shortcuts.length)
+                .map { shortcuts.item(it) as org.w3c.dom.Element }
+                .associateBy { it.getAttribute("keymap") }
+            assertEquals(CopySelectionShortcuts.macKeymapIds + "\$default", declared.keys, actionId)
+
+            val default = declared.getValue("\$default")
+            assertEquals("control alt shift G", default.getAttribute("first-keystroke"), actionId)
+            assertEquals(secondKey, default.getAttribute("second-keystroke"), actionId)
+            assertEquals("", default.getAttribute("replace-all"), actionId)
+
+            CopySelectionShortcuts.macKeymapIds.forEach { keymapId ->
+                val mac = declared.getValue(keymapId)
+                assertEquals("meta alt shift G", mac.getAttribute("first-keystroke"), "$keymapId / $actionId")
+                assertEquals(secondKey, mac.getAttribute("second-keystroke"), "$keymapId / $actionId")
+                assertEquals("true", mac.getAttribute("replace-all"), "$keymapId / $actionId")
+            }
+        }
+
+        val shortcutXml = registered.values
+            .flatMap { action ->
+                val shortcuts = action.getElementsByTagName("keyboard-shortcut")
+                (0 until shortcuts.length).map { shortcuts.item(it) as org.w3c.dom.Element }
+            }
+        assertFalse(shortcutXml.any { it.getAttribute("second-keystroke").isEmpty() })
+        assertFalse(shortcutXml.any { it.getAttribute("first-keystroke") in setOf("control alt C", "meta alt C") })
+        assertFalse(shortcutXml.any { it.getAttribute("first-keystroke") == "control alt H" })
     }
 
     private fun descriptorPresentationKeys(properties: Properties): Set<String> =
