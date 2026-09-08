@@ -129,8 +129,8 @@ class ReleaseVersionParityTest {
     @Test
     fun `workflow rejects command substitutions as literal tag data`(@TempDir tempDir: Path) {
         val tags = listOf(
-            "v${'$'}(printf${'$'}{IFS}TAG_COMMAND_EXECUTED)",
-            "v`printf${'$'}{IFS}TAG_COMMAND_EXECUTED`",
+            "v${'$'}(cat<<<TAG_COMMAND_EXECUTED)",
+            "v`cat<<<TAG_COMMAND_EXECUTED`",
         )
         tags.forEachIndexed { index, tag ->
             val refCheck = ProcessBuilder("git", "check-ref-format", "refs/tags/$tag").start()
@@ -141,7 +141,7 @@ class ReleaseVersionParityTest {
 
     @Test
     fun `boundary regression detects reverting env input to shell interpolation`(@TempDir tempDir: Path) {
-        val tag = "v${'$'}(printf${'$'}{IFS}TAG_COMMAND_EXECUTED)"
+        val tag = "v${'$'}(cat<<<TAG_COMMAND_EXECUTED)"
         val workflow = readNormalized(projectRoot.resolve(".github/workflows/release.yml"))
         val unsafeWorkflow = workflow.replace(
             "\"${'$'}GITHUB_REF_NAME\"",

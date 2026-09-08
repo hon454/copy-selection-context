@@ -144,6 +144,7 @@ class ReleaseArtifactSelectionTest {
     ) {
         val outputLines = Files.readAllLines(outputFile)
         assertEquals(2, outputLines.size)
+        assertTrue(outputLines.first().startsWith("path="), "Selector must publish the canonical path output key")
         assertEquals(
             expectedPath.normalize(),
             Path.of(outputLines.first().removePrefix("path=")).normalize(),
