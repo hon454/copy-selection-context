@@ -69,6 +69,19 @@ class GitHeadTargetValidatorTest {
         failure(repo.input("renamed.txt", "original\n"), GitPermalinkFailureReason.HEAD_PATH_ABSENT)
     }
 
+    @Test fun `replacing a source with equal contents size and modification time changes its identity`() {
+        val repo = repository()
+        repo.commit("source.txt", "original\n")
+        val prepared = success(repo.input("source.txt", "original\n"))
+        val source = repo.root.resolve("source.txt")
+        val replacement = repo.root.resolve("replacement.txt")
+        Files.writeString(replacement, "original\n")
+        Files.setLastModifiedTime(replacement, Files.getLastModifiedTime(source))
+        Files.move(replacement, source, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        assertEquals(GitPermalinkFailureReason.TARGET_UNAVAILABLE,
+            assertIs<GitPermalinkResult.Failure>(prepared.source.revalidate {}).reason)
+    }
+
     @Test fun `linked worktree common directory and detached HEAD retain GitLab remote selection`() {
         val repo = repository()
         val sha = repo.commit("source.txt", "text\n")

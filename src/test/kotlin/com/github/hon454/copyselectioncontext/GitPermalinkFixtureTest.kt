@@ -211,6 +211,7 @@ class GitPermalinkFixtureTest : BasePlatformTestCase() {
         assertExternalSourceChangeRejected {
             val replacement = it.resolveSibling("replacement.txt")
             Files.writeString(replacement, ORIGINAL)
+            Files.setLastModifiedTime(replacement, Files.getLastModifiedTime(it))
             Files.move(replacement, it, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
         }
 
