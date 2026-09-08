@@ -7,15 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-09-08
+
 ### Fixed
 
 - Preserve CommonMark closing fences indented by up to three spaces inside built-in copied code blocks (#97)
 - Honor the last branch remote value from ordered Git config includes when selecting permalink remotes (#105)
 - Keep standard copy, history, and Git permalink actions available while IDE indexing is in progress (#106)
+- Pass release tags safely to validation and restrict signing and publishing secrets to their required steps (#98)
 
 ### Changed
 
 - Explicitly keep opt-in usage counters in non-roaming IDE storage while preserving existing analytics state compatibility (#107)
+- Derive release version checks from canonical metadata so future version updates do not require hardcoded test changes (#99)
+- Document Windows Bash prerequisites and synchronize Context Collection guidance across all five README languages (#100, #101)
 
 ## [1.5.0] - 2026-09-06
 
@@ -184,7 +189,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Toast notifications
 - IntelliJ Platform 2024.3+ compatibility
 
-[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/hon454/copy-selection-context/compare/v1.5.0...v1.5.1
+[1.5.0]: https://github.com/hon454/copy-selection-context/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/hon454/copy-selection-context/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/hon454/copy-selection-context/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/hon454/copy-selection-context/compare/v1.3.0...v1.3.1
