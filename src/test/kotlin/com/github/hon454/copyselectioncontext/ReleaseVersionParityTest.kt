@@ -15,8 +15,10 @@ class ReleaseVersionParityTest {
     private val verifier = projectRoot.resolve("scripts/verify-release-version.sh")
 
     @Test
-    fun `canonical project version is 1_5_0`() {
-        assertEquals("1.5.0", canonicalVersion(projectRoot.resolve("build.gradle.kts")))
+    fun `canonical project version uses supported semantic version format`() {
+        val version = canonicalVersion(projectRoot.resolve("build.gradle.kts"))
+
+        assertTrue(version.matches(SEMVER), version)
     }
 
     @Test
@@ -29,21 +31,40 @@ class ReleaseVersionParityTest {
 
     @Test
     fun `verifier accepts the tag matching the canonical version`() {
-        val result = runVerifier("v${canonicalVersion(projectRoot.resolve("build.gradle.kts"))}")
+        val version = canonicalVersion(projectRoot.resolve("build.gradle.kts"))
+        val result = runVerifier("v$version")
 
         assertEquals(0, result.exitCode, result.output)
-        assertTrue(result.output.contains("Version verified: v1.5.0"), result.output)
+        assertTrue(result.output.contains("Version verified: v$version"), result.output)
     }
 
     @Test
-    fun `verifier rejects mismatched and malformed tags`() {
-        val mismatch = runVerifier("v9.9.9")
-        val malformed = runVerifier("1.1.0")
+    fun `verifier accepts matching tags for independent normal semantic version fixtures`(@TempDir tempDir: Path) {
+        listOf("2.17.3", "7.24.8").forEachIndexed { index, version ->
+            val buildFile = writeCanonicalBuildFile(tempDir.resolve("build-$index.gradle.kts"), version)
+            val result = runVerifier("v$version", buildFile)
+
+            assertEquals(0, result.exitCode, result.output)
+            assertTrue(result.output.contains("Version verified: v$version"), result.output)
+        }
+    }
+
+    @Test
+    fun `verifier rejects mismatched malformed tag and malformed canonical version`(@TempDir tempDir: Path) {
+        val buildFile = writeCanonicalBuildFile(tempDir.resolve("mismatch.gradle.kts"), "4.12.6")
+        val mismatch = runVerifier("v4.12.7", buildFile)
+        val malformedTag = runVerifier("4.12.6", buildFile)
+        val malformedCanonical = runVerifier(
+            "v4.12.6",
+            writeCanonicalBuildFile(tempDir.resolve("malformed.gradle.kts"), "4.12.6-rc.1"),
+        )
 
         assertEquals(1, mismatch.exitCode, mismatch.output)
         assertTrue(mismatch.output.contains("Version mismatch"), mismatch.output)
-        assertEquals(1, malformed.exitCode, malformed.output)
-        assertTrue(malformed.output.contains("must use v<major>.<minor>.<patch>"), malformed.output)
+        assertEquals(1, malformedTag.exitCode, malformedTag.output)
+        assertTrue(malformedTag.output.contains("must use v<major>.<minor>.<patch>"), malformedTag.output)
+        assertEquals(1, malformedCanonical.exitCode, malformedCanonical.output)
+        assertTrue(malformedCanonical.output.contains("Canonical version must use <major>.<minor>.<patch>"), malformedCanonical.output)
     }
 
     @Test
@@ -94,7 +115,7 @@ class ReleaseVersionParityTest {
 
     @Test
     fun `workflow rejects missing mismatched and malformed tags without outputs`(@TempDir tempDir: Path) {
-        listOf("", "v9.9.9", "1.5.0", "v1.5.0-rc.1").forEachIndexed { index, tag ->
+        listOf("", "v9.9.9", "3.14.1", "v3.14.1-rc.1").forEachIndexed { index, tag ->
             val result = runWorkflowVersionBoundary(tag, tempDir.resolve(index.toString()))
 
             assertEquals(1, result.exitCode, result.output)
@@ -146,6 +167,11 @@ class ReleaseVersionParityTest {
     private fun canonicalVersion(buildFile: Path): String {
         val match = Regex("(?m)^\\s*version\\s*=\\s*\"([^\"]+)\"").find(Files.readString(buildFile))
         return requireNotNull(match) { "Canonical version declaration not found in $buildFile" }.groupValues[1]
+    }
+
+    private fun writeCanonicalBuildFile(path: Path, version: String): Path {
+        Files.writeString(path, "version = \"$version\"")
+        return path
     }
 
     private fun runVerifier(tag: String, buildFile: Path? = null): CommandResult {
@@ -227,4 +253,8 @@ class ReleaseVersionParityTest {
         }
 
     private data class WorkflowResult(val exitCode: Int, val output: String, val outputs: Map<String, String>)
+
+    private companion object {
+        val SEMVER = Regex("[0-9]+\\.[0-9]+\\.[0-9]+")
+    }
 }
