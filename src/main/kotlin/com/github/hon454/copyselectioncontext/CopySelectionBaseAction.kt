@@ -17,10 +17,12 @@ abstract class CopySelectionBaseAction : DumbAwareAction() {
         val publisher = copyResultPublisher(project)
         val request = publisher.beginRequest()
 
-        val path = getPath(project, file)
-        val contexts = CopySelectionUtils.captureSelectionContexts(path, file, editor)
+        val settings = CopySelectionSettings.getInstance().state
+        val includeCode = includeCode(settings)
+        val path = getPath(project, file, settings)
+        val contexts = CopySelectionUtils.captureSelectionContexts(path, file, editor, includeCode)
         if (contexts.isEmpty()) return
-        val capturedContent = buildCapturedContent(contexts)
+        val capturedContent = buildCapturedContent(contexts, settings, includeCode)
 
         publisher.publishIfCurrent(
             request = request,
@@ -43,20 +45,35 @@ abstract class CopySelectionBaseAction : DumbAwareAction() {
         e.presentation.isEnabledAndVisible = editor != null && file != null
     }
 
-    protected abstract fun getPath(project: Project, file: VirtualFile): String
+    protected abstract fun getPath(
+        project: Project,
+        file: VirtualFile,
+        settings: CopySelectionSettings.State,
+    ): String
 
-    protected open fun buildContent(context: SelectionContext): String = formatWithSettings(context)
+    protected open fun includeCode(settings: CopySelectionSettings.State): Boolean = false
 
-    internal fun buildCapturedContent(contexts: List<SelectionContext>): CaretCopyResult = CaretCopyResult(
-        content = CopySelectionUtils.joinCaretBlocks(contexts.map(::buildContent)),
+    internal fun buildCapturedContent(contexts: List<SelectionContext>): CaretCopyResult {
+        val settings = CopySelectionSettings.getInstance().state
+        return buildCapturedContent(contexts, settings, includeCode(settings))
+    }
+
+    private fun buildCapturedContent(
+        contexts: List<SelectionContext>,
+        settings: CopySelectionSettings.State,
+        includeCode: Boolean,
+    ): CaretCopyResult = CaretCopyResult(
+        content = CopySelectionUtils.joinCaretBlocks(contexts.map { context ->
+            formatWithSettings(context, settings, includeCode)
+        }),
         lineRanges = contexts.map(SelectionContext::lineNumbers),
     )
 
-    protected fun formatWithSettings(
+    private fun formatWithSettings(
         context: SelectionContext,
-        includeCode: Boolean = false,
+        settings: CopySelectionSettings.State,
+        includeCode: Boolean,
     ): String {
-        val settings = CopySelectionSettings.getInstance().state
         val formatter = OutputFormatterFactory.getFormatterForSettings(settings)
         val code = if (includeCode) {
             if (settings.codeTrimming) context.code.trim() else context.code

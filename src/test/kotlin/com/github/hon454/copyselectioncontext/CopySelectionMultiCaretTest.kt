@@ -25,7 +25,7 @@ class CopySelectionMultiCaretTest {
         val fixture = multiCaretFixture()
         val action = CopySelectionContextAction()
 
-        val contexts = CopySelectionUtils.captureSelectionContexts("src/App.kt", fixture.file, fixture.editor)
+        val contexts = CopySelectionUtils.captureSelectionContexts("src/App.kt", fixture.file, fixture.editor, true)
         val result = action.buildCapturedContent(contexts)
 
         assertEquals(
@@ -43,7 +43,7 @@ class CopySelectionMultiCaretTest {
         val fixture = multiCaretFixture()
         val action = CopyWithCodeContentAction()
 
-        val contexts = CopySelectionUtils.captureSelectionContexts("src/App.kt", fixture.file, fixture.editor)
+        val contexts = CopySelectionUtils.captureSelectionContexts("src/App.kt", fixture.file, fixture.editor, true)
         val result = action.buildCapturedContent(contexts)
 
         assertEquals(
@@ -60,7 +60,7 @@ class CopySelectionMultiCaretTest {
     ) {
         val fixture = multiCaretFixture()
         val actions = listOf(CopyAbsolutePathAction(), CopyRelativePathAction())
-        val contexts = CopySelectionUtils.captureSelectionContexts("src/App.kt", fixture.file, fixture.editor)
+        val contexts = CopySelectionUtils.captureSelectionContexts("src/App.kt", fixture.file, fixture.editor, false)
 
         actions.forEach { action ->
             val result = action.buildCapturedContent(contexts)
@@ -80,7 +80,7 @@ class CopySelectionMultiCaretTest {
         CopySelectionSettings.State(includeCodeContent = true),
     ) {
         val fixture = multiCaretFixture()
-        val contexts = CopySelectionUtils.captureSelectionContexts("src/App.kt", fixture.file, fixture.editor)
+        val contexts = CopySelectionUtils.captureSelectionContexts("src/App.kt", fixture.file, fixture.editor, true)
         every { fixture.selectedCaret.selectionStart } returns 40
         every { fixture.selectedCaret.selectionEnd } returns 48
         every { fixture.selectedCaret.selectedText } returns "changed()"
