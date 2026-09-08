@@ -336,6 +336,39 @@ class AuditToolTest(unittest.TestCase):
                     project=str(self.root / "project")))
             launch.assert_not_called()
 
+    def test_gui_all_os_keymaps_is_explicit_and_recorded_in_launch_provenance(self):
+        app = self.root / "Synthetic.app"
+        resources = app / "Contents/Resources"
+        resources.mkdir(parents=True)
+        (resources / "original.vmoptions").write_text("-Xmx512m\n")
+        (resources / "product-info.json").write_text(json.dumps({
+            "envVarBaseName": "SYNTHETIC", "buildNumber": "test-only",
+            "launch": [{"os": "macOS", "arch": "aarch64", "launcherPath": "fake-launcher",
+                        "vmOptionsFilePath": "original.vmoptions"}],
+        }))
+        for enabled in [False, True]:
+            with self.subTest(all_os_keymaps=enabled):
+                root = self.root / str(enabled)
+                audit.prepare(argparse.Namespace(output=str(root), zip=str(self.archive),
+                    sha256=audit.digest(self.archive), case=None, parent="Mac OS X 10.5+",
+                    native_mac=True, removed_action="IntroduceConstant", old_copy=None, old_history=None))
+                self.install_harness(root)
+                before = audit.config_snapshot(root)
+                with mock.patch.object(audit, "run_process") as launch:
+                    audit.launch_gui(argparse.Namespace(app=str(app), profile=str(root),
+                        project=str(self.root / "project"), all_os_keymaps=enabled))
+                launch.assert_called_once()
+                command, _, directory, context, environment = launch.call_args.args
+                recorded = json.loads((directory / "gui-command.json").read_text())
+                options = (directory / "gui.vmoptions").read_text()
+                self.assertTrue(options.startswith("-Xmx512m\n"))
+                self.assertEqual(options.count("-Dkeymap.current.os.only=false\n"), int(enabled))
+                self.assertIs(recorded["keymapOsFilterOverride"], False if enabled else None)
+                self.assertEqual(recorded["keymapOsFilterOverride"], context["keymapOsFilterOverride"])
+                self.assertEqual(environment["SYNTHETIC_VM_OPTIONS"], str(directory / "gui.vmoptions"))
+                self.assertEqual(command[0], str(resources / "fake-launcher"))
+                self.assertEqual(before, audit.config_snapshot(root))
+
     def test_harness_change_invalidates_accepted_baseline_and_export_must_match_run(self):
         source = self.prepare()
         args = self.gui_fixture(source)

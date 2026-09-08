@@ -255,6 +255,15 @@ same run directory. Use the GUI export action after the fixture project opens.
 The nine-key behavioral run should also be repeated without
 the diagnostic harness. A harness action invocation is only a data export.
 
+For a separate normal GUI inventory of bundled OS families hidden on macOS,
+`launch-gui --all-os-keymaps` appends `-Dkeymap.current.os.only=false` to that
+run's private VM options. It preserves the distribution's options and records
+`keymapOsFilterOverride: false` in the launch evidence; without the flag the
+field is null and no override is added. Keep the ordinary GUI snapshot and this
+explicit override run separate. The flag requests loading only: validate the
+actual exported keymaps, parent chains, plugin owners and complete inventory.
+It does not establish Windows/Linux physical input behavior or waive licensing.
+
 ## Native GUI launch and input precautions
 
 Use an intact signed `.app` from the official distribution. Do not rewrite

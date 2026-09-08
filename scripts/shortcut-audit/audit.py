@@ -506,6 +506,8 @@ def launch_gui(args):
             stream.write("-Dcsc.audit.removedAction=" + metadata["removedAction"] + "\n")
         if getattr(args, "stroke_inventory", False):
             stream.write("-Dcsc.audit.strokeInventory=true\n")
+        if getattr(args, "all_os_keymaps", False):
+            stream.write("-Dkeymap.current.os.only=false\n")
     environment = os.environ.copy()
     variable = info["envVarBaseName"]
     environment[variable + "_PROPERTIES"] = str(root / "idea.properties")
@@ -513,6 +515,7 @@ def launch_gui(args):
     command = [str(launcher), str(Path(args.project).resolve())]
     context = run_context(root, metadata, run_id, "gui", info["buildNumber"], str(Path(args.project).resolve()))
     context["strokeInventory"] = bool(getattr(args, "stroke_inventory", False))
+    context["keymapOsFilterOverride"] = False if getattr(args, "all_os_keymaps", False) else None
     write_json(run_directory / "gui-command.json", {**context, "argv": command, "productInfo": info,
                                            "properties": str(root / "idea.properties"), "vmOptions": str(vmoptions)})
     run_process(command, root, run_directory, context, environment)
@@ -569,6 +572,8 @@ def main():
         gui.add_argument("--" + option, required=True)
     gui.add_argument("--stroke-inventory", action="store_true",
                      help="GUI export also writes a complete .strokes.tsv companion")
+    gui.add_argument("--all-os-keymaps", action="store_true",
+                     help="Explicit GUI-only keymap.current.os.only=false override; record loaded results separately")
     gui.set_defaults(run=launch_gui)
     compare = commands.add_parser("compare-prefixes")
     compare.add_argument("--export", dest="exports", action="append", required=True,
