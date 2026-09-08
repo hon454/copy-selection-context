@@ -25,18 +25,21 @@ internal data class GitSourceSnapshot(
             checkCanceled()
             return try {
                 val before = Files.readAttributes(path, BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
-                val key = before.fileKey()?.toString()
-                if (!before.isRegularFile || key == null) return unavailable()
+                if (!before.isRegularFile) return unavailable()
+                val key = fileKey(path, before, checkCanceled) ?: return unavailable()
                 val realPath = path.toRealPath()
                 val after = Files.readAttributes(path, BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
                 checkCanceled()
-                if (!after.isRegularFile || key != after.fileKey()?.toString() ||
+                if (!after.isRegularFile || key != fileKey(path, after, checkCanceled) ||
                     before.lastModifiedTime() != after.lastModifiedTime() || before.size() != after.size()) return unavailable()
                 GitPermalinkResult.Success(GitSourceSnapshot(path, realPath, key, after.lastModifiedTime(), after.size()))
             } catch (_: IOException) {
                 unavailable()
             }
         }
+
+        private fun fileKey(path: Path, attributes: BasicFileAttributes, checkCanceled: () -> Unit): String? =
+            attributes.fileKey()?.toString() ?: if (SystemGitExecutable.isWindows) GitWindowsFileIdentity.read(path, checkCanceled) else null
 
         private fun unavailable() = GitPermalinkResult.Failure(GitPermalinkFailureReason.TARGET_UNAVAILABLE,
             GitPermalinkDiagnostic(GitPermalinkOperation.READ_HEAD_TARGET))

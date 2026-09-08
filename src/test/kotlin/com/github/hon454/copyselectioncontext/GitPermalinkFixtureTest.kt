@@ -424,7 +424,11 @@ class GitPermalinkFixtureTest : BasePlatformTestCase() {
         @Suppress("SwallowedException")
         fun background() {
             val action = work.removeFirst()
-            try { ApplicationManager.getApplication().executeOnPooledThread(action).get(30, TimeUnit.SECONDS) }
+            // The platform Runnable adapter consumes PCE as normal cancellation. Own the Future
+            // inside that adapter so the test can assert what the production lookup actually threw.
+            val result = FutureTask<Unit> { action() }
+            ApplicationManager.getApplication().executeOnPooledThread(result)
+            try { result.get(30, TimeUnit.SECONDS) }
             catch (failed: ExecutionException) { throw requireNotNull(failed.cause) }
         }
         fun ui() = uiWork.removeFirst().invoke()

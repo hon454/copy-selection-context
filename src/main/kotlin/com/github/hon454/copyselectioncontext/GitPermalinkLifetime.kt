@@ -46,7 +46,7 @@ internal class GitPermalinkLifetime(project: Project, editor: Editor, file: Virt
                 if (events.any { event ->
                     val structural = event is VFileMoveEvent || event is VFileDeleteEvent ||
                         (event is VFilePropertyChangeEvent && event.propertyName == VirtualFile.PROP_NAME)
-                    structural && event.file?.let { it === source || VfsUtilCore.isAncestor(it, source, true) } == true
+                    structural && event.file?.let { it == source || VfsUtilCore.isAncestor(it, source, true) } == true
                 }) invalidated.set(true)
             }
         })
@@ -65,7 +65,8 @@ internal class GitPermalinkLifetime(project: Project, editor: Editor, file: Virt
         val file = fileRef.get() ?: return false
         return editor.document === document && document.modificationStamp == capturedStamp &&
             file.isValid && file.path == capturedPath && file.url == capturedUrl &&
-            FileDocumentManager.getInstance().getFile(document) === file
+            // The VFS may supply distinct equal wrappers for the same file.
+            FileDocumentManager.getInstance().getFile(document) == file
     }
 
     fun editor(): Editor? = editorRef.get()

@@ -135,6 +135,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `GitRepositoryMetadataResolver.kt` | Standard and linked-worktree metadata/ref resolution |
 | `GitProcessRunner.kt` | System Git argv/environment boundary with finite process/output limits and cancellation cleanup |
 | `GitHeadTargetValidator.kt` / `GitHeadSnapshot.kt` / `GitSourceSnapshot.kt` | Original HEAD tree/blob/document comparison and immutable Git metadata/local source revalidation evidence |
+| `GitWindowsFileIdentity.kt` | Windows volume/file ID lookup through bundled JNA, using a short metadata-only handle on BGT when NIO has no file key |
 | `GitPermalinkLifetime.kt` | Request-scoped weak owners, document/VFS ABA latches and final EDT identity checks |
 | `OutputFormatOption.kt` | Localized output-format setting options |
 | `OutputFormatter.kt` | Format context, built-in formatters, and formatter factory |
