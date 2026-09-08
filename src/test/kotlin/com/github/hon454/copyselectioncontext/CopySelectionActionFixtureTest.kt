@@ -401,7 +401,9 @@ class CopySelectionActionFixtureTest : BasePlatformTestCase() {
             return when (result) {
                 is GitPermalinkResult.Failure -> result
                 is GitPermalinkResult.Success -> GitPermalinkResult.Success(GitPreparedPermalink(result.value, GitHeadContentState.CLEAN,
-                    GitHeadSnapshot(java.nio.file.Path.of(input.rootPath), GitRepositoryMetadata("https://github.com/owner/repo.git", "fixture"), emptyMap())))
+                    GitHeadSnapshot(java.nio.file.Path.of(input.rootPath), GitRepositoryMetadata("https://github.com/owner/repo.git", "fixture"), emptyMap()),
+                    GitSourceSnapshot(java.nio.file.Path.of(input.filePath), java.nio.file.Path.of(input.filePath),
+                        "fixture", java.nio.file.attribute.FileTime.fromMillis(0), 0)))
             }
         }
 

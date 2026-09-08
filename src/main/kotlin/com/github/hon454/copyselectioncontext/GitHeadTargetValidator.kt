@@ -6,7 +6,6 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.charset.CodingErrorAction
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CancellationException
 
@@ -24,6 +23,7 @@ internal data class GitPreparedPermalink(
     val content: String,
     val state: GitHeadContentState,
     val head: GitHeadSnapshot,
+    val source: GitSourceSnapshot,
 )
 
 /** Reads the original commit tree and raw blob, never the index, diff/textconv or working-tree filters. */
@@ -36,8 +36,9 @@ internal class GitHeadTargetValidator(private val runner: GitProcessRunner = Git
         val root = Path.of(input.rootPath).toAbsolutePath().normalize()
         val file = Path.of(input.filePath).toAbsolutePath().normalize()
         if (!file.startsWith(root) || file == root) return@gitLookupBoundary failure(GitPermalinkFailureReason.OUT_OF_ROOT_FILE)
-        if (!Files.isRegularFile(file) || Files.isSymbolicLink(file)) {
-            return@gitLookupBoundary failure(GitPermalinkFailureReason.TARGET_UNAVAILABLE)
+        val source = when (val captured = GitSourceSnapshot.capture(file, checkCanceled)) {
+            is GitPermalinkResult.Failure -> return@gitLookupBoundary captured
+            is GitPermalinkResult.Success -> captured.value
         }
         if (input.documentText.length > MAX_DOCUMENT_CHARACTERS) {
             return@gitLookupBoundary failure(GitPermalinkFailureReason.GIT_OUTPUT_LIMIT)
@@ -82,12 +83,17 @@ internal class GitHeadTargetValidator(private val runner: GitProcessRunner = Git
             is GitPermalinkResult.Failure -> return@gitLookupBoundary current
             is GitPermalinkResult.Success -> Unit
         }
+        when (val current = source.revalidate(checkCanceled)) {
+            is GitPermalinkResult.Failure -> return@gitLookupBoundary current
+            is GitPermalinkResult.Success -> Unit
+        }
         GitPermalinkResult.Success(GitPreparedPermalink(
             content = CopySelectionUtils.joinCaretBlocks(input.lineRanges.map { (start, end) ->
                 GitPermalinkGenerator.buildPermalink(remote.repositoryUrl, remote.host, metadata.commitSha, relative, start, end)
             }),
             state = if (headText == input.documentText) GitHeadContentState.CLEAN else GitHeadContentState.DIRTY,
             head = head,
+            source = source,
         ))
     }
 

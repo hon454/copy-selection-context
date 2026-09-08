@@ -81,7 +81,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `CopyAbsolutePathAction.kt` | Absolute path (context menu only) |
 | `CopyWithCodeContentAction.kt` | Path + markdown code block (context menu only) |
 | `CopyGitPermalinkAction.kt` / `GitRepositoryMetadataResolver.kt` / `GitPermalinkGenerator.kt` | Dumb-aware async, worktree-safe GitHub/GitLab permalink generation with BGT presentation updates, published through the shared result boundary |
-| `GitHeadTargetValidator.kt` / `GitHeadSnapshot.kt` / `GitProcessRunner.kt` / `GitPermalinkLifetime.kt` | Original local HEAD path/content verification through bounded system Git, immutable prepared results, background HEAD revalidation and request-scoped document/VFS ABA guards; one Cancel-default dirty confirmation before publication |
+| `GitHeadTargetValidator.kt` / `GitHeadSnapshot.kt` / `GitSourceSnapshot.kt` / `GitProcessRunner.kt` / `GitPermalinkLifetime.kt` | Original local HEAD path/content verification through bounded system Git, immutable prepared results, background HEAD revalidation and request-scoped document/VFS ABA guards; one Cancel-default dirty confirmation before publication |
 | `ShowCopyHistoryAction.kt` / `CopyHistoryService.kt` / `CopyHistoryPopup.kt` | Dumb-aware history opening with BGT presentation updates plus local non-roaming project history, migration, re-copy, and clear-all |
 | `CopyPreview.kt` | Bounded, single-line, Unicode-safe, markup-escaped previews |
 | `CopySelectionAnalytics.kt` | Thread-safe opt-in, local-only usage counters and immutable UI snapshots |

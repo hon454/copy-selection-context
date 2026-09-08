@@ -197,6 +197,35 @@ class GitPermalinkFixtureTest : BasePlatformTestCase() {
         assertUntouched()
     }
 
+    fun testExternalDeleteDuringConfirmationWithoutVfsRefreshInvalidatesApproval() =
+        assertExternalSourceChangeRejected { Files.delete(it) }
+
+    fun testExternalRenameDuringConfirmationWithoutVfsRefreshInvalidatesApproval() =
+        assertExternalSourceChangeRejected { Files.move(it, it.resolveSibling("moved.txt")) }
+
+    fun testExternalReplacementDuringConfirmationWithoutVfsRefreshInvalidatesApproval() =
+        assertExternalSourceChangeRejected {
+            val replacement = it.resolveSibling("replacement.txt")
+            Files.writeString(replacement, ORIGINAL)
+            Files.move(replacement, it, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        }
+
+    private fun assertExternalSourceChangeRejected(change: (Path) -> Unit) {
+        edit("dirty\n$ORIGINAL")
+        val file = myFixture.file.virtualFile
+        val action = harness().apply { onConfirm = {
+            change(directory.resolve("source.txt"))
+            // Cached VFS identity is still valid; the final BGT source check must detect this.
+            assertTrue(file.isValid)
+            assertEquals(directory.resolve("source.txt").toString(), file.path)
+        } }
+        action.start(); action.background(); action.ui(); action.background(); action.ui()
+        assertEquals(1, action.confirmations)
+        assertEquals(1, action.revalidations)
+        assertEquals(listOf(GitPermalinkFailureReason.TARGET_UNAVAILABLE), action.failures)
+        assertUntouched()
+    }
+
     fun testAnotherProjectsCopyInsideConfirmationSupersedesThePreparedGitRequest() {
         withOtherProject { other ->
             val editor = EditorFactory.getInstance().createEditor(myFixture.editor.document, other)

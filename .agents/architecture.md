@@ -134,7 +134,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `GitPermalinkResult.kt` | Typed permalink results, failure categories, and redacted diagnostic formatting |
 | `GitRepositoryMetadataResolver.kt` | Standard and linked-worktree metadata/ref resolution |
 | `GitProcessRunner.kt` | System Git argv/environment boundary with finite process/output limits and cancellation cleanup |
-| `GitHeadTargetValidator.kt` / `GitHeadSnapshot.kt` | Original HEAD tree/blob/document comparison and immutable metadata revalidation evidence |
+| `GitHeadTargetValidator.kt` / `GitHeadSnapshot.kt` / `GitSourceSnapshot.kt` | Original HEAD tree/blob/document comparison and immutable Git metadata/local source revalidation evidence |
 | `GitPermalinkLifetime.kt` | Request-scoped weak owners, document/VFS ABA latches and final EDT identity checks |
 | `OutputFormatOption.kt` | Localized output-format setting options |
 | `OutputFormatter.kt` | Format context, built-in formatters, and formatter factory |

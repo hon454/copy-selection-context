@@ -98,7 +98,10 @@ open class CopyGitPermalinkAction : DumbAwareAction() {
         GitHeadTargetValidator().prepare(input, checkCanceled)
 
     internal open fun revalidateHead(prepared: GitPreparedPermalink, checkCanceled: () -> Unit): GitPermalinkResult<Unit> =
-        prepared.head.revalidate(checkCanceled)
+        when (val head = prepared.head.revalidate(checkCanceled)) {
+            is GitPermalinkResult.Failure -> head
+            is GitPermalinkResult.Success -> prepared.source.revalidate(checkCanceled)
+        }
 
     protected open fun confirmHeadDifference(project: Project): Boolean = Messages.showDialog(
         project,
