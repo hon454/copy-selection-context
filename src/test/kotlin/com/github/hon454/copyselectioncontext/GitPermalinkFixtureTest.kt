@@ -281,13 +281,13 @@ class GitPermalinkFixtureTest : BasePlatformTestCase() {
     fun testNewCopySuppressesAQueuedGitFailureAndCancelsAnUnstartedOldLookup() {
         val failed = harness().apply { prepareFailure = GitPermalinkFailureReason.SYSTEM_GIT_UNAVAILABLE }
         failed.start(); failed.background()
-        ClipboardRequestCoordinator.recopy("newer")
+        CopyHistoryPopup.recopy(project, "newer")
         failed.ui()
         assertTrue(failed.failures.isEmpty())
         assertTrue(failed.logs.isEmpty())
         val unstarted = harness()
         unstarted.start()
-        ClipboardRequestCoordinator.recopy("newer again")
+        CopyHistoryPopup.recopy(project, "newer again")
         assertFailsWith<ProcessCanceledException> { unstarted.background() }
         assertTrue(unstarted.uiWork.isEmpty())
         assertFalse(unstarted.lifetime!!.isAlive())
@@ -416,6 +416,8 @@ class GitPermalinkFixtureTest : BasePlatformTestCase() {
             actionPerformed(TestActionEvent.createTestEvent(this, context))
         }
 
+        // Preserve the exact platform cancellation instance across Future.get's wrapper.
+        @Suppress("SwallowedException")
         fun background() {
             val action = work.removeFirst()
             try { ApplicationManager.getApplication().executeOnPooledThread(action).get(30, TimeUnit.SECONDS) }
