@@ -3,7 +3,9 @@ package com.github.hon454.copyselectioncontext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.ide.CopyPasteManager
+import com.intellij.openapi.progress.ProcessCanceledException
 import java.awt.datatransfer.StringSelection
+import java.util.concurrent.CancellationException
 
 internal class CopyResultRequest internal constructor(internal val id: Long)
 
@@ -20,14 +22,25 @@ sealed interface CopyPublicationOutcome {
 internal class ClipboardRequestCoordinator {
     private var sequence = 0L
     private var attempted = false
+    private var clipboardFailed = false
+    private var failureReportClaimed = false
 
     @Synchronized fun beginRequest(): CopyResultRequest {
         sequence = Math.incrementExact(sequence)
         attempted = false
+        clipboardFailed = false
+        failureReportClaimed = false
         return CopyResultRequest(sequence)
     }
 
     @Synchronized fun isCurrent(request: CopyResultRequest): Boolean = request.id == sequence
+
+    /** Claim before dispatch so repeated or reentrant callers cannot schedule another error. */
+    @Synchronized fun claimFailureReport(request: CopyResultRequest): Boolean {
+        if (!isCurrent(request) || !clipboardFailed || failureReportClaimed) return false
+        failureReportClaimed = true
+        return true
+    }
 
     @Synchronized fun writeIfCurrent(
         request: CopyResultRequest,
@@ -39,7 +52,17 @@ internal class ClipboardRequestCoordinator {
         attempted = true
         validate()?.let { return it }
         if (!isCurrent(request)) return CopyNotPublishedReason.STALE
-        return try { write(); null } catch (_: Exception) { CopyNotPublishedReason.CLIPBOARD_FAILURE }
+        return try {
+            write()
+            null
+        } catch (cancelled: ProcessCanceledException) {
+            throw cancelled
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            if (isCurrent(request)) clipboardFailed = true
+            CopyNotPublishedReason.CLIPBOARD_FAILURE
+        }
     }
 
     companion object {
@@ -47,10 +70,9 @@ internal class ClipboardRequestCoordinator {
             ApplicationManager.getApplication().getService(ClipboardRequestCoordinator::class.java)
 
         /** Managed re-copy is clipboard-only and takes its place in the same application sequence. */
-        fun recopy(content: String, isAlive: () -> Boolean = { true }): CopyPublicationOutcome {
+        fun recopy(request: CopyResultRequest, content: String, isAlive: () -> Boolean): CopyPublicationOutcome {
             ApplicationManager.getApplication().assertIsDispatchThread()
             val coordinator = getInstance()
-            val request = coordinator.beginRequest()
             val failure = coordinator.writeIfCurrent(request,
                 { if (isAlive()) null else CopyNotPublishedReason.DISPOSED },
                 { CopyPasteManager.getInstance().setContents(StringSelection(content)) })

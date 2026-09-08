@@ -16,6 +16,7 @@ class ContextCollectionCopyCommand private constructor(
     private val confirm: (ContextCollectionOutputResult.Ready) -> Boolean,
     private val report: (String) -> Unit,
     private val dispatch: (() -> Unit) -> Unit,
+    private val failureReporter: CopyFailureReporter,
 ) : Disposable {
     private var pending: Disposable? = null
     private var disposed = false
@@ -23,7 +24,7 @@ class ContextCollectionCopyCommand private constructor(
     constructor(project: Project) : this(project, ContextCollectionOutputService.getInstance(project), CopyResultPublisher.getInstance(project),
         { ready -> confirmCopy(project, ready) },
         { message -> Messages.showWarningDialog(project, message, CopySelectionBundle.message("collection.copy.title")) },
-        { ApplicationManager.getApplication().invokeLater(it) })
+        { ApplicationManager.getApplication().invokeLater(it) }, CopyFailureReporter.getInstance(project))
 
     fun execute() {
         ApplicationManager.getApplication().assertIsDispatchThread()
@@ -57,12 +58,9 @@ class ContextCollectionCopyCommand private constructor(
                 val outcome = publisher.publishOutcomeIfCurrent(request,
                     CopyResult(result.payload, language = result.language, actualFormat = result.actualFormat),
                     CopyResultPolicy.COLLECTION, output::serializePublication, { !disposed && output.isCurrent(key) })
-                if (outcome is CopyPublicationOutcome.NotPublished && publisher.isCurrent(request)) {
-                    when (outcome.reason) {
-                        CopyNotPublishedReason.INVALIDATED -> report(CopySelectionBundle.message("collection.copy.invalidated"))
-                        CopyNotPublishedReason.CLIPBOARD_FAILURE -> report(CopySelectionBundle.message("collection.copy.failed"))
-                        else -> Unit
-                    }
+                failureReporter.report(request, outcome) { !disposed }
+                if (outcome == CopyPublicationOutcome.NotPublished(CopyNotPublishedReason.INVALIDATED) && publisher.isCurrent(request)) {
+                    report(CopySelectionBundle.message("collection.copy.invalidated"))
                 }
             }
         }
@@ -100,7 +98,8 @@ class ContextCollectionCopyCommand private constructor(
 
         internal fun createForTest(project: Project, output: ContextCollectionOutputService, publisher: CopyResultPublisher,
             confirm: (ContextCollectionOutputResult.Ready) -> Boolean, report: (String) -> Unit,
-            dispatch: (() -> Unit) -> Unit): ContextCollectionCopyCommand =
-            ContextCollectionCopyCommand(project, output, publisher, confirm, report, dispatch)
+            dispatch: (() -> Unit) -> Unit,
+            failureReporter: CopyFailureReporter = CopyFailureReporter.getInstance(project)): ContextCollectionCopyCommand =
+            ContextCollectionCopyCommand(project, output, publisher, confirm, report, dispatch, failureReporter)
     }
 }

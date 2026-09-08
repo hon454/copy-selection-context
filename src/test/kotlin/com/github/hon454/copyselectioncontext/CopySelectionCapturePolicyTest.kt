@@ -160,8 +160,10 @@ class CopySelectionCapturePolicyTest {
         every { event.getData(CommonDataKeys.VIRTUAL_FILE) } returns file
         every { project.basePath } returns null
         every { project.getService(CopyResultPublisher::class.java) } returns publisher
+        every { project.getService(CopyFailureReporter::class.java) } returns mockk(relaxed = true)
         every { publisher.beginRequest() } returns request
-        every { publisher.publishIfCurrent(request, capture(published), CopyResultPolicy.STANDARD) } returns true
+        every { publisher.publishOutcomeIfCurrent(request, capture(published), CopyResultPolicy.STANDARD, any(), any()) } returns
+            CopyPublicationOutcome.Published(emptyList())
         every { editor.caretModel } returns caretModel
         every { editor.document } returns document
         every { selectedCaret.hasSelection() } returns true

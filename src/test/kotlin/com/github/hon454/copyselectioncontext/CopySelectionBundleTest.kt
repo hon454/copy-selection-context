@@ -8,6 +8,15 @@ import java.text.MessageFormat
 import java.util.Properties
 
 class CopySelectionBundleTest {
+    @Test
+    fun `clipboard error has fixed localized text without copied data arguments`() {
+        ALL_BUNDLES.forEach { (localeName, resourcePath) ->
+            val message = loadBundle(resourcePath).getProperty("notification.clipboard.failed")
+            assertTrue(message.isNotBlank(), localeName)
+            assertEquals(message, MessageFormat(message).format(emptyArray<Any>()), localeName)
+            assertTrue(!message.contains('{'), localeName)
+        }
+    }
 
     @Test
     fun `every shipped locale bundle has exactly the active base keys`() {

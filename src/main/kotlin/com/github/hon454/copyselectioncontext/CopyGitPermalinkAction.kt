@@ -22,6 +22,7 @@ open class CopyGitPermalinkAction : DumbAwareAction() {
         val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
         val publisher = copyResultPublisher(project)
         val request = publisher.beginRequest()
+        val failureReporter = copyFailureReporter(project)
 
         val lineRanges = resolveLineRanges(editor)
         val rootPath = resolveGitRootPath(project, file)
@@ -48,7 +49,7 @@ open class CopyGitPermalinkAction : DumbAwareAction() {
                         }
                     }
                     is GitPermalinkResult.Success -> {
-                        publisher.publishIfCurrent(
+                        val outcome = publisher.publishOutcomeIfCurrent(
                             request = request,
                             result = CopyResult(
                                 content = result.value,
@@ -57,6 +58,7 @@ open class CopyGitPermalinkAction : DumbAwareAction() {
                             ),
                             policy = CopyResultPolicy.GIT_PERMALINK,
                         )
+                        failureReporter.report(request, outcome)
                     }
                 }
             }
@@ -88,6 +90,8 @@ open class CopyGitPermalinkAction : DumbAwareAction() {
 
     internal open fun copyResultPublisher(project: Project): CopyResultPublisher =
         CopyResultPublisher.getInstance(project)
+
+    internal open fun copyFailureReporter(project: Project): CopyFailureReporter = CopyFailureReporter.getInstance(project)
 
     internal fun resolveLineRanges(editor: Editor): List<Pair<Int, Int>> {
         if (editor.caretModel.caretCount <= 1) {

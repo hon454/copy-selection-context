@@ -38,7 +38,7 @@ The publisher's `STANDARD` policy enables clipboard writes, optional analytics, 
 
 ## Clipboard
 
-All successful standard, permalink and collection results reach `CopyResultPublisher`; its production side-effect adapter performs the clipboard write inside `ClipboardRequestCoordinator.writeIfCurrent`. The coordinator owns only application request identity and the atomic final check/write. Acquire the request at invocation, before async work, and keep dialogs outside its monitor. Final collection validation must run on EDT with content/settings mutations. Use `ClipboardRequestCoordinator.recopy` for clipboard-only history/status actions. Never write before ordering is checked. `COLLECTION` disables history/gutter, attributes analytics to prepared actual format and reduced language, and counts review independently. `Published(feedbackFailures)` means the clipboard succeeded even if an optional effect failed; never retry a token or an attempted effect.
+All successful standard, permalink and collection results reach `CopyResultPublisher`; its production side-effect adapter performs the clipboard write inside `ClipboardRequestCoordinator.writeIfCurrent`. The coordinator owns only application request identity and scalar attempt/error-claim state. Acquire the request at invocation, before async work, and keep dialogs outside its monitor. Final collection validation must run on EDT with content/settings mutations. Use `CopyFailureReporter.getInstance(project).recopy(content)` for clipboard-only history/status actions, supplying a widget lifetime check for status. It acquires one request, passes that identity into coordinator re-copy and reports only a current clipboard failure. Standard/Git/collection callers pass their structured publication outcome to `report(request, outcome)`. Never write before ordering is checked. `COLLECTION` disables history/gutter, attributes analytics to prepared actual format and reduced language, and counts review independently. `Published(feedbackFailures)` means the clipboard succeeded even if an optional effect failed; never retry a token or an attempted effect. See [the failure contract](../docs/development/clipboard-failure-contract.md).
 
 ## Notifications
 
@@ -97,7 +97,7 @@ There are 39 explicit mappings, including Kotlin, Java, C#, JavaScript/TypeScrip
 ## Status Bar Widget
 
 ```kotlin
-class CopySelectionStatusBarWidget : CustomStatusBarWidgetAdapter()
+class CopySelectionStatusBarWidget(project: Project) : CustomStatusBarWidgetAdapter()
 ```
 
 The Java `CustomStatusBarWidgetAdapter` implements the public `CustomStatusBarWidget` API without Kotlin generating compatibility bridges for deprecated `StatusBarWidget` default methods. The Kotlin widget extends that adapter instead of implementation-only editor widget classes or the obsolete IntelliJ `Consumer` callback. Its Swing label is created lazily, stores the full last-copied content in an `AtomicReference`, shows a bounded single-line preview with a total 40-character budget including its prefix, and copies the full value again when clicked. `CopyPreview` preserves Unicode code points, escapes notification/tooltip markup, and never cuts an escape entity. `CopySelectionStatusBarWidgetFactory` registers the widget through `statusBarWidgetFactory` in `plugin.xml`; standard path/code actions call `update()` after copying.

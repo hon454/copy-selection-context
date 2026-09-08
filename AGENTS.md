@@ -72,6 +72,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `ShowContextCollectionAction.kt` | Localized no-editor tool-window open action without a default shortcut |
 | `ContextCollectionCopyCommand.kt` / `CopyAllContextCollectionAction.kt` | Shared no-editor copy command, combined confirmation and final EDT input validation |
 | `ClipboardRequestCoordinator.kt` | Application-wide request tokens and atomic final clipboard transaction; no retained payload/project state |
+| `CopyFailureReporter.kt` | Project-owned, localized clipboard errors with one claim per failed request and final token/project/widget lifetime checks |
 | `AddToContextCollectionAction.kt` | Add-only editor action; no publisher or copy side effects |
 | `SelectionContext.kt` | Immutable per-caret snapshot of path, file, range, code, language, and filename inputs |
 | `CopySelectionUtils.kt` | Path/language helpers and policy-aware single-pass selection context capture without unused text reads |
@@ -92,6 +93,8 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 **Flow**: User trigger -> Action captures/formats a result or begins async permalink resolution -> project-scoped `CopyResultPublisher` applies explicit standard/permalink policy -> clipboard -> optional standard-only analytics -> gutter marker -> project history -> optional notification -> status bar -> optional standard-only review eligibility
 
 Collection copy consumes the current immutable output key/result and validates content/settings revision, actual options and project lifetime on EDT immediately before the application coordinator writes. `COLLECTION` enables opt-in analytics and independent review accounting once, notification preference and status; history and gutter are disabled. `Published(feedbackFailures)` remains successful after optional feedback failure; no effect is retried. Standard, permalink, collection and clipboard-only history/status re-copy all acquire application request tokens. See `docs/development/context-collection-output-contract.md` for #74 integration.
+
+All five managed copy entry points report current clipboard write failure through `CopyFailureReporter`, regardless of success notification settings. Claims are bound to the coordinator's failed attempt; queued errors recheck token and project lifetime immediately before notification, plus widget lifetime for status re-copy. No retry or clipboard restoration is attempted. See `docs/development/clipboard-failure-contract.md`.
 
 ## Conventions
 

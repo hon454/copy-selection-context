@@ -63,8 +63,10 @@ object CopyHistoryPopup {
             )
         } + PopupItem.ClearAll
 
-    internal fun recopy(project: Project, content: String): CopyPublicationOutcome =
-        ClipboardRequestCoordinator.recopy(content) { !project.isDisposed }
+    internal fun recopy(project: Project, content: String): CopyPublicationOutcome {
+        if (project.isDisposed) return CopyPublicationOutcome.NotPublished(CopyNotPublishedReason.DISPOSED)
+        return CopyFailureReporter.getInstance(project).recopy(content)
+    }
 
     internal fun handleSelection(
         service: CopyHistoryService,
