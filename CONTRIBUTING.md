@@ -117,6 +117,12 @@ required validation cannot reach either publication step. Signing, canonical
 ZIP selection, checksum, attestation, GitHub Release creation, and Marketplace
 publication remain one Linux job and are never repeated per OS.
 
+The Windows row invokes Gradle with PowerShell and `gradlew.bat`, discovers the
+Git for Windows `bash.exe`, and exports that exact path as `BASH_EXE` for tests
+that execute the checked-in release scripts. Its prerequisite check runs the
+same executable, avoiding an accidental fallback to the legacy WSL
+`C:\Windows\System32\bash.exe`. Unix rows use `./gradlew` and Bash directly.
+
 For a pre-merge, non-publishing execution, push the exact candidate commit to a
 branch matching `codex/verify-*`. That branch trigger runs `Release Validation`
 with read-only token permissions and no release secrets or publication steps.

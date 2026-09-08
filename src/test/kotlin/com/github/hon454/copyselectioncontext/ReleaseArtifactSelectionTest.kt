@@ -131,7 +131,7 @@ class ReleaseArtifactSelectionTest {
         environment: Map<String, String>,
         outputFile: Path,
     ): ScriptResult {
-        val processBuilder = ProcessBuilder(listOf("bash", script.toString()) + arguments)
+        val processBuilder = ProcessBuilder(listOf(TestShell.bashExecutable(), script.toString()) + arguments)
             .directory(projectRoot.toFile())
             .redirectErrorStream(true)
         listOf("CERTIFICATE_CHAIN", "PRIVATE_KEY", "PUBLISH_TOKEN").forEach {

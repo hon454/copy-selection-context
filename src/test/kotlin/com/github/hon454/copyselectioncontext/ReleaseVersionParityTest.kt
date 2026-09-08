@@ -183,7 +183,7 @@ class ReleaseVersionParityTest {
     }
 
     private fun runVerifier(tag: String, buildFile: Path? = null): CommandResult {
-        val command = mutableListOf("bash", verifier.toString(), tag)
+        val command = mutableListOf(TestShell.bashExecutable(), verifier.toString(), tag)
         buildFile?.let { command.add(it.toString()) }
         val process = ProcessBuilder(command)
             .directory(projectRoot.toFile())
@@ -226,7 +226,7 @@ class ReleaseVersionParityTest {
         steps.forEachIndexed { index, step ->
             val outputFile = Files.createFile(tempDir.resolve("step-$index-output"))
             val builder = ProcessBuilder(
-                "bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c",
+                TestShell.bashExecutable(), "--noprofile", "--norc", "-e", "-o", "pipefail", "-c",
                 renderExpressions(step["run"] as String, context),
             ).directory(projectRoot.toFile()).redirectErrorStream(true)
             val environment = builder.environment()

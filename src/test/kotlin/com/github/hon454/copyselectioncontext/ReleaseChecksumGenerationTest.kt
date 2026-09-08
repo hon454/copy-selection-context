@@ -50,7 +50,7 @@ class ReleaseChecksumGenerationTest {
 
     private fun runGenerator(pluginZip: Path, checksumFile: Path): CommandResult {
         val process = ProcessBuilder(
-            "bash",
+            TestShell.bashExecutable(),
             generator.toString(),
             pluginZip.toString(),
             checksumFile.toString(),

@@ -1,0 +1,24 @@
+name: Excluded Windows validation
+on: push
+jobs:
+  os-tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        exclude:
+          - os: windows-latest
+    steps:
+      - if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: ./gradlew allTests koverXmlReport koverHtmlReport --continue --stacktrace --console=plain
+      - if: matrix.os == 'macos-latest'
+        shell: bash
+        run: ./gradlew allTests --continue --stacktrace --console=plain
+      - if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: .\gradlew.bat allTests --continue --stacktrace --console=plain

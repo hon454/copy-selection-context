@@ -19,6 +19,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.xmlb.XmlSerializer
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
+import java.nio.file.Files
 
 class ContextCollectionFixtureTest : BasePlatformTestCase() {
     private lateinit var service: ContextCollectionService
@@ -200,7 +201,9 @@ class ContextCollectionFixtureTest : BasePlatformTestCase() {
 
     fun testIndependentProjectLifetimeAndSessionReset() {
         val otherLifetime = Disposer.newDisposable()
-        val otherProject = requireNotNull(ProjectManager.getInstance().createProject("collection-other", myFixture.tempDirPath + "/other-project"))
+        val otherProjectPath = Files.createTempDirectory("copy-selection-context-collection-other-")
+        val otherProject =
+            requireNotNull(ProjectManager.getInstance().createProject("collection-other", otherProjectPath.toString()))
         Disposer.register(otherLifetime, otherProject)
         val otherService = ContextCollectionService(otherProject)
         Disposer.register(otherLifetime, otherService)
@@ -226,6 +229,7 @@ class ContextCollectionFixtureTest : BasePlatformTestCase() {
         } finally {
             EditorFactory.getInstance().releaseEditor(otherEditor)
             ApplicationManager.getApplication().runWriteAction { Disposer.dispose(otherLifetime) }
+            otherProjectPath.toFile().deleteRecursively()
         }
     }
 

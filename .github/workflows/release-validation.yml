@@ -48,13 +48,25 @@ jobs:
           command -v bash mktemp dirname find sort basename mv rm
           command -v sha256sum || command -v shasum
 
+      - name: Select Git Bash for Windows child processes
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $gitExecutable = (Get-Command git.exe -ErrorAction Stop).Source
+          $gitRoot = Split-Path -Parent (Split-Path -Parent $gitExecutable)
+          $gitBash = Join-Path $gitRoot 'bin\bash.exe'
+          if (-not (Test-Path -LiteralPath $gitBash -PathType Leaf)) {
+            Write-Error "Git Bash was not found at $gitBash"
+            exit 1
+          }
+          "BASH_EXE=$gitBash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Check Windows Bash prerequisites
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          bash --version
-          where.exe bash
-          bash -c "command -v bash mktemp dirname find sort basename mv rm && (command -v sha256sum || command -v shasum)"
+          & $env:BASH_EXE --version
+          & $env:BASH_EXE -c "command -v bash mktemp dirname find sort basename mv rm && (command -v sha256sum || command -v shasum)"
 
       - name: Run Linux test suite and generate Kotlin coverage
         if: matrix.os == 'ubuntu-latest'

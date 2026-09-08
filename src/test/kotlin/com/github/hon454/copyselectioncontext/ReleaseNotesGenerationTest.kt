@@ -76,7 +76,7 @@ class ReleaseNotesGenerationTest {
         )
 
         val process = ProcessBuilder(
-            "bash",
+            TestShell.bashExecutable(),
             generator.toString(),
             "1.2.0",
             "v1.2.0",
