@@ -105,15 +105,25 @@ keymaps. Run other host distributions separately if their bundled contributions
 differ. Never label macOS-hosted keymap data as Windows/Linux runtime evidence.
 
 Output includes the exact launch argv and product identity (`audit-command.json`),
-`audit-console.log`, the complete `keymaps.tsv` and `summary.json`. A nonzero IDE
-exit, absent completion marker, zero keymaps or missing product action is a
-failure. A complete export containing external G-prefix occupancy is evidence
+`audit-console.log`, PID/start/exit records, the complete `keymaps.tsv` and
+`summary.json`. Schema 2 exports record profile/run/PID identity, open projects,
+initialized JSON parent chains, all nine command and watched-action bindings
+(including mouse shortcuts and explicit empty lists), and all six probe strokes.
+The parser rejects missing/duplicate rows, invalid schema/columns, mismatched
+completion counts, incomplete per-keymap bindings and missing occupancy for a
+recorded shortcut. A nonzero IDE exit also fails. Interrupted or failed launches
+terminate their own process group and save the exit/cleanup record. Old schema 1
+data requires `summarize --allow-legacy`; it is inspection-only and cannot certify
+parents or become baseline/candidate acceptance evidence. A complete export containing external G-prefix occupancy is evidence
 of a conflict, not a passing audit. Report it for a product decision; do not
 choose replacement keys or unbind external actions.
 
-For GUI export, install only the candidate and the audit harness in a fresh
-test plugin directory, and add `csc.audit.output=EVIDENCE_DIRECTORY` to its
-`idea.properties`. The nine-key behavioral run should also be repeated without
+For GUI export, install only the product and the audit harness in a fresh test
+plugin directory, then use `launch-gui --app IDE_APP --profile TEST_PROFILE
+--project FIXTURE_PROJECT`. The runner creates a unique `gui-run-UUID` directory,
+private VM options and `gui-command.json`; its VM options set the export location
+and profile/run identities. Save screenshots and accessibility text inside that
+same run directory. Use the GUI export action after the fixture project opens. The nine-key behavioral run should also be repeated without
 the diagnostic harness. A harness action invocation is only a data export.
 
 ## Native GUI launch and input precautions
@@ -165,13 +175,13 @@ fixture path as `FILE`.
 | K-C | Prefix, release, C | Clipboard is exactly ` @FILE#L2 `; history/status update once |
 | K-R | Prefix, release, R | Clipboard is exactly ` @example.txt#L2 `, including leading/trailing spaces |
 | K-P | Prefix, release, P | Clipboard is exactly ` @FILE#L2 `, including leading/trailing spaces |
-| K-B | Prefix, release, B | Existing path/range plus fenced `beta` text; inspect full clipboard |
+| K-B | Prefix, release, B | Exact code payload `B` defined below; UTF-8 clipboard bytes match |
 | K-L | Prefix, release, L on clean committed text | Commit-pinned fixture URL with `#L2`; unchanged existing permalink publication contract |
 | K-L-dirty | Change line 2, run L, cancel; repeat and confirm | Cancel preserves clipboard; confirm uses captured HEAD/range; no duplicate write |
 | K-A | Seed a known clipboard value, prefix/release/A | One collection capture, clipboard/history/status unchanged |
-| K-H | Prepare history, close every editor, prefix/release/H | History opens; re-copy selected item produces its exact payload |
+| K-H | In a fresh profile, execute K-C once, close every editor, prefix/release/H | History opens with the C item; re-copy yields exactly ` @FILE#L2 ` |
 | K-O | Close every editor, prefix/release/O | Collection tool window opens with the saved capture |
-| K-F | With no editor, prefix/release/F | Existing combined collection payload copied once; compare preview/full clipboard |
+| K-F | Clear the test collection, K-A once, set collection Include Code off, close all editors, prefix/release/F | Exactly ` @FILE#L2 ` copied once; repeat with Include Code on and expect payload `B` |
 | K-release | Prefix with modifiers held, varied release timing, then letter | Record platform behavior and verify the documented all-released/plain-letter path |
 | K-Escape | Prefix, Escape, then type a sentinel | No product action; normal typing resumes |
 | K-timeout | Prefix, wait beyond observed platform timeout, then type | No stuck chord state or unintended product action; record actual timeout |
@@ -179,6 +189,20 @@ fixture path as `FILE`.
 | K-disabled | No selection/editor/project as applicable | Disabled editor actions do not copy; no-editor actions retain their contracts |
 | K-focus | Prefix, move focus between editor/tool window/settings/another app | No stale context action or trapped typing after cancellation |
 | K-indexing | Trigger while indexing; cancel and resume typing | Dumb-aware action behavior is preserved; no index dependency exception |
+
+The exact code payload `B`, expressed as a JSON string after replacing `FILE`
+with the absolute fixture path, is:
+
+```json
+" @FILE#L2 \n```text\nbeta\n```"
+```
+
+There is no trailing newline after the closing fence. K-F uses one capture to
+avoid duplicate-source snapshot labels. For a separate two-capture check at the
+same path/range, record each capture number and UTC timestamp and build the
+expected string as `[Snapshot #N · YYYY-MM-DDTHH:mm:ss.SSSZ]\n` plus that capture's
+formatted payload, joined with exactly `\n\n`. Compare against this independently
+constructed string; the UI preview alone is not an oracle.
 
 ## Settings matrix
 
@@ -218,8 +242,10 @@ each case with `prepare --case CASE --native-mac --parent OBSERVED_KEYMAP_ID`.
 For `removed-ide`, supply `--removed-action ID` from an actual baseline collision
 dump. For `explicit-old`, supply `--old-copy KEYSTROKE --old-history KEYSTROKE`
 from its effective runtime bindings. The tool writes **seed XML**, not a record of IDE acceptance. Start v1.6.0,
-verify the selected keymap/values in UI and runtime export, quit cleanly, then
-take a config snapshot. Only that accepted baseline is ready for cloning.
+verify the selected keymap/values in UI and runtime export, and quit cleanly.
+`launch-gui` records the config snapshot after process exit. Then explicitly
+record the observation with `accept-baseline` as below. Seed preparation or a
+boolean acceptance marker cannot authorize a clone.
 
 | Case | Baseline | Required candidate result before explicit restore |
 | --- | --- | --- |
@@ -237,11 +263,32 @@ The same dump maps Copy to `meta alt C`, while the IDE's CallHierarchy remains
 binding or a collision. Use the observed values for each Rider/IDE lineage.
 
 ```bash
-python3 scripts/shortcut-audit/audit.py snapshot BASELINE_PROFILE BEFORE_JSON
+python3 scripts/shortcut-audit/audit.py accept-baseline \
+  --profile BASELINE_PROFILE --run-directory BASELINE_PROFILE/gui-run-UUID \
+  --export BASELINE_PROFILE/gui-run-UUID/keymaps-gui-TIMESTAMP.tsv \
+  --observed-keymap OBSERVED_KEYMAP_ID --performer OPERATOR_NAME \
+  --notes OBSERVATION_DESCRIPTION --confirm-observed \
+  --gui-evidence BASELINE_PROFILE/gui-run-UUID/keymap.png \
+  --gui-evidence BASELINE_PROFILE/gui-run-UUID/keymap.txt
 python3 scripts/shortcut-audit/audit.py clone-upgrade \
   --source BASELINE_PROFILE --output NEW_CANDIDATE_PROFILE \
   --zip CANDIDATE_ZIP --sha256 CANDIDATE_SHA256 --commit INTEGRATED_MAIN_SHA
 ```
+
+Acceptance checks that the GUI loaded v1.6.0 in the intended four profile paths,
+had the expected project and keymap open, exported complete bindings from the
+recorded PID/run within its lifetime, and exited normally. It verifies each seed's
+keyboard/mouse/empty/deletion contract and binds the raw export, launch records,
+PNG or native JPEG screenshot, accessibility text and unchanged exit config snapshot by hashes.
+The operator attests to what the screenshot and UI actually showed; these hashes
+provide integrity checks, not independent attestation against a fabricated set
+of artifacts. Unit tests use explicitly synthetic evidence, never real GUI PASS.
+
+Accepted baselines are frozen: the launcher refuses to reopen them, and cloning
+revalidates all evidence and current config/product hashes. Source and target
+must be disjoint canonical paths (neither equal nor an ancestor of the other),
+including symlink aliases. A target nested under the source is rejected before
+any writes. Preserve the accepted original and work only in a new sibling tree.
 
 The clone copies only the baseline config and installs the candidate product ZIP
 in a new plugin directory; mutable system/cache/log directories are new. Preserve

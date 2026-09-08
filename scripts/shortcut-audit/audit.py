@@ -11,17 +11,17 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import subprocess
+import uuid
 from datetime import datetime, timezone
 import xml.etree.ElementTree as ET
 import zipfile
 
+from evidence import COMMANDS, COMMAND_IDS, PREFIX, PRODUCT_ID, parse_export, require
+
 
 HERE = Path(__file__).resolve().parent
-PRODUCT_ID = "com.github.hon454.copy-selection-context"
-PREFIX = "CopySelectionContext."
-COMMANDS = ["Copy", "ShowHistory", "AddToCollection", "ShowCollection", "CopyAllCollection",
-            "CopyRelativePath", "CopyAbsolutePath", "CopyWithCodeContent", "CopyGitPermalink"]
 CASES = ["pristine", "unrelated-only", "explicit-old", "custom", "unassigned", "removed-ide"]
 
 
@@ -72,9 +72,10 @@ def initialize(root):
 
 def profile_metadata(root, archive, version, **extra):
     write_json(root / "profile.json", {
-        "schema": 1, "createdUtc": datetime.now(timezone.utc).isoformat(),
+        "schema": 2, "profileId": str(uuid.uuid4()), "createdUtc": datetime.now(timezone.utc).isoformat(),
         "profile": str(root), "productZip": str(archive), "productSha256": digest(archive),
-        "productVersion": version, "state": "prepared-not-launched", **extra,
+        "productVersion": version, "productFiles": tree_snapshot(root, "plugins"),
+        "state": "prepared-not-launched", **extra,
     })
 
 
@@ -123,16 +124,15 @@ def prepare(args):
         seed_keymap(root, args.case, args.parent, args.native_mac, args.removed_action,
                     args.old_copy, args.old_history)
     profile_metadata(root, archive, version, case=args.case, parent=args.parent,
-                     removedAction=args.removed_action, oldCopy=args.old_copy, oldHistory=args.old_history)
+                     nativeMac=args.native_mac, removedAction=args.removed_action,
+                     oldCopy=args.old_copy, oldHistory=args.old_history)
 
 
 def clone_upgrade(args):
     source, target = Path(args.source).resolve(), Path(args.output).resolve()
-    original = json.loads((source / "profile.json").read_text())
-    if original["productVersion"] != "1.6.0":
-        raise ValueError("Source is not a prepared v1.6.0 baseline")
-    if (source / "config/.lock").exists():
-        raise ValueError("Stop the baseline IDE before cloning")
+    require(source != target and source not in target.parents and target not in source.parents,
+            "source and target must be disjoint canonical paths")
+    validate_acceptance(source)
     archive = Path(args.zip).resolve()
     if digest(archive) != args.sha256:
         raise ValueError("Candidate ZIP digest mismatch")
@@ -144,8 +144,207 @@ def clone_upgrade(args):
 
 
 def config_snapshot(root):
-    return {str(path.relative_to(root)): digest(path)
-            for path in sorted((root / "config").rglob("*")) if path.is_file()}
+    return tree_snapshot(root, "config")
+
+
+def tree_snapshot(root, directory):
+    result = {}
+    base = root / directory
+    require(base.is_dir() and not base.is_symlink(), "invalid profile directory " + directory)
+    for path in sorted(base.rglob("*")):
+        require(not path.is_symlink(), "profile contains a symlink: " + str(path))
+        if path.is_file():
+            result[str(path.relative_to(root))] = digest(path)
+    return result
+
+
+def load_profile(root):
+    metadata = json.loads((root / "profile.json").read_text())
+    require(metadata.get("schema") == 2, "profile must be prepared by the current tool")
+    require(metadata.get("profile") == str(root), "profile identity/path mismatch")
+    uuid.UUID(metadata["profileId"])
+    require(metadata.get("state") == "prepared-not-launched", "invalid immutable preparation record")
+    files = metadata.get("productFiles")
+    require(isinstance(files, dict) and bool(files), "missing installed product manifest")
+    for name, expected in files.items():
+        path = contained_file(root, name)
+        require(name.startswith("plugins/") and digest(path) == expected, "installed product changed")
+    return metadata
+
+
+def contained_file(root, name):
+    path = root / name
+    resolved = path.resolve()
+    require(not Path(name).is_absolute() and root in resolved.parents and path.is_file(), "evidence path escapes profile or is missing")
+    for node in [path, *path.parents]:
+        if node == root:
+            break
+        require(not node.is_symlink(), "symlink evidence is not accepted")
+    return resolved
+
+
+def ensure_closed(root):
+    lock = root / "config/.lock"
+    require(not lock.exists() and not lock.is_symlink(), "stop the profile IDE first")
+    for run in root.glob("gui-run-*"):
+        require(run.is_dir() and not run.is_symlink(), "invalid GUI run directory")
+        require(not (run / "process-start.json").exists() or (run / "process-result.json").exists(), "unfinished GUI launch record")
+
+
+def run_process(command, root, directory, context, environment=None, timeout=None, log_name="gui-console.log"):
+    """Own the launched process group and always record exit/cleanup evidence."""
+    started = datetime.now(timezone.utc).isoformat()
+    process, interrupted = None, False
+    with open(directory / log_name, "x") as log:
+        try:
+            process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT,
+                                       env=environment, start_new_session=True)
+            write_json(directory / "process-start.json", {**context, "pid": process.pid, "startedUtc": started})
+            print(f"Started test IDE pid={process.pid}, profile={root}, evidence={directory}", flush=True)
+            process.wait(timeout=timeout)
+            if process.returncode:
+                raise RuntimeError(f"IDE exited {process.returncode}; see {directory / log_name}")
+        except BaseException:
+            interrupted = True
+            if process is not None:
+                try:
+                    os.killpg(process.pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    pass
+                # A launcher can exit before one of its children. Clean the
+                # owned group even when the direct process has already ended.
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                process.wait(timeout=5)
+            raise
+        finally:
+            if process is not None:
+                write_json(directory / "process-result.json", {**context, "pid": process.pid,
+                    "startedUtc": started, "finishedUtc": datetime.now(timezone.utc).isoformat(),
+                    "exitCode": process.poll(), "interrupted": interrupted,
+                    "configSnapshot": config_snapshot(root)})
+
+
+def run_context(root, metadata, run_id, mode, build, project=None):
+    return {"schema": 1, "runId": run_id, "profileId": metadata["profileId"], "profile": str(root),
+            "profileSha256": digest(root / "profile.json"), "productSha256": metadata["productSha256"],
+            "mode": mode, "ideBuild": build, "project": project}
+
+
+def acceptance_proof(root, run_name, export_name, gui_names, observed_keymap):
+    metadata = load_profile(root)
+    require(metadata.get("productVersion") == "1.6.0" and metadata.get("case") in CASES, "not a released-version baseline case")
+    ensure_closed(root)
+    directory = root / run_name
+    require(directory.resolve().parent == root and directory.name.startswith("gui-run-") and not directory.is_symlink(), "invalid GUI run directory")
+    start_path = contained_file(root, run_name + "/process-start.json")
+    end_path = contained_file(root, run_name + "/process-result.json")
+    command_path = contained_file(root, run_name + "/gui-command.json")
+    start, end, command = [json.loads(path.read_text()) for path in [start_path, end_path, command_path]]
+    require(start.get("schema") == 1 and end.get("schema") == 1 and start.get("mode") == end.get("mode") == "gui", "not a GUI launch")
+    require(type(start.get("pid")) is int and start["pid"] > 0 and start["pid"] == end.get("pid"), "PID evidence mismatch")
+    require(type(end.get("exitCode")) is int and end["exitCode"] == 0 and end.get("interrupted") is False, "GUI did not exit cleanly")
+    for key in ["runId", "profileId", "profile", "profileSha256", "productSha256", "ideBuild", "project"]:
+        require(start.get(key) is not None and start.get(key) == end.get(key) == command.get(key), "launch identity mismatch: " + key)
+    require(start["profileId"] == metadata["profileId"] and start["profile"] == str(root)
+            and start["profileSha256"] == digest(root / "profile.json")
+            and start["productSha256"] == metadata["productSha256"], "launch/profile mismatch")
+    uuid.UUID(start["runId"])
+    require(directory.name == "gui-run-" + start["runId"], "GUI run directory identity mismatch")
+    export_path = contained_file(root, export_name)
+    require(export_path.parent == directory.resolve(), "export belongs to another run")
+    data = parse_export(export_path)
+    meta = data["metadata"]
+    require(meta["headless"] == "false" and meta["profileId"] == start["profileId"]
+            and meta["runId"] == start["runId"] and int(meta["processId"]) == start["pid"], "export is not from this GUI process")
+    require(meta["build"].split("-", 1)[-1] == start["ideBuild"], "IDE build mismatch")
+    require(data["plugins"][PRODUCT_ID][2] == "1.6.0", "GUI did not load v1.6.0")
+    for name in ["config", "system", "plugins", "log"]:
+        require(Path(meta["idea." + name + ".path"]).resolve() == root / name, "GUI used other profile paths")
+    require(start["project"] in json.loads(meta["projectRoots"]), "expected project was not open")
+    stamp = lambda value: datetime.fromisoformat(value.replace("Z", "+00:00"))
+    require(stamp(start["startedUtc"]) <= stamp(meta["timeUtc"]) <= stamp(end["finishedUtc"]), "export outside GUI process lifetime")
+    expected_map = metadata["parent"] if metadata["case"] == "pristine" else "CSC Audit " + metadata["case"]
+    require(observed_keymap == meta["activeKeymap"] == expected_map, "active keymap did not accept the seed")
+    validate_seed_bindings(metadata, data)
+    require(config_snapshot(root) == end.get("configSnapshot"), "baseline config changed after clean exit")
+    require(bool(gui_names), "missing GUI observation evidence")
+    gui = [contained_file(root, name) for name in gui_names]
+    require(all(path.parent == directory.resolve() and path.stat().st_size > 0 for path in gui), "GUI evidence belongs to another run or is empty")
+    def is_screenshot(path):
+        with open(path, "rb") as stream:
+            signature = stream.read(8)
+        return (path.suffix.lower() == ".png" and signature == b"\x89PNG\r\n\x1a\n"
+                or path.suffix.lower() in {".jpg", ".jpeg"} and signature.startswith(b"\xff\xd8\xff"))
+    require(any(is_screenshot(path) for path in gui)
+            and any(path.suffix == ".txt" for path in gui), "both screenshot and accessibility text are required")
+    files = [start_path, end_path, command_path, export_path, *gui]
+    return {"profileId": metadata["profileId"], "runId": start["runId"], "keymap": observed_keymap,
+            "files": {str(path.relative_to(root)): digest(path) for path in files},
+            "configSnapshot": config_snapshot(root), "finishedUtc": end["finishedUtc"]}
+
+
+def accept_baseline(args):
+    root = Path(args.profile).resolve()
+    require(args.confirm_observed and args.performer.strip() and args.notes.strip(), "explicit operator observation is required")
+    run_name = str(Path(args.run_directory).resolve().relative_to(root))
+    export_name = str(Path(args.export).resolve().relative_to(root))
+    gui_names = [str(Path(path).resolve().relative_to(root)) for path in args.gui_evidence]
+    proof = acceptance_proof(root, run_name, export_name, gui_names, args.observed_keymap)
+    write_json(root / "acceptance.json", {"schema": 1, "state": "gui-accepted",
+        "performer": args.performer, "notes": args.notes, "acceptedUtc": datetime.now(timezone.utc).isoformat(),
+        "runDirectory": run_name, "export": export_name, "guiEvidence": gui_names,
+        "observedKeymap": args.observed_keymap, "proof": proof})
+
+
+def validate_acceptance(root):
+    record = json.loads(contained_file(root, "acceptance.json").read_text())
+    require(record.get("schema") == 1 and record.get("state") == "gui-accepted"
+            and isinstance(record.get("performer"), str) and bool(record["performer"].strip())
+            and isinstance(record.get("notes"), str) and bool(record["notes"].strip()), "missing explicit baseline acceptance")
+    proof = acceptance_proof(root, record["runDirectory"], record["export"], record["guiEvidence"], record["observedKeymap"])
+    require(record.get("proof") == proof, "acceptance evidence changed or marker is incomplete")
+
+
+def validate_seed_bindings(metadata, data):
+    keymap = data["metadata"]["activeKeymap"]
+    values = lambda action, scheme=keymap: json.loads(data["bindings"][(scheme, action)][3])
+    for action in COMMAND_IDS - {PREFIX + "Copy", PREFIX + "ShowHistory"}:
+        require(values(action) == [], "v1.6.0 seed unexpectedly binds " + action)
+    tokens = lambda stroke: sorted(stroke.replace("control", "ctrl").split()
+                                   + ([] if any(word in stroke.split() for word in ["pressed", "released", "typed"]) else ["pressed"]))
+    def single_keyboard(items, expected):
+        return len(items) == 1 and items[0]["kind"] == "keyboard" and items[0]["second"] is None and tokens(items[0]["first"]) == tokens(expected)
+    case = metadata["case"]
+    for command, key in [("Copy", "C"), ("ShowHistory", "H")]:
+        items = values(PREFIX + command)
+        if case == "unassigned":
+            require(items == [], "explicit unassigned binding was not accepted")
+        elif case == "explicit-old":
+            expected = metadata["oldCopy" if command == "Copy" else "oldHistory"]
+            require(single_keyboard(items, expected), "explicit legacy binding was not accepted")
+        elif case == "custom":
+            keyboard = [item for item in items if item["kind"] == "keyboard"]
+            modifier = "meta" if metadata["nativeMac"] else "control"
+            require(single_keyboard(keyboard, modifier + " shift F" + ("11" if key == "C" else "12")), "custom keyboard binding was not accepted")
+            other = [item for item in items if item["kind"] != "keyboard"]
+            expected_mouse = (not other if command == "ShowHistory" else len(other) == 1
+                              and other[0]["kind"] == "mouse" and other[0]["button"] == 2
+                              and other[0]["clickCount"] == 1 and other[0]["modifiers"] in {2, 128, 130})
+            require(expected_mouse, "custom mouse binding was not accepted")
+        else:
+            require(items == values(PREFIX + command, metadata["parent"]), "inherited binding changed in seed")
+    if case == "unrelated-only":
+        require(single_keyboard(values("EditorToggleUseSoftWraps"), "control alt shift F9"), "unrelated edit was not accepted")
+    if case == "removed-ide":
+        action = metadata["removedAction"]
+        require(values(action) == [] and bool(values(action, metadata["parent"])), "IDE removal was not accepted or parent was already unassigned")
 
 
 def build(args):
@@ -167,9 +366,10 @@ def build(args):
 
 def audit(args):
     home, root = Path(args.ide_home).resolve(), Path(args.profile).resolve()
-    metadata = json.loads((root / "profile.json").read_text())
-    if metadata["profile"] != str(root):
-        raise ValueError("Profile path changed; create or clone a profile explicitly")
+    metadata = load_profile(root)
+    ensure_closed(root)
+    require(not (root / "acceptance.json").exists(), "accepted baselines are immutable; use a clone")
+    run_id = str(uuid.uuid4())
     probe = Path(args.harness).resolve()
     shutil.copytree(probe, root / "plugins/csc-keymap-audit", dirs_exist_ok=False)
     product_info_path = home / "Resources/product-info.json"
@@ -186,64 +386,61 @@ def audit(args):
            .replace("$APP_PACKAGE", str(home.parent)).replace("$IDE_HOME", str(home))
            for item in launch["additionalJvmArguments"]]
     command = [str(java), "-Xms128m", "-Xmx1536m", *jvm, "-Djava.awt.headless=true",
+               f"-Dcsc.audit.profileId={metadata['profileId']}", f"-Dcsc.audit.runId={run_id}",
                f"-Didea.home.path={home}", f"-Didea.properties.file={root / 'idea.properties'}",
                f"-XX:ErrorFile={root / 'log/hs_err_%p.log'}", f"-XX:HeapDumpPath={root / 'log/heap.hprof'}"]
     command += [f"-Didea.{name}.path={root / name}" for name in ["config", "system", "plugins", "log"]]
+    if metadata.get("removedAction"):
+        command.append("-Dcsc.audit.removedAction=" + metadata["removedAction"])
     command += ["-cp", classpath, "com.intellij.idea.Main", "csc-keymap-audit", str(root / "keymaps.tsv")]
-    write_json(root / "audit-command.json", {"argv": command, "productInfo": info, "profile": metadata})
-    with open(root / "audit-console.log", "x") as log:
-        result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=args.timeout)
-    if result.returncode:
-        raise RuntimeError(f"IDE exited {result.returncode}; see {root / 'audit-console.log'}")
+    context = run_context(root, metadata, run_id, "headless", info["buildNumber"])
+    write_json(root / "audit-command.json", {**context, "argv": command, "productInfo": info})
+    run_process(command, root, root, context, timeout=args.timeout, log_name="audit-console.log")
     summarize(root / "keymaps.tsv", root / "summary.json")
 
 
 def launch_gui(args):
     app, root = Path(args.app).resolve(), Path(args.profile).resolve()
-    metadata = json.loads((root / "profile.json").read_text())
-    if metadata["profile"] != str(root):
-        raise ValueError("Profile path changed; create or clone it explicitly")
+    metadata = load_profile(root)
+    ensure_closed(root)
+    require(not (root / "acceptance.json").exists(), "accepted baselines are immutable; use a clone")
+    run_id = str(uuid.uuid4())
     info_path = app / "Contents/Resources/product-info.json"
     info = json.loads(info_path.read_text())
     launch = next(item for item in info["launch"] if item["os"] == "macOS" and item["arch"] == "aarch64")
     launcher = (info_path.parent / launch["launcherPath"]).resolve()
     original_options = (info_path.parent / launch["vmOptionsFilePath"]).read_text()
-    run_directory = root / ("gui-run-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ"))
+    run_directory = root / ("gui-run-" + run_id)
     run_directory.mkdir()
     vmoptions = run_directory / "gui.vmoptions"
     with open(vmoptions, "x") as stream:
         stream.write(original_options + f"\n-XX:ErrorFile={root / 'log/hs_err_%p.log'}\n"
                      + f"-XX:HeapDumpPath={root / 'log/heap.hprof'}\n"
-                     + f"-Dcsc.audit.output={root}\n")
+                     + f"-Dcsc.audit.output={run_directory}\n"
+                     + f"-Dcsc.audit.profileId={metadata['profileId']}\n-Dcsc.audit.runId={run_id}\n")
+        if metadata.get("removedAction"):
+            stream.write("-Dcsc.audit.removedAction=" + metadata["removedAction"] + "\n")
     environment = os.environ.copy()
     variable = info["envVarBaseName"]
     environment[variable + "_PROPERTIES"] = str(root / "idea.properties")
     environment[variable + "_VM_OPTIONS"] = str(vmoptions)
     command = [str(launcher), str(Path(args.project).resolve())]
-    write_json(run_directory / "gui-command.json", {"argv": command, "productInfo": info, "profile": metadata,
+    context = run_context(root, metadata, run_id, "gui", info["buildNumber"], str(Path(args.project).resolve()))
+    write_json(run_directory / "gui-command.json", {**context, "argv": command, "productInfo": info,
                                            "properties": str(root / "idea.properties"), "vmOptions": str(vmoptions)})
-    with open(run_directory / "gui-console.log", "x") as log:
-        process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, env=environment)
-        print(f"Started test IDE pid={process.pid}, profile={root}", flush=True)
-        result = process.wait()
-    if result:
-        raise RuntimeError(f"IDE exited {result}; see {run_directory / 'gui-console.log'}")
+    run_process(command, root, run_directory, context, environment)
 
 
-def summarize(source, target):
-    with source.open(encoding="utf-8") as stream:
-        rows = [line.rstrip("\n").split("\t") for line in stream]
-    commands = [row[1] for row in rows if row[0] == "COMMAND"]
-    keymaps = [row for row in rows if row[0] == "KEYMAP"]
-    if not rows or rows[-1][0] != "END" or set(commands) != {PREFIX + name for name in COMMANDS} or not keymaps:
-        raise ValueError("Incomplete runtime evidence (missing END, keymaps or product actions)")
-    occupancy = [row for row in rows if row[0] == "OCCUPANCY"]
-    external = [row for row in occupancy if row[2].endswith("shift G") and row[3] not in commands]
+def summarize(source, target, allow_legacy=False):
+    data = parse_export(source, allow_legacy)
+    commands, keymaps, occupancy = data["commands"], data["keymaps"], data["occupancies"]
+    external = [row for row in occupancy if row[2].endswith("shift G") and row[3] not in COMMAND_IDS]
     write_json(target, {"sourceSha256": digest(source), "keymapCount": len(keymaps),
-                       "commandCount": len(commands), "keymaps": keymaps,
+                       "commandCount": len(commands), "keymaps": list(keymaps.values()), "bindingCount": len(data["bindings"]),
+                       "legacyInspectionOnly": data["legacyInspectionOnly"],
                        "externalPrefixOccupancy": external,
                        "oldCHOccupancy": [row for row in occupancy if not row[2].endswith("shift G")],
-                       "note": "Loaded effective keymap data only; no physical key, GUI, OS or IME verdict"})
+                       "note": "Data inspection only, not a pass verdict. Legacy exports require regeneration and cannot be accepted as baselines; no physical key, GUI, OS or IME verdict."})
     print(f"{len(keymaps)} keymaps, {len(commands)} product actions, {len(external)} external prefix occupancies")
 
 
@@ -278,10 +475,17 @@ def main():
     for option in ["app", "profile", "project"]:
         gui.add_argument("--" + option, required=True)
     gui.set_defaults(run=launch_gui)
+    accept = commands.add_parser("accept-baseline")
+    for option in ["profile", "run-directory", "export", "observed-keymap", "performer", "notes"]:
+        accept.add_argument("--" + option, required=True)
+    accept.add_argument("--gui-evidence", action="append", required=True)
+    accept.add_argument("--confirm-observed", action="store_true")
+    accept.set_defaults(run=accept_baseline)
     report = commands.add_parser("summarize")
     report.add_argument("source", type=Path)
     report.add_argument("output", type=Path)
-    report.set_defaults(run=lambda args: summarize(args.source, args.output))
+    report.add_argument("--allow-legacy", action="store_true", help="Inspect old data without accepting it as complete evidence")
+    report.set_defaults(run=lambda args: summarize(args.source, args.output, args.allow_legacy))
     snap = commands.add_parser("snapshot")
     snap.add_argument("profile", type=Path)
     snap.add_argument("output", type=Path)
