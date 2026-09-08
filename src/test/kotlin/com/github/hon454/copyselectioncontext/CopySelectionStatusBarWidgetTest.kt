@@ -21,7 +21,7 @@ import kotlin.test.assertTrue
 class CopySelectionStatusBarWidgetTest {
     @Test
     fun `status and tooltip use safe bounded previews`() {
-        val widget = CopySelectionStatusBarWidget()
+        val widget = CopySelectionStatusBarWidget(mockk(relaxed = true))
         val content = "src/App.kt:10-20\n<script>😀 ${"x".repeat(1_000)}</script>"
 
         widget.update(content)
@@ -50,7 +50,9 @@ class CopySelectionStatusBarWidgetTest {
             every { CopyPasteManager.getInstance() } returns manager
             every { manager.setContents(capture(copied)) } just runs
 
-            val widget = CopySelectionStatusBarWidget()
+            val project = mockk<com.intellij.openapi.project.Project>(relaxed = true)
+            every { project.getService(CopyFailureReporter::class.java) } returns CopyFailureReporter(project)
+            val widget = CopySelectionStatusBarWidget(project)
             val content = "src/App.kt:10-20\n<script>😀 ${"x".repeat(1_000)}</script>"
             widget.update(content)
 

@@ -107,6 +107,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `CopyHistoryService.kt` | Local, non-roaming project history, migration, and retention |
 | `CopyPreview.kt` | Bounded, single-line, Unicode-safe, markup-escaped previews |
 | `CopyResultPublisher.kt` | Project-scoped copy-result ordering plus explicit standard/permalink side-effect policies |
+| `CopyFailureReporter.kt` | Project-owned clipboard failure reporting, identity/lifetime checks and clipboard-only re-copy |
 | `CopyRelativePathAction.kt` | Context-menu action with a project-relative path |
 | `CopySelectionAnalytics.kt` | Thread-safe opt-in application-local counters and immutable snapshots |
 | `CopySelectionBaseAction.kt` | Dumb-aware shared standard-copy lifecycle with BGT updates and EDT post-copy integrations |
@@ -115,7 +116,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `CopySelectionContextAction.kt` | Settings-driven primary action |
 | `CopySelectionGutterIconRenderer.kt` | Gutter icon and safe tooltip preview |
 | `CopySelectionHighlighter.kt` | Editor-scoped multi-range gutter marker lifecycle |
-| `CopySelectionNotifier.kt` | Settings-aware success and localized permalink-failure balloons |
+| `CopySelectionNotifier.kt` | Settings-aware success, guarded clipboard-failure and localized permalink-failure balloons |
 | `CopySelectionReviewNotifier.kt` | Localized honest-review balloon and Review on Marketplace / Later / Don't ask again actions |
 | `CopySelectionReviewService.kt` | Session-only threshold, build-resource version and environment policy, non-roaming suppression state, and Marketplace opening |
 | `CopySelectionSettings.kt` | Persistent application settings and path enum |

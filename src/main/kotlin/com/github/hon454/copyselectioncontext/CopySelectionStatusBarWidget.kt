@@ -1,13 +1,14 @@
 package com.github.hon454.copyselectioncontext
 
 import com.intellij.openapi.wm.StatusBar
+import com.intellij.openapi.project.Project
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JComponent
 import javax.swing.JLabel
 
-class CopySelectionStatusBarWidget : CustomStatusBarWidgetAdapter() {
+class CopySelectionStatusBarWidget(project: Project) : CustomStatusBarWidgetAdapter() {
 
     companion object {
         const val ID = "CopySelectionStatusBarWidget"
@@ -15,6 +16,7 @@ class CopySelectionStatusBarWidget : CustomStatusBarWidgetAdapter() {
     }
 
     private val lastCopied = AtomicReference("")
+    private var project: Project? = project
     private var statusBar: StatusBar? = null
     private var disposed = false
     private val label: JLabel by lazy {
@@ -54,9 +56,11 @@ class CopySelectionStatusBarWidget : CustomStatusBarWidgetAdapter() {
         disposed = true
         lastCopied.set("")
         statusBar = null
+        project = null
     }
 
     fun update(content: String) {
+        if (disposed) return
         lastCopied.set(content)
         label.text = getText()
         label.toolTipText = getTooltipText()
@@ -64,9 +68,11 @@ class CopySelectionStatusBarWidget : CustomStatusBarWidgetAdapter() {
     }
 
     private fun copyLastValue() {
+        val owner = project ?: return
+        if (disposed || owner.isDisposed) return
         val content = lastCopied.get()
         if (content.isNotBlank()) {
-            ClipboardRequestCoordinator.recopy(content) { !disposed }
+            CopyFailureReporter.getInstance(owner).recopy(content) { !disposed }
         }
     }
 }

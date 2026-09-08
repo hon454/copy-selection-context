@@ -199,7 +199,7 @@ class ContextCollectionOutputFixtureTest : BasePlatformTestCase() {
                     "collection" -> b.publish(CopyResult("B-collection", actualFormat = "pathline"), CopyResultPolicy.COLLECTION)
                     "history" -> CopyHistoryPopup.recopy(other, "B-history")
                     "status" -> {
-                        val widget = CopySelectionStatusBarWidget()
+                        val widget = CopySelectionStatusBarWidget(other)
                         widget.update("B-status")
                         val component = widget.component
                         component.mouseListeners.forEach { it.mouseClicked(MouseEvent(component, MouseEvent.MOUSE_CLICKED, 0, 0, 0, 0, 1, false)) }

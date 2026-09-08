@@ -5,6 +5,14 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.project.Project
 
 object CopySelectionNotifier {
+    internal fun notifyClipboardFailure(project: Project, isCurrent: () -> Boolean) {
+        val notification = NotificationGroupManager.getInstance()
+            .getNotificationGroup("CopySelectionContext")
+            .createNotification(CopySelectionBundle.message("notification.clipboard.failed"), NotificationType.ERROR)
+        // Notification construction may initialize services; check again at the visible boundary.
+        if (isCurrent()) notification.notify(project)
+    }
+
     fun notify(project: Project?, message: String) {
         if (project == null) return
         if (!CopySelectionSettings.getInstance().state.enableNotification) return

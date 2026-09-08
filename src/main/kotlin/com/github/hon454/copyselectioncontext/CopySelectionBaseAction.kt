@@ -16,6 +16,7 @@ abstract class CopySelectionBaseAction : DumbAwareAction() {
         val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
         val publisher = copyResultPublisher(project)
         val request = publisher.beginRequest()
+        val failureReporter = copyFailureReporter(project)
 
         val settings = CopySelectionSettings.getInstance().state
         val includeCode = includeCode(settings)
@@ -24,7 +25,7 @@ abstract class CopySelectionBaseAction : DumbAwareAction() {
         if (contexts.isEmpty()) return
         val capturedContent = buildCapturedContent(contexts, settings, includeCode)
 
-        publisher.publishIfCurrent(
+        val outcome = publisher.publishOutcomeIfCurrent(
             request = request,
             result = CopyResult(
                 content = capturedContent.content,
@@ -34,7 +35,10 @@ abstract class CopySelectionBaseAction : DumbAwareAction() {
             ),
             policy = CopyResultPolicy.STANDARD,
         )
+        failureReporter.report(request, outcome)
     }
+
+    internal open fun copyFailureReporter(project: Project): CopyFailureReporter = CopyFailureReporter.getInstance(project)
 
     internal open fun copyResultPublisher(project: Project): CopyResultPublisher =
         CopyResultPublisher.getInstance(project)

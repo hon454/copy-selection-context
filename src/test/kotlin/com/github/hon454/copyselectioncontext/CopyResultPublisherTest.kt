@@ -173,13 +173,24 @@ class CopyResultPublisherTest {
     }
 
     @Test fun `clipboard failure prevents all optional effects and is never retried`() {
-        val effects = RecordingSideEffects("clipboard")
-        val publisher = publisher(effects, true)
-        val request = publisher.beginRequest()
-        assertEquals(CopyPublicationOutcome.NotPublished(CopyNotPublishedReason.CLIPBOARD_FAILURE),
-            publisher.publishOutcomeIfCurrent(request, result, CopyResultPolicy.COLLECTION))
-        publisher.publishOutcomeIfCurrent(request, result, CopyResultPolicy.COLLECTION)
-        assertEquals(listOf("clipboard"), effects.events)
+        for (policy in CopyResultPolicy.entries) {
+            val effects = RecordingSideEffects("clipboard")
+            val coordinator = ClipboardRequestCoordinator()
+            val publisher = CopyResultPublisher.createForTest(effects, coordinator) { CopyResultSettings(true, "pathline", 10) }
+            val queue = ArrayDeque<() -> Unit>()
+            var errors = 0
+            val reporter = CopyFailureReporter.createForTest(coordinator, dispatch = queue::addLast,
+                showError = { current -> if (current()) errors++ })
+            val request = publisher.beginRequest()
+            val outcome = publisher.publishOutcomeIfCurrent(request, result, policy)
+            assertEquals(CopyPublicationOutcome.NotPublished(CopyNotPublishedReason.CLIPBOARD_FAILURE), outcome)
+            reporter.report(request, outcome)
+            reporter.report(request, publisher.publishOutcomeIfCurrent(request, result, policy))
+            queue.removeFirst().invoke()
+            assertEquals(1, errors)
+            assertTrue(queue.isEmpty())
+            assertEquals(listOf("clipboard"), effects.events)
+        }
     }
 
     @Test fun `each newer project policy and managed recopy suppress both delayed policies and stale failures`() {
