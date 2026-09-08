@@ -81,6 +81,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `CopyAbsolutePathAction.kt` | Absolute path (context menu only) |
 | `CopyWithCodeContentAction.kt` | Path + markdown code block (context menu only) |
 | `CopyGitPermalinkAction.kt` / `GitRepositoryMetadataResolver.kt` / `GitPermalinkGenerator.kt` | Dumb-aware async, worktree-safe GitHub/GitLab permalink generation with BGT presentation updates, published through the shared result boundary |
+| `GitHeadTargetValidator.kt` / `GitHeadSnapshot.kt` / `GitProcessRunner.kt` / `GitPermalinkLifetime.kt` | Original local HEAD path/content verification through bounded system Git, immutable prepared results, background HEAD revalidation and request-scoped document/VFS ABA guards; one Cancel-default dirty confirmation before publication |
 | `ShowCopyHistoryAction.kt` / `CopyHistoryService.kt` / `CopyHistoryPopup.kt` | Dumb-aware history opening with BGT presentation updates plus local non-roaming project history, migration, re-copy, and clear-all |
 | `CopyPreview.kt` | Bounded, single-line, Unicode-safe, markup-escaped previews |
 | `CopySelectionAnalytics.kt` | Thread-safe opt-in, local-only usage counters and immutable UI snapshots |
@@ -91,6 +92,8 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `CopySelectionConfigurable.kt` | Settings UI with multiline template editor, preview, validation, passive review link, and analytics view/reset controls |
 
 **Flow**: User trigger -> Action captures/formats a result or begins async permalink resolution -> project-scoped `CopyResultPublisher` applies explicit standard/permalink policy -> clipboard -> optional standard-only analytics -> gutter marker -> project history -> optional notification -> status bar -> optional standard-only review eligibility
+
+Permalinks require system Git only for this action. HEAD-absent targets are blocked, current document equality skips confirmation, and differing text requires one Cancel-default confirmation using the captured SHA/current ranges. Git checks run in the background; final EDT validation rejects changed document/file identity, expired lifetime or superseded application requests. See `docs/development/git-permalink-contract.md` for local-only process safety, cancellation and the external-HEAD synchronization boundary.
 
 Collection copy consumes the current immutable output key/result and validates content/settings revision, actual options and project lifetime on EDT immediately before the application coordinator writes. `COLLECTION` enables opt-in analytics and independent review accounting once, notification preference and status; history and gutter are disabled. `Published(feedbackFailures)` remains successful after optional feedback failure; no effect is retried. Standard, permalink, collection and clipboard-only history/status re-copy all acquire application request tokens. See `docs/development/context-collection-output-contract.md` for #74 integration.
 

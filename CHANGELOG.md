@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Validate permalink paths and current editor content against the original local HEAD, block absent or unverifiable targets, and confirm changed files once with Cancel as the default; use bounded system Git queries without implicit fetches or helpers (#110)
+
 ### Changed
 
 - Skip selected and current-line text capture when standard copy actions produce path-only output (#108)

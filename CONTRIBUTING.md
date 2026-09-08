@@ -6,6 +6,7 @@
 
 - JDK 21+
 - IntelliJ IDEA (Community or Ultimate)
+- System Git for the local repository integration tests (`git` on Unix/macOS, `git.exe` on Windows). These tests create temporary commits, linked worktrees and local object alternates; they never contact a remote. The test commands must support `--no-lazy-fetch` and `check-attr --source`. Plugin users need Git only for the permalink action.
 
 Windows contributors who run `test` or `allTests` also need a
 Bash executable and the basic Unix command-line tools used by the release

@@ -8,12 +8,43 @@ import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.SelectionModel
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.slot
+import io.mockk.unmockkStatic
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.Messages
+import javax.swing.Icon
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class CopyGitPermalinkActionTest {
     private val action = CopyGitPermalinkAction()
+
+    @Test
+    fun `production dirty confirmation selects Cancel and approves only the explicit copy option`() {
+        val project = mockk<Project>()
+        val options = slot<Array<String>>()
+        val selected = slot<Int>()
+        val message = slot<String>()
+        val action = object : CopyGitPermalinkAction() { fun confirm() = confirmHeadDifference(project) }
+        mockkStatic(Messages::class)
+        try {
+            every { Messages.getCancelButton() } returns "Cancel"
+            every { Messages.getWarningIcon() } returns mockk<Icon>()
+            every { Messages.showDialog(project, capture(message), any(), capture(options), capture(selected), any()) } returns 1
+            assertFalse(action.confirm())
+            assertEquals(1, selected.captured)
+            assertEquals("Cancel", options.captured[selected.captured])
+            assertTrue(message.captured.contains("HEAD"))
+            every { Messages.showDialog(project, any(), any(), any(), any(), any()) } returns 0
+            assertTrue(action.confirm())
+        } finally {
+            unmockkStatic(Messages::class)
+        }
+    }
 
     @Test
     fun `single caret keeps the editor selection range contract`() {
@@ -92,7 +123,7 @@ class CopyGitPermalinkActionTest {
         val filePath = "/different/private/source.kt"
 
         val failure = assertIs<GitPermalinkResult.Failure>(
-            action.tryBuildPermalink(rootPath, filePath, listOf(Pair(1, 1)))
+            GitHeadTargetValidator().prepare(GitPermalinkInput(rootPath, filePath, "text", "UTF-8", listOf(Pair(1, 1))))
         )
 
         assertEquals(GitPermalinkFailureReason.OUT_OF_ROOT_FILE, failure.reason)
@@ -104,7 +135,7 @@ class CopyGitPermalinkActionTest {
         val invalidPath = "\u0000private-code"
 
         val failure = assertIs<GitPermalinkResult.Failure>(
-            action.tryBuildPermalink(invalidPath, "/repository/source.kt", listOf(Pair(1, 1)))
+            GitHeadTargetValidator().prepare(GitPermalinkInput(invalidPath, "/repository/source.kt", "text", "UTF-8", listOf(Pair(1, 1))))
         )
 
         assertEquals(GitPermalinkFailureReason.UNEXPECTED_FAILURE, failure.reason)

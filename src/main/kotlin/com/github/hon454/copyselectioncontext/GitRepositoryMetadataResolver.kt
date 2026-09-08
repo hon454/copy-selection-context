@@ -1,8 +1,10 @@
 package com.github.hon454.copyselectioncontext
 
+import com.intellij.openapi.progress.ProcessCanceledException
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.CancellationException
 
 internal data class GitRepositoryMetadata(
     val remoteUrl: String,
@@ -22,6 +24,10 @@ internal object GitRepositoryMetadataResolver {
                 reason = GitPermalinkFailureReason.UNRESOLVED_GIT_METADATA,
                 diagnostic = GitPermalinkDiagnostic(GitPermalinkOperation.RESOLVE_GIT_METADATA),
             )
+    } catch (canceled: ProcessCanceledException) {
+        throw canceled
+    } catch (canceled: CancellationException) {
+        throw canceled
     } catch (exception: GitConfigIncludeException) {
         GitPermalinkResult.Failure(
             reason = exception.reason,

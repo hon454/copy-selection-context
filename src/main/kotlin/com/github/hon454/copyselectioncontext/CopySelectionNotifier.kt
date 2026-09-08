@@ -26,16 +26,16 @@ object CopySelectionNotifier {
             .notify(project)
     }
 
-    fun notifyPermalinkFailure(project: Project?, reason: GitPermalinkFailureReason) {
-        if (project == null) return
+    fun notifyPermalinkFailure(project: Project?, reason: GitPermalinkFailureReason, isCurrent: () -> Boolean = { true }) {
+        if (project == null || project.isDisposed || !isCurrent()) return
 
-        NotificationGroupManager.getInstance()
+        val notification = NotificationGroupManager.getInstance()
             .getNotificationGroup("CopySelectionContext")
             .createNotification(
                 permalinkFailureText(reason),
                 NotificationType.ERROR
             )
-            .notify(project)
+        if (!project.isDisposed && isCurrent()) notification.notify(project)
     }
 
     internal fun notificationText(message: String): String =
@@ -53,6 +53,14 @@ object CopySelectionNotifier {
                 "notification.permalink.failed.git.config.include.depth"
             GitPermalinkFailureReason.UNSUPPORTED_REMOTE_HOST -> "notification.permalink.failed.remote.host"
             GitPermalinkFailureReason.OUT_OF_ROOT_FILE -> "notification.permalink.failed.out.of.root"
+            GitPermalinkFailureReason.SYSTEM_GIT_UNAVAILABLE -> "notification.permalink.failed.git.unavailable"
+            GitPermalinkFailureReason.GIT_EXECUTION_FAILED -> "notification.permalink.failed.git.execution"
+            GitPermalinkFailureReason.GIT_TIMEOUT -> "notification.permalink.failed.git.timeout"
+            GitPermalinkFailureReason.GIT_OUTPUT_LIMIT -> "notification.permalink.failed.git.output.limit"
+            GitPermalinkFailureReason.HEAD_PATH_ABSENT -> "notification.permalink.failed.head.absent"
+            GitPermalinkFailureReason.UNSUPPORTED_HEAD_CONTENT -> "notification.permalink.failed.head.unsupported"
+            GitPermalinkFailureReason.TARGET_UNAVAILABLE -> "notification.permalink.failed.target.unavailable"
+            GitPermalinkFailureReason.HEAD_CHANGED -> "notification.permalink.failed.head.changed"
             GitPermalinkFailureReason.IO_FAILURE -> "notification.permalink.failed.io"
             GitPermalinkFailureReason.UNEXPECTED_FAILURE -> "notification.permalink.failed.unexpected"
         }
