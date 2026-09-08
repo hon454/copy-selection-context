@@ -69,6 +69,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `ContextCollectionSourceTracker.kt` / `ContextCollectionSubscriptions.kt` | Independent source-state revision, immutable live-file reverse index, document fast path and conservative structural VFS checks without retaining editors/documents |
 | `ContextCollectionFormatter.kt` / `ContextCollectionOutputService.kt` | Bounded pure formatting and shared keyed background output state |
 | `ContextCollectionToolWindowFactory.kt` / `ToolWindowFactoryAdapter.java` / `ContextCollectionPanel.kt` / `ContextCollectionPresentation.kt` / `ContextCollectionTextViewer.kt` | Lazy content-owned collection UI, keyboard organization and full read-only previews |
+| `ContextCollectionTextLayout.kt` / `ContextCollectionTextView.kt` / `ContextCollectionTextRaster.kt` | Worker-prepared paragraph geometry, indexed viewport painting and oversized shaping-cluster masks; native text documents and selection/copy remain intact |
 | `ShowContextCollectionAction.kt` | Localized no-editor tool-window open action without a default shortcut |
 | `ContextCollectionCopyCommand.kt` / `CopyAllContextCollectionAction.kt` | Shared no-editor copy command, combined confirmation and final EDT input validation |
 | `ClipboardRequestCoordinator.kt` | Application-wide request tokens and atomic final clipboard transaction; no retained payload/project state |

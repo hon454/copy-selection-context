@@ -1,0 +1,19 @@
+// Opt-in only. Run with a chosen JBR, isolated from builds, IDEs and other profilers.
+allprojects {
+    plugins.withId('org.jetbrains.kotlin.jvm') {
+        tasks.register('profileCollectionViewer', JavaExec) {
+            dependsOn tasks.named('testClasses')
+            classpath = sourceSets.test.runtimeClasspath
+            mainClass = 'com.github.hon454.copyselectioncontext.ContextCollectionViewerProbe'
+            maxHeapSize = '4g'
+            jvmArgs '-Djava.awt.headless=true'
+            if (System.getenv('CSC_PROFILE_JAVA')) executable = System.getenv('CSC_PROFILE_JAVA')
+            args providers.gradleProperty('viewerProfileOutput').get(),
+                providers.gradleProperty('viewerProfileBaseline').get(),
+                providers.gradleProperty('viewerProfileCandidate').get()
+            if (providers.gradleProperty('viewerProfileCases').isPresent()) {
+                args providers.gradleProperty('viewerProfileCases').get()
+            }
+        }
+    }
+}

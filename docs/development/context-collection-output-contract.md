@@ -48,6 +48,63 @@ Collection analytics uses the ready result's actual formatter and one reduced no
 
 Collection `CLIPBOARD_FAILURE` now goes exclusively through the project-owned `CopyFailureReporter`, shared by all five copy entry points. It ignores the success notification setting and claims a failed token at most once before scheduling an error. Actual notification rechecks the same token and live project/command; it never captures the collection payload. Existing invalidated/overflow/blank/empty reporting remains in the command, so there is no second clipboard-failure dialog. See [the clipboard failure contract](clipboard-failure-contract.md).
 
+## Full preview geometry (#103)
+
+Both captured code and final output use `ContextCollectionTextViewer`. The viewer keeps the exact
+`PlainDocument` text and native `JTextArea` keyboard actions, accessibility and `TransferHandler`.
+Selection copy reads the selected original UTF-16 range. Copy All continues to read the service's
+complete `Ready.payload`; preview preparation never changes its key, byte count, warnings or limits.
+
+Detached document insertion, whole-paragraph `Bidi`, contextual shaping, dimensions and line/cell
+indexes are prepared on a pooled thread. The Swing component and its custom `ContextCollectionTextView`
+stay on EDT. Preferred size reads cached dimensions; painting binary-searches the first visible line
+and fragment, then visits the viewport. Caret lookup and mouse hit testing use the same geometry,
+including visually reordered runs. Tabs occupy tab stops without replacing the underlying character.
+Cells normally contain at most 512 UTF-16 units and end at an actual shaping-cluster caret boundary.
+An indivisible larger cluster uses background glyph masks and prepared caret coordinates, so a long
+combining sequence cannot force shaping or a giant glyph draw on EDT. No displayed text is truncated,
+normalized, wrapped into a different document, or moved to a separate opening action.
+
+Every request owns its current payload and detached prepared document. Supersession and content or
+project disposal cancel work and empty both references even if an EDT callback is already queued.
+The callback captures only that cancellable request and installs only the current generation in a live
+project/content. Unchanged preview text/font/context preserves the current document and selection.
+Font or graphics-configuration changes prepare fresh geometry with the new rendering context.
+
+`ContextCollectionTextLayoutTest` compares whole-paragraph shaping and visual caret positions, verifies
+raw line/cell coverage and counts viewport work. `ContextCollectionTextViewerFixtureTest` controls
+worker and EDT queues, exercises stale completion and disposal without sleeps, and copies full and
+partial original text through the native transfer handler up to 4 MiB. It belongs to the isolated
+`platformTest` partition. The profiler below has no automatic wall-clock pass/fail threshold and does
+not substitute for actual IDE GUI verification.
+
+### Reproducible before/after profile
+
+Use a single idle machine and the minimum supported IDE's bundled JBR for both variants. The baseline
+in `ContextCollectionViewerProbe` reproduces the original viewer's detached 8192-unit document
+inserts and standard `JTextArea` installation. The candidate uses the production
+`ContextCollectionTextArea` and `ContextCollectionTextViewer.prepareDocument`. Select the same runtime,
+LAF, Monospaced 13pt font and 500×300 viewport; close other heavy workloads during the full comparison.
+
+```bash
+CSC_PROFILE_JAVA='/path/to/IDE/jbr/bin/java' ./gradlew \
+  --init-script scripts/profile-collection-viewer.init.gradle profileCollectionViewer \
+  -PviewerProfileOutput=/absolute/path/to/evidence \
+  -PviewerProfileBaseline=<baseline-sha> -PviewerProfileCandidate=<candidate-sha>
+```
+
+The optional `-PviewerProfileCases=small,ascii256k,korean256k,bidi256k,mixed,bidi4m` selects inputs.
+Each selected input gets two warmups per variant and five measured runs per variant, alternating
+AB/BA order. Explicit GC runs before each sample, outside measurements. `environment.txt`,
+`samples.csv`, `summary.csv` and `preview.jfr` record environment, preparation, EDT installation/layout,
+paint and maximum queued EDT delay. The recording includes named `copyselection.PreviewStage`
+events and the JDK profile configuration for attribution of execution samples and allocation/GC.
+
+Keep raw logs/JFR outside product commits. Record source/package SHA, the complete command and
+runtime, median/max values, profile interpretation and limitations in the implementation PR.
+Report actual IDE switching, resizing, last-character access, full/partial native copy, `{code}`×16
+4 MiB Copy All, ×17 overflow and clear/disposal separately from this headless measurement.
+
 ## Verification and #74 handoff
 
 `ContextCollectionFormatterTest` covers golden strings, conflict identity, fixed labels, warnings, every template variable, exact byte boundaries, malformed UTF-16 and bounded template amplification. `CopyResultPublisherTest` covers all policies, no editor, accounting cardinality, failure isolation, no retry, two publisher ordering and a latch-controlled final transaction. `ContextCollectionOutputFixtureTest` is registered in `platformStateTestClasses`; it covers real clipboard/history/gutter, settings/source invalidation, controlled stale calculations, confirmation mutation, disposal and two live projects including history/status re-copy. No timing sleeps are used.
