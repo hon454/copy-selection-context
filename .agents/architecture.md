@@ -101,7 +101,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `ContextCollectionTextNavigation.kt` | Cached line-boundary actions that avoid native per-character Home/End and line-selection scans |
 | `ContextCollectionPanel.kt` | Keyboard-accessible collection management consuming shared snapshots/output/copy |
 | `ContextCollectionToolWindowFactory.kt` / `ToolWindowFactoryAdapter.java` | Lazy right tool window with one non-closeable content and its disposable; public Java adapter avoids Kotlin bridges to internal platform defaults |
-| `ShowContextCollectionAction.kt` | No-editor, assignable localized open action with no default shortcut |
+| `ShowContextCollectionAction.kt` | No-editor, assignable localized open action using the shared G-prefix default |
 | `ContextCollectionItem.kt` | Immutable captures, source locations, snapshots and typed add results |
 | `ContextCollectionStore.kt` | Pure bounded capture transaction and session mutation engine |
 | `ContextCollectionService.kt` | Project-only session service and editor capture adapter |
@@ -122,6 +122,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `CopySelectionBundle.kt` | Localized message lookup through the public class-aware `DynamicBundle` constructor |
 | `CopySelectionConfigurable.kt` | Tools settings UI, multiline template editor, preview, validation, and local analytics controls |
 | `CopySelectionContextAction.kt` | Settings-driven primary action |
+| `CopySelectionShortcuts.kt` | Shared nine-command G-prefix defaults and active-keymap lineage selection |
 | `CopySelectionGutterIconRenderer.kt` | Gutter icon and safe tooltip preview |
 | `CopySelectionHighlighter.kt` | Editor-scoped multi-range gutter marker lifecycle |
 | `CopySelectionNotifier.kt` | Settings-aware success, guarded clipboard-failure and localized permalink-failure balloons |

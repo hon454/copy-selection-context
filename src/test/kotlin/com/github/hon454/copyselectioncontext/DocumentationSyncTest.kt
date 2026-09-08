@@ -88,8 +88,8 @@ class DocumentationSyncTest {
     @Test
     fun `collection copy descriptor and documentation retain output ordering contracts`() {
         val descriptor = repositoryRoot.resolve("src/main/resources/META-INF/plugin.xml").readText()
-        val action = Regex("""<action id="CopySelectionContext.CopyAllCollection"\s+class="[^"]+"\s*/>""")
-        assertTrue(action.containsMatchIn(descriptor), "Copy All must remain localized and have no default shortcut")
+        val action = Regex("""<action id="CopySelectionContext.CopyAllCollection"\s+class="[^"]+">""")
+        assertTrue(action.containsMatchIn(descriptor), "Copy All must remain localized and registered")
         val contract = repositoryRoot.resolve("docs/development/context-collection-output-contract.md").readText()
         listOf("Calculating", "BlankItem", "AboveHardLimit", "262144", "4194304", "Published(feedbackFailures)",
             "SNAPSHOT_LABELS_ABSENT", "HISTORICAL_CODE_ABSENT", "EDT", "source", "Ctrl/Cmd+C").forEach {
