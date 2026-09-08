@@ -7,7 +7,7 @@
 - JDK 21+
 - IntelliJ IDEA (Community or Ultimate)
 
-Windows contributors who run `test`, `platformTest`, or `allTests` also need a
+Windows contributors who run `test` or `allTests` also need a
 Bash executable and the basic Unix command-line tools used by the release
 script tests. Those tests invoke the repository's `scripts/*.sh` files through
 `ProcessBuilder("bash", ...)`; the scripts use tools such as `mktemp`, `dirname`,
@@ -17,23 +17,20 @@ and test requirement only. Plugin users do not need Bash or these tools to
 install or use the plugin.
 
 Git for Windows with Git Bash is one example of an environment that provides
-these tools. Before starting Gradle, check the environment from the same
-terminal that will launch it:
+these tools. From Windows Command Prompt (`cmd.exe`) or PowerShell, first
+locate Bash, then check the tools inside that Bash environment before starting
+Gradle:
 
 ```text
 bash --version
-where bash
-where mktemp
-where find
-where sort
-where basename
-# At least one of these must resolve:
-where sha256sum
-where shasum
+where.exe bash
+bash -lc "for tool in bash mktemp dirname find sort basename mv rm sha256sum shasum; do printf '%s=' \"\$tool\"; command -v \"\$tool\" || exit 1; done"
 ```
 
-Each required command should resolve to an executable; at least one of
-`sha256sum` or `shasum` must be available. If a command is not found,
+`where.exe bash` confirms which Bash a Windows shell would start, while
+`command -v` checks the Unix tools in Bash rather than Windows `find` or
+`sort` commands. The check should find every required tool except that at
+least one of `sha256sum` or `shasum` must be available. If a command is not found,
 install or enable a Bash distribution that provides the required Unix tools,
 then open a new terminal with that distribution's `bin` directory on `PATH`.
 The important detail is that `bash` and those tools must be discoverable by the
