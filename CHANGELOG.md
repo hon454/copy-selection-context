@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Preserve CommonMark closing fences indented by up to three spaces inside built-in copied code blocks (#97)
 - Honor the last branch remote value from ordered Git config includes when selecting permalink remotes (#105)
+- Keep standard copy, history, and Git permalink actions available while IDE indexing is in progress (#106)
 
 ### Changed
 

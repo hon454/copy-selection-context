@@ -211,14 +211,18 @@ class DocumentationSyncTest {
         val registeredActions = registeredActionClassNames()
         val directParents = registeredActions.associateWith(::directParentOf)
 
-        assertEquals("AnAction", directParentOf("CopySelectionBaseAction"))
+        assertEquals("DumbAwareAction", directParentOf("CopySelectionBaseAction"))
 
         val sharedPipelineActions = directParents
             .filterValues { it == "CopySelectionBaseAction" }
             .keys
         val directActions = directParents
-            .filterValues { it == "AnAction" }
+            .filterValues { it == "AnAction" || it == "DumbAwareAction" }
             .keys
+        assertEquals(
+            setOf("CopyGitPermalinkAction", "ShowCopyHistoryAction"),
+            directParents.filterValues { it == "DumbAwareAction" }.keys,
+        )
         assertEquals(registeredActions, sharedPipelineActions + directActions)
 
         val patterns = repositoryRoot.resolve(".agents/patterns.md").readText()
