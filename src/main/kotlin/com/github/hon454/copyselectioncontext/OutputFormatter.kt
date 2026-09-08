@@ -49,9 +49,34 @@ class PathLineFormatter : OutputFormatter {
 
 internal object MarkdownCodeFence {
     fun forCode(code: String): String {
-        val maxBackticks = code.lines().maxOfOrNull { line ->
-            line.takeWhile { it == '`' }.length
-        } ?: 0
+        var maxBackticks = 0
+        var index = 0
+        while (index < code.length) {
+            var spaces = 0
+            while (spaces < 4 && index < code.length && code[index] == ' ') {
+                spaces++
+                index++
+            }
+
+            val backtickStart = index
+            while (index < code.length && code[index] == '`') index++
+            val backticks = index - backtickStart
+
+            if (spaces == 0) {
+                maxBackticks = maxOf(maxBackticks, backticks)
+            } else if (spaces <= 3 && backticks >= 3) {
+                var closingFence = true
+                while (index < code.length && code[index] != '\n' && code[index] != '\r') {
+                    if (code[index] != ' ' && code[index] != '\t') closingFence = false
+                    index++
+                }
+                if (closingFence) maxBackticks = maxOf(maxBackticks, backticks)
+            }
+
+            while (index < code.length && code[index] != '\n' && code[index] != '\r') index++
+            if (index < code.length && code[index] == '\r') index++
+            if (index < code.length && code[index] == '\n') index++
+        }
         return "`".repeat(maxOf(3, maxBackticks + 1))
     }
 }
