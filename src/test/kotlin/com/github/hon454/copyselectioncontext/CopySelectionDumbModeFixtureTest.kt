@@ -116,14 +116,9 @@ class CopySelectionDumbModeFixtureTest : BasePlatformTestCase() {
         myFixture.configureByText("publisher.kt", "first line\nsecond<caret> line\nthird line")
         val repositoryRoot = Files.createTempDirectory("copy-selection-dumb-mode-git")
         try {
-            val source = repositoryRoot.resolve("src/Main.kt")
-            write(repositoryRoot.resolve(".git/HEAD"), "ref: refs/heads/main\n")
-            write(repositoryRoot.resolve(".git/refs/heads/main"), "$COMMIT_SHA\n")
-            write(
-                repositoryRoot.resolve(".git/config"),
-                "[remote \"origin\"]\n    url = https://github.com/owner/repo.git\n",
-            )
-            write(source, "first line\nsecond line\nthird line\n")
+            val repository = LocalGitRepository(repositoryRoot)
+            val sourceText = "first line\nsecond line\nthird line\n"
+            val commitSha = repository.commit("src/Main.kt", sourceText)
             val historyContent = "previous copied context"
             CopyHistoryService.getInstance(project).addEntry(historyContent)
 
@@ -145,15 +140,13 @@ class CopySelectionDumbModeFixtureTest : BasePlatformTestCase() {
                 assertEquals(historyContent, clipboardText())
 
                 val permalinkAction = assertIs<CopyGitPermalinkAction>(registeredAction(PERMALINK_ACTION_ID))
-                val permalink = assertIs<GitPermalinkResult.Success<String>>(
-                    permalinkAction.tryBuildPermalink(
-                        repositoryRoot.toString(),
-                        source.toString(),
-                        listOf(Pair(2, 3)),
-                    ),
-                ).value
+                val permalink = assertIs<GitPermalinkResult.Success<GitPreparedPermalink>>(
+                    ApplicationManager.getApplication().executeOnPooledThread<GitPermalinkResult<GitPreparedPermalink>> {
+                        GitHeadTargetValidator().prepare(repository.input("src/Main.kt", sourceText, ranges = listOf(2 to 3)))
+                    }.get(20, TimeUnit.SECONDS),
+                ).value.content
                 val expectedPermalink =
-                    "https://github.com/owner/repo/blob/$COMMIT_SHA/src/Main.kt#L2-L3"
+                    "https://github.com/owner/repo/blob/$commitSha/src/Main.kt#L2-L3"
                 assertEquals(expectedPermalink, permalink)
 
                 val publisher = permalinkAction.copyResultPublisher(project)

@@ -15,6 +15,7 @@ import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.ide.CopyPasteManager
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.popup.IPopupChooserBuilder
@@ -37,7 +38,9 @@ import java.awt.datatransfer.StringSelection
 import java.awt.datatransfer.Transferable
 import java.awt.event.MouseEvent
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.FutureTask
+import kotlin.test.assertFailsWith
 
 /** Real entry points and platform owners; writes fail before touching the real clipboard. */
 class ClipboardFailureFixtureTest : BasePlatformTestCase() {
@@ -257,7 +260,8 @@ class ClipboardFailureFixtureTest : BasePlatformTestCase() {
                     harness.start(route, finish = false)
                     failWrite = false
                     CopyHistoryPopup.recopy(other, "newest")
-                    harness.flushWork()
+                    if (route == Route.GIT) assertFailsWith<ProcessCanceledException> { harness.flushWork() }
+                    else harness.flushWork()
                     harness.flushErrors()
                     assertEquals("newest", copied())
                     assertEquals(1, attempts)
@@ -298,6 +302,20 @@ class ClipboardFailureFixtureTest : BasePlatformTestCase() {
             assertEquals(listOf(CopySelectionBundle.message("collection.copy.invalidated")), harness.collectionErrors)
             assertTrue(harness.errors.isEmpty())
             assertEquals(0, attempts)
+        }
+    }
+
+    fun testDirtyGitApprovalReportsWriteFailureAfterRequestCleanup() {
+        reset()
+        Harness(project).use { harness ->
+            harness.gitState = GitHeadContentState.DIRTY
+            harness.start(Route.GIT)
+            assertEquals(1, harness.confirmations)
+            assertEquals(1, attempts)
+            assertTrue(harness.successEffects.isEmpty())
+            assertEquals("sentinel", copied())
+            harness.flushErrors()
+            assertEquals(listOf(Notice(project, CopySelectionBundle.message("notification.clipboard.failed"), NotificationType.ERROR)), notices)
         }
     }
 
@@ -343,6 +361,7 @@ class ClipboardFailureFixtureTest : BasePlatformTestCase() {
         var confirmations = 0
         var duringConfirmation: () -> Unit = {}
         var historyPopupClosed = false
+        var gitState = GitHeadContentState.CLEAN
         val file: VirtualFile = if (owner === project) myFixture.file.virtualFile else
             LightVirtualFile("private-source-B.txt", PlainTextFileType.INSTANCE, "private code credential")
         val editor: Editor = if (owner === project) myFixture.editor else
@@ -395,10 +414,16 @@ class ClipboardFailureFixtureTest : BasePlatformTestCase() {
                 Route.STANDARD -> perform(CopySelectionContextAction())
                 Route.GIT -> perform(object : CopyGitPermalinkAction() {
                     override fun resolveGitRootPath(project: Project, file: VirtualFile) = "/fixture"
-                    override fun executeInBackground(action: () -> Unit) { work.addLast(action) }
+                    override fun executeInBackground(project: Project, action: () -> Unit, onCanceled: () -> Unit) { work.addLast(action) }
                     override fun invokeOnUiThread(action: () -> Unit) { work.addLast(action) }
-                    override fun tryBuildPermalink(rootPath: String, filePath: String, lineRanges: List<Pair<Int, Int>>) =
-                        GitPermalinkResult.Success("https://github.com/owner/repo/blob/abcdef/private-source.kt#L1")
+                    override fun preparePermalink(input: GitPermalinkInput, checkCanceled: () -> Unit) =
+                        GitPermalinkResult.Success(GitPreparedPermalink(
+                            "https://github.com/owner/repo/blob/abcdef/private-source.kt#L1", gitState,
+                            GitHeadSnapshot(Path.of(input.rootPath), GitRepositoryMetadata("https://github.com/owner/repo", "fixture"), emptyMap()),
+                            GitSourceSnapshot(Path.of(input.filePath), Path.of(input.filePath),
+                                "fixture", java.nio.file.attribute.FileTime.fromMillis(0), 0)))
+                    override fun revalidateHead(prepared: GitPreparedPermalink, checkCanceled: () -> Unit) = GitPermalinkResult.Success(Unit)
+                    override fun confirmHeadDifference(project: Project): Boolean { confirmations++; return true }
                 })
                 Route.COLLECTION -> perform(CopyAllContextCollectionAction(), editorAvailable = false)
                 Route.HISTORY -> chooseHistory()

@@ -133,7 +133,11 @@ fun calculateTotal(items: List<Item>): Double {
 ```
 ````
 
-The separate **Copy GitHub/GitLab Permalink** action reads normal-repository or linked-worktree metadata on a background thread and builds a commit-specific URL for each caret. Only the latest standard or permalink request can publish; an older async completion cannot overwrite a newer copy. If the repository remote or commit cannot be resolved, it reports an error and leaves the clipboard unchanged.
+The separate **Copy GitHub/GitLab Permalink** action uses system Git on a background thread to verify the original HEAD file in a normal repository or linked worktree. **Only permalinks require Git.** If Git is missing or cannot run, this action reports a localized error; standard, collection, history and status-bar copies continue to work. The plugin does not install Git or change PATH or Git settings.
+
+A path absent from HEAD, including a new file or a renamed destination, cannot be copied as a permalink. If the current editor document matches HEAD, copying needs no extra confirmation. If it differs, including unsaved, saved or staged edits, one confirmation explains that HEAD may contain different code at the current line numbers. **Cancel is the default.** Choosing **Copy Permalink** uses the captured HEAD SHA and current caret ranges, with no automatic line mapping. Changes detected during verification or confirmation invalidate that request.
+
+Only the latest managed copy request across projects can publish. Git queries read local objects with replacement refs and implicit fetching disabled; unsupported, missing, binary or undecodable objects fail safely. The plugin never saves, commits, stashes, fetches or pushes automatically. A permalink does not guarantee that its commit has been pushed or that the remote is accessible.
 
 ### History, Notifications, and Status
 
