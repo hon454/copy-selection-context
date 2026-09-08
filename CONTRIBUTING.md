@@ -7,6 +7,40 @@
 - JDK 21+
 - IntelliJ IDEA (Community or Ultimate)
 
+Windows contributors who run `test`, `platformTest`, or `allTests` also need a
+Bash executable and the basic Unix command-line tools used by the release
+script tests. Those tests invoke the repository's `scripts/*.sh` files through
+`ProcessBuilder("bash", ...)`; the scripts use tools such as `mktemp`, `dirname`,
+`find`, `sort`, `basename`, `mv`, `rm`, and a SHA-256 utility (`sha256sum` or
+`shasum`). This is a development
+and test requirement only. Plugin users do not need Bash or these tools to
+install or use the plugin.
+
+Git for Windows with Git Bash is one example of an environment that provides
+these tools. Before starting Gradle, check the environment from the same
+terminal that will launch it:
+
+```text
+bash --version
+where bash
+where mktemp
+where find
+where sort
+where basename
+# At least one of these must resolve:
+where sha256sum
+where shasum
+```
+
+Each required command should resolve to an executable; at least one of
+`sha256sum` or `shasum` must be available. If a command is not found,
+install or enable a Bash distribution that provides the required Unix tools,
+then open a new terminal with that distribution's `bin` directory on `PATH`.
+The important detail is that `bash` and those tools must be discoverable by the
+Gradle process itself, not only by a separate Git Bash window. Re-run the
+checks in the terminal where `gradlew.bat` will be invoked; this guide does
+not modify the user's PATH automatically.
+
 ### Build & Run
 
 ```bash
