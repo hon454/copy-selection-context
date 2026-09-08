@@ -92,12 +92,17 @@ object CopySelectionUtils {
         return Pair(startLine, endLine)
     }
 
-    internal fun captureSelectionContexts(path: String, file: VirtualFile, editor: Editor): List<SelectionContext> {
+    internal fun captureSelectionContexts(
+        path: String,
+        file: VirtualFile,
+        editor: Editor,
+        includeCode: Boolean,
+    ): List<SelectionContext> {
         val contexts = mutableListOf<SelectionContext>()
         val language = detectLanguage(file)
         val filename = file.name
         editor.caretModel.runForEachCaret { caret ->
-            contexts.add(captureSelectionContext(path, file, language, filename, editor, caret))
+            contexts.add(captureSelectionContext(path, file, language, filename, editor, caret, includeCode))
         }
         return contexts
     }
@@ -114,6 +119,7 @@ object CopySelectionUtils {
         filename: String,
         editor: Editor,
         caret: Caret,
+        includeCode: Boolean,
     ): SelectionContext {
         val document = editor.document
         val hasSelection = caret.hasSelection()
@@ -123,16 +129,20 @@ object CopySelectionUtils {
             Triple(
                 document.getLineNumber(selectionStart) + 1,
                 document.getLineNumber(selectionEnd - 1) + 1,
-                caret.selectedText ?: "",
+                if (includeCode) caret.selectedText ?: "" else "",
             )
         } else {
             val caretLine = caret.logicalPosition.line
-            val lineStart = document.getLineStartOffset(caretLine)
-            val lineEnd = document.getLineEndOffset(caretLine)
             Triple(
                 caretLine + 1,
                 caretLine + 1,
-                document.getText(TextRange(lineStart, lineEnd)),
+                if (includeCode) {
+                    val lineStart = document.getLineStartOffset(caretLine)
+                    val lineEnd = document.getLineEndOffset(caretLine)
+                    document.getText(TextRange(lineStart, lineEnd))
+                } else {
+                    ""
+                },
             )
         }
         return SelectionContext(

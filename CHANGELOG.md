@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Skip selected and current-line text capture when standard copy actions produce path-only output (#108)
+
 ## [1.5.1] - 2026-09-08
 
 ### Fixed

@@ -20,9 +20,9 @@
 ## Standard Copy Flow
 
 1. The user invokes `CopySelectionContextAction` with `Ctrl+Alt+C` / `Cmd+Alt+C`, or chooses an explicit path/code action from the editor context menu.
-2. The dumb-aware `CopySelectionBaseAction` evaluates project/editor/file availability on the background action update thread, then resolves those same inputs on EDT when invoked. `CopySelectionUtils` reads each caret exactly once into an immutable `SelectionContext` containing the captured path, file, filename, selected text or current line, 1-based inclusive line range, and Markdown language tag. This flow uses editor, document, VFS and settings state without an index-backed query.
+2. The dumb-aware `CopySelectionBaseAction` evaluates project/editor/file availability on the background action update thread, then resolves those same inputs on EDT when invoked. It snapshots settings and fixes the action's code-capture policy before visiting carets. `CopySelectionUtils` captures path, file, filename, 1-based inclusive line range and Markdown language tag for every caret, but reads the selected/current-line payload exactly once only when that policy includes code. The immutable `SelectionContext` carries an empty code value for path-only formatting and never retains an editor, document, caret or lazy reader. This flow uses editor, document, VFS and settings state without an index-backed query.
 3. A non-empty selection uses `selectionEnd - 1` as its last included offset, so a selection ending at the next line's start does not include that line. With multiple carets, each captured context is formatted independently and the blocks are joined with a blank line; formatting and post-copy highlighting never re-read mutable editor selection state.
-4. `OutputFormatterFactory` selects the configured Claude Code, Path:Line, or custom template formatter. `CopySelectionContextAction` includes code only when enabled; `CopyWithCodeContentAction` always includes it.
+4. `OutputFormatterFactory` selects the configured Claude Code, Path:Line, or custom template formatter using the same settings snapshot and include-code decision used for capture. `CopySelectionContextAction` includes code only when enabled; `CopyWithCodeContentAction` always includes it; explicit relative/absolute path actions never acquire code payloads. A custom template's `{code}` continues to follow the main include-code setting.
 5. The project-scoped `CopyResultPublisher` obtains an application `ClipboardRequestCoordinator` token at invocation and applies the explicit `STANDARD` policy only while current. The same application sequence covers async permalinks, collection copies, history and status re-copy across projects.
 6. `CopyPasteManager` writes the complete formatted result to the clipboard.
 7. When analytics are enabled, `CopySelectionAnalytics` increments total, selected-format, and detected-language counters exactly once per standard copy action, including multi-caret copies.
@@ -120,7 +120,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `CopySelectionSettings.kt` | Persistent application settings and path enum |
 | `CopySelectionStatusBarWidget.kt` | Public custom status widget with safe last-copy preview and click-to-copy interaction |
 | `CopySelectionStatusBarWidgetFactory.kt` | Status-bar widget registration lifecycle |
-| `CopySelectionUtils.kt` | VFS paths, language detection, exclusive-end ranges, and single-pass caret context capture |
+| `CopySelectionUtils.kt` | VFS paths, language detection, exclusive-end ranges, and policy-aware single-pass caret context capture |
 | `CopySelectionWebHelpProvider.kt` | README help-topic URLs |
 | `CopyWithCodeContentAction.kt` | Context-menu action that always includes code |
 | `GitPermalinkGenerator.kt` | GitHub/GitLab remote parsing and encoded URL construction |

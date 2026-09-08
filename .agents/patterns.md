@@ -4,14 +4,14 @@
 
 ### Shared copy-pipeline actions
 
-`CopySelectionBaseAction` extends `DumbAwareAction`, declares `ActionUpdateThread.BGT`, captures and formats standard results on invocation, then publishes through the project-scoped `CopyResultPublisher` with the explicit `STANDARD` policy. Its update path only reads project/editor/file availability from the data context; invocation remains on EDT and does not use index-backed APIs. Four registered actions inherit that shared behavior:
+`CopySelectionBaseAction` extends `DumbAwareAction`, declares `ActionUpdateThread.BGT`, snapshots settings and resolves its include-code policy before caret capture, formats with that same decision, then publishes through the project-scoped `CopyResultPublisher` with the explicit `STANDARD` policy. Its update path only reads project/editor/file availability from the data context; invocation remains on EDT and does not use index-backed APIs. Four registered actions inherit that shared behavior:
 
 - `CopySelectionContextAction`
 - `CopyRelativePathAction`
 - `CopyAbsolutePathAction`
 - `CopyWithCodeContentAction`
 
-These subclasses implement `getPath()` and may override `buildContent()`.
+These subclasses implement `getPath()` and select their code-capture policy. The base policy is false, so relative and absolute path actions do not acquire selected/current-line text. `CopySelectionContextAction` returns the captured `includeCodeContent` setting and `CopyWithCodeContentAction` returns true. Pass that explicit Boolean to `CopySelectionUtils.captureSelectionContexts`; never infer it from formatter/template contents or defer text acquisition through an editor callback.
 
 ### Specialized direct actions
 
@@ -79,6 +79,8 @@ val lines = if (selectionModel.hasSelection()) {
 ```
 
 IntelliJ selection ends are exclusive, so line resolution must use `selectionEnd - 1`. Multi-caret actions resolve each caret independently and join formatted blocks with a blank line.
+
+When code is excluded, selection offsets and line metadata are still resolved but neither `Caret.selectedText` nor the current-line `Document.getText` boundary is crossed. When code is included, each caret payload is acquired once into the immutable context and formatting does not return to the editor.
 
 ## Path Normalization
 

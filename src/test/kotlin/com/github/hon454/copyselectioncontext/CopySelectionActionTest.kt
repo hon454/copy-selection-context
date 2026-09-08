@@ -77,6 +77,10 @@ class CopySelectionActionTest {
     }
 
     private class TestCopySelectionAction : CopySelectionBaseAction() {
-        override fun getPath(project: Project, file: VirtualFile): String = file.path
+        override fun getPath(
+            project: Project,
+            file: VirtualFile,
+            settings: CopySelectionSettings.State,
+        ): String = file.path
     }
 }

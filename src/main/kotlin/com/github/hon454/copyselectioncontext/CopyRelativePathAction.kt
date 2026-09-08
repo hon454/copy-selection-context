@@ -4,7 +4,11 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 
 class CopyRelativePathAction : CopySelectionBaseAction() {
-    override fun getPath(project: Project, file: VirtualFile): String {
+    override fun getPath(
+        project: Project,
+        file: VirtualFile,
+        settings: CopySelectionSettings.State,
+    ): String {
         return CopySelectionUtils.resolvePath(project, file, PathType.RELATIVE)
     }
 }

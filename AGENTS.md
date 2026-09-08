@@ -61,7 +61,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | File | Role |
 |------|------|
 | `CopySelectionContextAction.kt` | Main unified action (`Ctrl+Alt+C` shortcut) |
-| `CopySelectionBaseAction.kt` / `CopyResultPublisher.kt` | Dumb-aware standard formatting with BGT presentation updates plus the project-scoped, policy-driven publisher for clipboard, analytics, highlighting, history, notifications, status, review accounting, and cross-action ordering |
+| `CopySelectionBaseAction.kt` / `CopyResultPublisher.kt` | Dumb-aware standard formatting that fixes the code-capture policy before reading caret payloads, with BGT presentation updates plus the project-scoped, policy-driven publisher for clipboard, analytics, highlighting, history, notifications, status, review accounting, and cross-action ordering |
 | `OutputFormatter.kt` / `TemplateFormatter.kt` | Built-in Claude Code and Path:Line formats plus custom templates |
 | `ContextCollectionService.kt` / `ContextCollectionStore.kt` / `ContextCollectionItem.kt` | Session-only immutable captures, bounded atomic additions, revisions and mutations |
 | `ContextCollectionSourceTracker.kt` / `ContextCollectionSubscriptions.kt` | Independent source-state revision and disposable listeners without retaining editors/documents |
@@ -72,7 +72,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `ClipboardRequestCoordinator.kt` | Application-wide request tokens and atomic final clipboard transaction; no retained payload/project state |
 | `AddToContextCollectionAction.kt` | Add-only editor action; no publisher or copy side effects |
 | `SelectionContext.kt` | Immutable per-caret snapshot of path, file, range, code, language, and filename inputs |
-| `CopySelectionUtils.kt` | Path/language helpers and single-pass selection context capture |
+| `CopySelectionUtils.kt` | Path/language helpers and policy-aware single-pass selection context capture without unused text reads |
 | `CopySelectionHighlighter.kt` | Editor-scoped gutter highlighter lifecycle |
 | `CopyRelativePathAction.kt` | Relative path (context menu only) |
 | `CopyAbsolutePathAction.kt` | Absolute path (context menu only) |
