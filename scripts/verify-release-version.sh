@@ -31,6 +31,11 @@ fi
 canonical_version="$(printf '%s\n' "$version_lines" | sed -E 's/^[[:space:]]*version[[:space:]]*=[[:space:]]*"([^"]+)".*$/\1/')"
 tag_version="${release_tag#v}"
 
+if [[ ! "$canonical_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "::error::Canonical version must use <major>.<minor>.<patch>: $canonical_version" >&2
+  exit 1
+fi
+
 if [[ "$canonical_version" != "$tag_version" ]]; then
   echo "::error::Version mismatch: tag=$tag_version, $build_file=$canonical_version" >&2
   exit 1
