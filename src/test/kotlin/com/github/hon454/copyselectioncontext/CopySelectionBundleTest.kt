@@ -250,6 +250,38 @@ class CopySelectionBundleTest {
         assertTrue(base.getProperty("review.prompt.content").contains("honest", ignoreCase = true))
     }
 
+    @Test
+    fun `shortcut introduction is localized and preserves dynamic prefix and assignment`() {
+        val keys = setOf(
+            "shortcuts.intro.title",
+            "shortcuts.intro.content",
+            "shortcuts.intro.unassigned",
+            "shortcuts.intro.action.settings",
+            "shortcuts.intro.action.keymap",
+            "shortcuts.intro.action.dismiss",
+        )
+
+        ALL_BUNDLES.forEach { (localeName, resourcePath) ->
+            val bundle = loadBundle(resourcePath)
+            keys.forEach { key ->
+                assertTrue(bundle.getProperty(key).isNotBlank(), "$localeName message '$key' should be non-blank")
+            }
+            val content = bundle.getProperty("shortcuts.intro.content")
+            assertEquals(setOf(0, 1), messageArgumentIndexes(content), localeName)
+            val formatted = MessageFormat.format(content, "PREFIX_VALUE", "CURRENT_VALUE")
+            assertTrue(formatted.contains("PREFIX_VALUE"), localeName)
+            assertTrue(formatted.contains("CURRENT_VALUE"), localeName)
+        }
+
+        val english = loadBundle("messages/CopySelectionBundle.properties")
+            .getProperty("shortcuts.intro.content")
+        assertTrue(english.contains("defaults", ignoreCase = true))
+        assertTrue(english.contains("current", ignoreCase = true))
+        assertTrue(english.contains("once", ignoreCase = true))
+        assertTrue(!english.contains("changed", ignoreCase = true))
+        assertTrue(!english.contains("updated", ignoreCase = true))
+    }
+
     private fun loadBundleKeys(resourcePath: String): Set<String> {
         return loadBundle(resourcePath).stringPropertyNames()
     }

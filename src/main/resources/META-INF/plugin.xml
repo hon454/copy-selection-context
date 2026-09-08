@@ -47,6 +47,8 @@ Source and issue tracker: <a href="https://github.com/hon454/copy-selection-cont
                     factoryClass="com.github.hon454.copyselectioncontext.ContextCollectionToolWindowFactory"
                     icon="/icons/copyContext.svg" canCloseContents="false"/>
 
+        <postStartupActivity implementation="com.github.hon454.copyselectioncontext.CopySelectionShortcutStartupActivity"/>
+
         <!-- Notification Group -->
         <notificationGroup id="CopySelectionContext" displayType="BALLOON"/>
         

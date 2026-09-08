@@ -123,6 +123,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `CopySelectionConfigurable.kt` | Tools settings UI, multiline template editor, preview, validation, and local analytics controls |
 | `CopySelectionContextAction.kt` | Settings-driven primary action |
 | `CopySelectionShortcuts.kt` | Shared nine-command G-prefix defaults and active-keymap lineage selection |
+| `CopySelectionShortcutIntroduction.kt` | Application-scoped non-roaming once-only introduction that reads the shared prefix and effective Copy binding without changing keymaps |
 | `CopySelectionGutterIconRenderer.kt` | Gutter icon and safe tooltip preview |
 | `CopySelectionHighlighter.kt` | Editor-scoped multi-range gutter marker lifecycle |
 | `CopySelectionNotifier.kt` | Settings-aware success, guarded clipboard-failure and localized permalink-failure balloons |

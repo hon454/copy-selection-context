@@ -95,6 +95,25 @@ class PluginDescriptorLocalizationTest {
     }
 
     @Test
+    fun `shortcut introduction is registered as one project startup activity`() {
+        val activities = descriptor.getElementsByTagName("postStartupActivity")
+        val matching = (0 until activities.length)
+            .map { activities.item(it) as org.w3c.dom.Element }
+            .filter {
+                it.getAttribute("implementation") ==
+                    "com.github.hon454.copyselectioncontext.CopySelectionShortcutStartupActivity"
+            }
+
+        assertEquals(1, matching.size)
+
+        val groups = descriptor.getElementsByTagName("notificationGroup")
+        val introductionGroup = (0 until groups.length)
+            .map { groups.item(it) as org.w3c.dom.Element }
+            .single { it.getAttribute("id") == CopySelectionShortcutIntroduction.NOTIFICATION_GROUP_ID }
+        assertEquals("BALLOON", introductionGroup.getAttribute("displayType"))
+    }
+
+    @Test
     fun `descriptor and shared command table declare the same g prefix defaults`() {
         val actions = descriptor.getElementsByTagName("action")
         val registered = (0 until actions.length)
