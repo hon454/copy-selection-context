@@ -1,12 +1,16 @@
 package com.github.hon454.copyselectioncontext
 
+import com.intellij.configurationStore.SchemeDataHolder
 import com.intellij.openapi.actionSystem.KeyboardShortcut
+import com.intellij.openapi.actionSystem.MouseShortcut
+import com.intellij.openapi.actionSystem.Shortcut
 import com.intellij.openapi.keymap.Keymap
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.keymap.ex.KeymapManagerEx
 import com.intellij.openapi.keymap.impl.KeymapImpl
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import javax.swing.KeyStroke
+import org.jdom.Element
 
 class CopySelectionShortcutFixtureTest : BasePlatformTestCase() {
     fun testRegisteredDefaultsUseOneTwoStrokeShortcutPerCommand() {
@@ -84,47 +88,103 @@ class CopySelectionShortcutFixtureTest : BasePlatformTestCase() {
         assertTrue(CopySelectionShortcuts.usesMacKeymap(macChild, macHost = false))
     }
 
-    fun testDefaultInheritancePreservesOverridesUnassignedAndUnrelatedEdits() {
-        val parent = keymap("Old plugin defaults")
+    fun testPersistedUserChoicesSurviveDefaultUpgradeAcrossAllCommands() {
+        val oldParent = keymap(PARENT_NAME)
         val oldCopy = keyboard("control alt C")
         val oldHistory = keyboard("control alt H")
-        parent.addShortcut(COPY, oldCopy)
-        parent.addShortcut(HISTORY, oldHistory)
-        parent.canModify = false
+        val removedIdeShortcut = keyboard("control alt I")
+        oldParent.addShortcut(COPY, oldCopy)
+        oldParent.addShortcut(HISTORY, oldHistory)
+        oldParent.addShortcut(REMOVED_IDE_ACTION, removedIdeShortcut)
+        oldParent.canModify = false
 
-        val untouched = parent.deriveKeymap("Untouched")
-        val unrelated = parent.deriveKeymap("Unrelated edits").apply {
-            addShortcut("Unrelated.Action", keyboard("control Q"))
+        val customKeyboard = keyboard("control shift A")
+        val customMouse = MouseShortcut(2, 0, 1)
+        val mouseOnly = MouseShortcut(3, 0, 1)
+        val unrelatedKeyboard = keyboard("control Q")
+        val staged = oldParent.deriveKeymap("Persisted user keymap").apply {
+            addShortcut(ADD_TO_COLLECTION, customKeyboard)
+            addShortcut(ADD_TO_COLLECTION, customMouse)
+            addShortcut(COPY_ALL_COLLECTION, mouseOnly)
+            removeAllActionShortcuts(REMOVED_IDE_ACTION)
+            addShortcut(UNRELATED_ACTION, unrelatedKeyboard)
         }
-        val explicitlyUnassigned = parent.deriveKeymap("Explicitly unassigned").apply {
-            removeAllActionShortcuts(COPY)
-            removeAllActionShortcuts(HISTORY)
-        }
-
-        CopySelectionShortcuts.defaultShortcuts(mac = false).forEach { (actionId, shortcut) ->
-            parent.removeAllActionShortcuts(actionId)
-            parent.addShortcut(actionId, shortcut)
-        }
-        val explicitOld = parent.deriveKeymap("Explicit old defaults").apply {
-            removeAllActionShortcuts(COPY)
-            addShortcut(COPY, oldCopy)
-            removeAllActionShortcuts(HISTORY)
-            addShortcut(HISTORY, oldHistory)
+        val persisted = staged.writeScheme().apply {
+            replaceAction(COPY, oldCopy)
+            replaceAction(HISTORY, oldHistory)
+            replaceAction(SHOW_COLLECTION)
         }
 
-        assertPluginDefaults(untouched)
-        assertPluginDefaults(unrelated)
-        assertEquals(listOf(keyboard("control Q")), unrelated.getShortcuts("Unrelated.Action").toList())
-        assertContainsElements(explicitOld.getShortcuts(COPY).toList(), oldCopy)
-        assertContainsElements(explicitOld.getShortcuts(HISTORY).toList(), oldHistory)
-        assertEmpty(explicitlyUnassigned.getShortcuts(COPY).toList())
-        assertEmpty(explicitlyUnassigned.getShortcuts(HISTORY).toList())
+        val before = loadPersisted(persisted, oldParent)
+        val beforeCommands = shortcutSnapshot(before, CopySelectionShortcuts.commands.keys)
+        assertEquals(listOf(oldCopy), beforeCommands.getValue(COPY))
+        assertEquals(listOf(oldHistory), beforeCommands.getValue(HISTORY))
+        assertEquals(listOf(customKeyboard, customMouse), beforeCommands.getValue(ADD_TO_COLLECTION))
+        assertEmpty(beforeCommands.getValue(SHOW_COLLECTION))
+        assertEquals(listOf(mouseOnly), beforeCommands.getValue(COPY_ALL_COLLECTION))
+        assertEmpty(before.getShortcuts(REMOVED_IDE_ACTION).toList())
+        assertEquals(listOf(unrelatedKeyboard), before.getShortcuts(UNRELATED_ACTION).toList())
+
+        val newParent = keymap(PARENT_NAME).apply {
+            CopySelectionShortcuts.defaultShortcuts(mac = false).forEach { (actionId, shortcut) ->
+                addShortcut(actionId, shortcut)
+            }
+            addShortcut(REMOVED_IDE_ACTION, removedIdeShortcut)
+            canModify = false
+        }
+        val after = loadPersisted(persisted, newParent)
+        val afterCommands = shortcutSnapshot(after, CopySelectionShortcuts.commands.keys)
+        val explicitlyPersisted = setOf(
+            COPY,
+            HISTORY,
+            ADD_TO_COLLECTION,
+            SHOW_COLLECTION,
+            COPY_ALL_COLLECTION,
+        )
+        val expectedAfter = CopySelectionShortcuts.commands.keys.associateWith { actionId ->
+            if (actionId in explicitlyPersisted) {
+                beforeCommands.getValue(actionId)
+            } else {
+                listOf(CopySelectionShortcuts.defaultShortcuts(mac = false).getValue(actionId))
+            }
+        }
+
+        assertEquals(expectedAfter, afterCommands)
+        assertEmpty(after.getShortcuts(REMOVED_IDE_ACTION).toList())
+        assertEquals(listOf(unrelatedKeyboard), after.getShortcuts(UNRELATED_ACTION).toList())
     }
 
-    private fun assertPluginDefaults(keymap: Keymap) {
-        CopySelectionShortcuts.defaultShortcuts(mac = false).forEach { (actionId, shortcut) ->
-            assertEquals(actionId, listOf(shortcut), keymap.getShortcuts(actionId).toList())
+    private fun loadPersisted(element: Element, parent: Keymap): Keymap = PersistedKeymap(parent, element)
+
+    private fun shortcutSnapshot(keymap: Keymap, actionIds: Collection<String>): Map<String, List<Shortcut>> =
+        actionIds.associateWith { actionId -> keymap.getShortcuts(actionId).toList() }
+
+    private fun Element.replaceAction(actionId: String, vararg shortcuts: KeyboardShortcut) {
+        getChildren("action").firstOrNull { it.getAttributeValue("id") == actionId }?.let(::removeContent)
+        addContent(Element("action").setAttribute("id", actionId).apply {
+            shortcuts.forEach { shortcut ->
+                addContent(
+                    Element("keyboard-shortcut")
+                        .setAttribute("first-keystroke", shortcut.firstKeyStroke.toString()),
+                )
+            }
+        })
+    }
+
+    private class PersistedKeymap(
+        private val resolvedParent: Keymap,
+        element: Element,
+    ) : KeymapImpl(
+        object : SchemeDataHolder<KeymapImpl> {
+            override fun read(): Element = element.clone()
+        },
+    ) {
+        init {
+            name = element.getAttributeValue("name")
         }
+
+        override fun findParentScheme(parentSchemeName: String): Keymap? =
+            resolvedParent.takeIf { it.name == parentSchemeName }
     }
 
     private fun keymap(name: String) = KeymapImpl().apply { this.name = name }
@@ -132,7 +192,13 @@ class CopySelectionShortcutFixtureTest : BasePlatformTestCase() {
     private fun keyboard(stroke: String) = KeyboardShortcut(KeyStroke.getKeyStroke(stroke), null)
 
     companion object {
+        private const val PARENT_NAME = "Synthetic plugin defaults"
         private const val COPY = "CopySelectionContext.Copy"
         private const val HISTORY = "CopySelectionContext.ShowHistory"
+        private const val ADD_TO_COLLECTION = "CopySelectionContext.AddToCollection"
+        private const val SHOW_COLLECTION = "CopySelectionContext.ShowCollection"
+        private const val COPY_ALL_COLLECTION = "CopySelectionContext.CopyAllCollection"
+        private const val REMOVED_IDE_ACTION = "IntroduceConstant"
+        private const val UNRELATED_ACTION = "Unrelated.Action"
     }
 }
