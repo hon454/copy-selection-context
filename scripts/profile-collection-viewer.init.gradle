@@ -3,7 +3,9 @@ allprojects {
     plugins.withId('org.jetbrains.kotlin.jvm') {
         tasks.register('profileCollectionViewer', JavaExec) {
             dependsOn tasks.named('testClasses')
-            classpath = sourceSets.test.runtimeClasspath
+            // Platform APIs are compile-only dependencies, but the production viewer implements
+            // Disposable even though this headless probe never creates an IntelliJ application.
+            classpath = sourceSets.test.runtimeClasspath + sourceSets.test.compileClasspath
             mainClass = 'com.github.hon454.copyselectioncontext.ContextCollectionViewerProbe'
             maxHeapSize = '4g'
             jvmArgs '-Djava.awt.headless=true'

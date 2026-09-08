@@ -14,13 +14,14 @@ import javax.swing.text.Position
 import javax.swing.text.View
 
 /** The same native component is used by the plugin, fixture tests and the standalone profiler. */
-internal class ContextCollectionTextArea : JTextArea() {
+internal open class ContextCollectionTextArea : JTextArea() {
     override fun updateUI() {
         setUI(object : BasicTextAreaUI() {
             override fun create(element: Element): View = ContextCollectionTextView(element)
         })
         // Selection is painted from logical ranges, including disjoint bidi regions.
         highlighter = null
+        installCollectionLineNavigation(this)
     }
 }
 
@@ -108,7 +109,9 @@ internal class ContextCollectionTextView(element: Element) : View(element) {
         val cell = line.cellAtX(x - origin.x) ?: return line.start
         if (cell.isTab) {
             val left = x - origin.x - cell.x < cell.width / 2
-            return if (left != cell.rtl) cell.start else cell.end
+            val atStart = left != cell.rtl
+            bias[0] = if (atStart) Position.Bias.Forward else Position.Bias.Backward
+            return if (atStart) cell.start else cell.end
         }
         val hit = cell.realHit(requireNotNull(cell.hit(x - origin.x - cell.x, y - origin.y - row * model.lineHeight - model.ascent)))
         bias[0] = if (hit.isLeadingEdge) Position.Bias.Forward else Position.Bias.Backward

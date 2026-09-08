@@ -28,6 +28,7 @@ internal class ContextCollectionTextRaster private constructor(
     private val left: TextHitInfo,
     private val right: TextHitInfo,
     private val stops: List<TextHitInfo>,
+    private val hitIndex: CollectionRasterHitIndex,
     private val rtl: Boolean,
     private val top: Float,
     private val height: Float,
@@ -40,7 +41,11 @@ internal class ContextCollectionTextRaster private constructor(
 ) {
     fun caretX(hit: TextHitInfo): Float = if (hit.isLeadingEdge) leading[hit.insertionIndex] else trailing[hit.insertionIndex]
 
-    fun hit(x: Float): TextHitInfo = if (x < advance / 2) left else right
+    fun hit(x: Float, y: Float): TextHitInfo = when {
+        x < 0f -> left
+        x >= advance -> right
+        else -> hitIndex.hit(x, y, rtl)
+    }
 
     fun next(hit: TextHitInfo, forward: Boolean): TextHitInfo? {
         val offset = if (rtl) -hit.insertionIndex else hit.insertionIndex
@@ -129,9 +134,71 @@ internal class ContextCollectionTextRaster private constructor(
                 tiles.add(tile)
             }
             checkCancelled()
-            return ContextCollectionTextRaster(layout.advance, leading, trailing, real(left), real(right), stops, !layout.isLeftToRight,
+            val hitIndex = CollectionRasterHitIndex.prepare(layout, stops, checkCancelled)
+            return ContextCollectionTextRaster(layout.advance, leading, trailing, real(left), real(right), stops, hitIndex, !layout.isLeftToRight,
                 top, height, firstX, scaleX, scaleY, tiles,
                 max(0f, -bounds.x.toFloat()), max(0f, bounds.maxX.toFloat() - layout.advance))
+        }
+    }
+}
+
+/** Native TextLayout hit semantics, indexed by the physical font metrics used by this one-font run. */
+private class CollectionRasterHitIndex private constructor(private val groups: List<Group>) {
+    private data class Metrics(val y: Float, val italic: Float)
+    private data class Character(val offset: Int, val next: Int, val x: Float)
+    private data class Group(val metrics: Metrics, val characters: List<Character>)
+
+    fun hit(x: Float, y: Float, rtl: Boolean): TextHitInfo {
+        var closest: Character? = null
+        var closestMetrics: Metrics? = null
+        var distance = Double.MAX_VALUE
+        for (group in groups) {
+            val characters = group.characters
+            var low = 0
+            var high = characters.size
+            while (low < high) {
+                val middle = (low + high) ushr 1
+                if (characters[middle].x < x) low = middle + 1 else high = middle
+            }
+            // Within one metrics group, the nearest x is also the nearest character center.
+            for (index in max(0, low - 1)..min(low, characters.lastIndex)) {
+                val candidate = characters[index]
+                val dx = candidate.x - x
+                val dy = group.metrics.y - y
+                val nextDistance = (4 * dx * dx + dy * dy).toDouble()
+                if (nextDistance < distance || (nextDistance == distance && candidate.offset < (closest?.offset ?: Int.MAX_VALUE))) {
+                    closest = candidate
+                    closestMetrics = group.metrics
+                    distance = nextDistance
+                }
+            }
+        }
+        val character = requireNotNull(closest)
+        val metrics = requireNotNull(closestMetrics)
+        val left = x < character.x - (y - metrics.y) * metrics.italic
+        return if (left != rtl) TextHitInfo.leading(character.offset) else TextHitInfo.trailing(character.next - 1)
+    }
+
+    companion object {
+        fun prepare(layout: TextLayout, stops: List<TextHitInfo>, checkCancelled: () -> Unit): CollectionRasterHitIndex {
+            val offsets = stops.map { it.insertionIndex }.distinct().sorted()
+            val groups = LinkedHashMap<Metrics, MutableList<Character>>()
+            for ((index, offset) in offsets.withIndex()) {
+                if (index % ContextCollectionTextLayout.CELL_CHARACTERS == 0) checkCancelled()
+                if (offset >= layout.characterCount) continue
+                val leading = layout.getCaretInfo(TextHitInfo.leading(offset))
+                val trailing = layout.getCaretInfo(TextHitInfo.trailing(offset))
+                // Public physical caret endpoints expose each fallback font's baseline and slant.
+                val cy = (leading[3] + leading[5]) / 2
+                val italic = (leading[2] - leading[4]) / (leading[5] - leading[3])
+                val cx = (leading[2] + leading[4] + trailing[2] + trailing[4]) / 4
+                groups.getOrPut(Metrics(cy, italic)) { ArrayList() }
+                    .add(Character(offset, offsets.getOrElse(index + 1) { layout.characterCount }, cx))
+            }
+            return CollectionRasterHitIndex(groups.map { (metrics, characters) ->
+                // Native ties choose the first logical character, including zero-advance marks.
+                Group(metrics, characters.sortedWith(compareBy<Character> { it.x }.thenBy { it.offset }).distinctBy { it.x })
+            })
         }
     }
 }

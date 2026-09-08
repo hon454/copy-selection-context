@@ -136,4 +136,103 @@ class ContextCollectionTextLayoutTest {
         assertEquals(1, masks)
         assertTrue(directlyDrawnCharacters <= 2 * ContextCollectionTextLayout.CELL_CHARACTERS)
     }
+
+    @Test
+    fun `oversized masks retain mouse access to internal glyph boundaries`() {
+        for (text in listOf("a" + "\u0301".repeat(1536) + "b", "א" + "\u05B0".repeat(1536) + "ב",
+            "ا" + "\u064B".repeat(1536) + "ب")) {
+            val expected = TextLayout(text, font, context)
+            val model = prepare(text).lines.single()
+            val cell = model.logical.single()
+            assertTrue(cell.raster != null)
+            for (halfPixel in -1..(expected.advance * 2).toInt()) {
+                val x = halfPixel / 2f
+                for (y in listOf(-5f, 0f, 3f)) {
+                    assertEquals(expected.hitTestChar(x, y), cell.hit(x, y), "${text.first()} x=$x y=$y")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `mouse hits preserve the tab edge beside a bidirectional run`() {
+        for (text in listOf("a\tאב", "אב\txyz", "\tאב", "אב\t")) {
+            val geometry = prepare(text)
+            val tab = geometry.lines.single().visual.single { it.isTab }
+            javax.swing.SwingUtilities.invokeAndWait {
+                val document = javax.swing.text.PlainDocument().apply {
+                    insertString(0, text, null)
+                    putProperty(ContextCollectionTextLayout.DOCUMENT_PROPERTY, geometry)
+                }
+                val area = ContextCollectionTextArea().apply { this.font = this@ContextCollectionTextLayoutTest.font }
+                area.document = document
+                area.setSize(500, 300)
+                val view = area.ui.getRootView(area).getView(0)
+                val allocation = java.awt.Rectangle(0, 0, 500, 300)
+                for (right in listOf(false, true)) {
+                    val bias = arrayOf(javax.swing.text.Position.Bias.Forward)
+                    val hit = view.viewToModel(tab.x + tab.width * if (right) 0.75f else 0.25f, 5f, allocation, bias)
+                    val returned = view.modelToView(hit, allocation, bias[0]).bounds2D.x
+                    assertEquals((tab.x + if (right) tab.width else 0f).toDouble(), returned, 0.01, text)
+                }
+            }
+        }
+    }
+
+    @Test
+    @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+    fun `native line action keys use indexed boundaries instead of scanning the row`() {
+        val names = listOf("caret-begin-line", "caret-end-line", "selection-begin-line", "selection-end-line",
+            "caret-begin-line-and-up", "caret-end-line-and-down", "select-line")
+        // Preserve native action semantics on small inputs, including repeated up/down edge moves.
+        for (text in listOf("first\nsecond\nlast", "abc\nאבג\nمرحبا")) {
+            val geometry = prepare(text)
+            javax.swing.SwingUtilities.invokeAndWait {
+                val reference = javax.swing.JTextArea(text).apply { font = this@ContextCollectionTextLayoutTest.font; setSize(500, 300) }
+                val candidate = ContextCollectionTextArea().apply {
+                    font = this@ContextCollectionTextLayoutTest.font
+                    document = javax.swing.text.PlainDocument().apply {
+                        insertString(0, text, null)
+                        putProperty(ContextCollectionTextLayout.DOCUMENT_PROPERTY, geometry)
+                    }
+                    setSize(500, 300)
+                }
+                for (name in names) for (offset in text.indices) {
+                    reference.caretPosition = offset
+                    candidate.caretPosition = offset
+                    repeat(2) {
+                        for (area in listOf(reference, candidate)) area.actionMap.get(name)
+                            .actionPerformed(java.awt.event.ActionEvent(area, 0, name))
+                        assertEquals(reference.caretPosition, candidate.caretPosition, "$name at $offset")
+                        assertEquals(reference.selectionStart, candidate.selectionStart, "$name at $offset")
+                        assertEquals(reference.selectionEnd, candidate.selectionEnd, "$name at $offset")
+                    }
+                }
+            }
+        }
+        for (text in listOf("ا".repeat(131072), "x".repeat(4194304))) {
+            val geometry = prepare(text)
+            val document = javax.swing.text.PlainDocument().apply {
+                insertString(0, text, null)
+                putProperty(ContextCollectionTextLayout.DOCUMENT_PROPERTY, geometry)
+            }
+            javax.swing.SwingUtilities.invokeAndWait {
+                val area = object : ContextCollectionTextArea() {
+                    var lookups = 0
+                    override fun modelToView(position: Int): java.awt.Rectangle? {
+                        assertTrue(++lookups <= 64, "A line action must not visit every character")
+                        return super.modelToView(position)
+                    }
+                }.apply { this.document = document; setSize(500, 300) }
+                for (name in names) {
+                    area.caretPosition = text.length / 2
+                    area.lookups = 0
+                    area.actionMap.get(name).actionPerformed(java.awt.event.ActionEvent(area, 0, name))
+                    assertEquals(if (name.contains("begin")) 0 else text.length, area.caretPosition)
+                    if (name.startsWith("selection")) assertEquals(text.length / 2, area.selectionEnd - area.selectionStart)
+                    if (name == "select-line") assertEquals(text, area.selectedText)
+                }
+            }
+        }
+    }
 }

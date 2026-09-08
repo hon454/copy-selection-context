@@ -38,7 +38,7 @@ internal class ContextCollectionTextLayout private constructor(
         val rightOverhang: Float = layout?.bounds?.let { max(0f, it.maxX.toFloat() - width) } ?: raster?.rightOverhang ?: 0f
         val isTab: Boolean get() = layout == null && raster == null
         fun caretX(hit: TextHitInfo): Float = if (layout != null) baselineX(layout, hit) else raster?.caretX(hit) ?: 0f
-        fun hit(x: Float, y: Float): TextHitInfo? = layout?.hitTestChar(x, y) ?: raster?.hit(x)
+        fun hit(x: Float, y: Float): TextHitInfo? = layout?.hitTestChar(x, y) ?: raster?.hit(x, y)
         fun next(hit: TextHitInfo, right: Boolean): TextHitInfo? = if (layout != null) {
             if (right) layout.getNextRightHit(hit) else layout.getNextLeftHit(hit)
         } else raster?.next(hit, right)

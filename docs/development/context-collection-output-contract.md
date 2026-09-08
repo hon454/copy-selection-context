@@ -51,7 +51,7 @@ Collection `CLIPBOARD_FAILURE` now goes exclusively through the project-owned `C
 ## Full preview geometry (#103)
 
 Both captured code and final output use `ContextCollectionTextViewer`. The viewer keeps the exact
-`PlainDocument` text and native `JTextArea` keyboard actions, accessibility and `TransferHandler`.
+`PlainDocument` text and native `JTextArea` accessibility and `TransferHandler`.
 Selection copy reads the selected original UTF-16 range. Copy All continues to read the service's
 complete `Ready.payload`; preview preparation never changes its key, byte count, warnings or limits.
 
@@ -60,6 +60,9 @@ indexes are prepared on a pooled thread. The Swing component and its custom `Con
 stay on EDT. Preferred size reads cached dimensions; painting binary-searches the first visible line
 and fragment, then visits the viewport. Caret lookup and mouse hit testing use the same geometry,
 including visually reordered runs. Tabs occupy tab stops without replacing the underlying character.
+The native line-navigation action keys use cached line boundaries: Swing's default Home/End and
+select-line actions otherwise scan every character through `Utilities.getRowStart/End`. Other native
+actions remain available, and selection-extending and up/down boundary behavior is preserved.
 Cells normally contain at most 512 UTF-16 units and end at an actual shaping-cluster caret boundary.
 An indivisible larger cluster uses background glyph masks and prepared caret coordinates, so a long
 combining sequence cannot force shaping or a giant glyph draw on EDT. No displayed text is truncated,
@@ -70,6 +73,9 @@ project disposal cancel work and empty both references even if an EDT callback i
 The callback captures only that cancellable request and installs only the current generation in a live
 project/content. Unchanged preview text/font/context preserves the current document and selection.
 Font or graphics-configuration changes prepare fresh geometry with the new rendering context.
+Oversized masks retain native logical mouse-hit semantics through worker-prepared character centers
+grouped by physical font metrics and indexed along x; zero-advance ties keep logical character order.
+Tabs preserve the affinity of their clicked edge next to bidirectional runs.
 
 `ContextCollectionTextLayoutTest` compares whole-paragraph shaping and visual caret positions, verifies
 raw line/cell coverage and counts viewport work. `ContextCollectionTextViewerFixtureTest` controls
