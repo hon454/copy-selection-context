@@ -64,6 +64,6 @@ internal object CopySelectionShortcuts {
         return macHost
     }
 
-    private const val DEFAULT_PREFIX = "control alt shift G"
-    private const val MAC_PREFIX = "meta alt shift G"
+    private const val DEFAULT_PREFIX = "control alt shift Z"
+    private const val MAC_PREFIX = "meta alt shift Z"
 }

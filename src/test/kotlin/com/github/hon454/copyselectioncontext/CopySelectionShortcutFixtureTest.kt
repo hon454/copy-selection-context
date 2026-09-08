@@ -154,6 +154,51 @@ class CopySelectionShortcutFixtureTest : BasePlatformTestCase() {
         assertEquals(listOf(unrelatedKeyboard), after.getShortcuts(UNRELATED_ACTION).toList())
     }
 
+    fun testPersistedGPrefixDistinguishesInheritedAndExplicitAssignments() {
+        val oldDefaults = CopySelectionShortcuts.commands.mapValues { (_, secondKey) ->
+            twoStroke("control alt shift G", secondKey)
+        }
+        val oldParent = keymap(G_PREFIX_PARENT_NAME).apply {
+            oldDefaults.forEach { (actionId, shortcut) -> addShortcut(actionId, shortcut) }
+            canModify = false
+        }
+        val unrelatedKeyboard = keyboard("control Q")
+        val staged = oldParent.deriveKeymap("Persisted G-prefix user keymap").apply {
+            addShortcut(UNRELATED_ACTION, unrelatedKeyboard)
+        }
+        val persisted = staged.writeScheme().apply {
+            replaceAction(COPY, oldDefaults.getValue(COPY))
+        }
+
+        val before = loadPersisted(persisted, oldParent)
+        val beforeCommands = shortcutSnapshot(before, CopySelectionShortcuts.commands.keys)
+        assertEquals(oldDefaults.mapValues { (_, shortcut) -> listOf(shortcut) }, beforeCommands)
+
+        val newDefaults = CopySelectionShortcuts.defaultShortcuts(mac = false)
+        val newParent = keymap(G_PREFIX_PARENT_NAME).apply {
+            newDefaults.forEach { (actionId, shortcut) ->
+                addShortcut(actionId, shortcut)
+            }
+            canModify = false
+        }
+        val after = loadPersisted(persisted, newParent)
+        val expectedAfter = CopySelectionShortcuts.commands.keys.associateWith { actionId ->
+            listOf(
+                if (actionId == COPY) {
+                    oldDefaults.getValue(actionId)
+                } else {
+                    newDefaults.getValue(actionId)
+                },
+            )
+        }
+
+        assertEquals(expectedAfter, shortcutSnapshot(after, CopySelectionShortcuts.commands.keys))
+        assertEquals(listOf(unrelatedKeyboard), after.getShortcuts(UNRELATED_ACTION).toList())
+        CopySelectionShortcuts.commands.keys.filterNot { it == COPY }.forEach { actionId ->
+            assertFalse(after.getShortcuts(actionId).contains(oldDefaults.getValue(actionId)))
+        }
+    }
+
     private fun loadPersisted(element: Element, parent: Keymap): Keymap = PersistedKeymap(parent, element)
 
     private fun shortcutSnapshot(keymap: Keymap, actionIds: Collection<String>): Map<String, List<Shortcut>> =
@@ -163,10 +208,10 @@ class CopySelectionShortcutFixtureTest : BasePlatformTestCase() {
         getChildren("action").firstOrNull { it.getAttributeValue("id") == actionId }?.let(::removeContent)
         addContent(Element("action").setAttribute("id", actionId).apply {
             shortcuts.forEach { shortcut ->
-                addContent(
-                    Element("keyboard-shortcut")
-                        .setAttribute("first-keystroke", shortcut.firstKeyStroke.toString()),
-                )
+                addContent(Element("keyboard-shortcut").apply {
+                    setAttribute("first-keystroke", shortcut.firstKeyStroke.toString())
+                    shortcut.secondKeyStroke?.let { setAttribute("second-keystroke", it.toString()) }
+                })
             }
         })
     }
@@ -191,8 +236,14 @@ class CopySelectionShortcutFixtureTest : BasePlatformTestCase() {
 
     private fun keyboard(stroke: String) = KeyboardShortcut(KeyStroke.getKeyStroke(stroke), null)
 
+    private fun twoStroke(first: String, second: String) = KeyboardShortcut(
+        KeyStroke.getKeyStroke(first),
+        KeyStroke.getKeyStroke(second),
+    )
+
     companion object {
         private const val PARENT_NAME = "Synthetic plugin defaults"
+        private const val G_PREFIX_PARENT_NAME = "Synthetic G-prefix plugin defaults"
         private const val COPY = "CopySelectionContext.Copy"
         private const val HISTORY = "CopySelectionContext.ShowHistory"
         private const val ADD_TO_COLLECTION = "CopySelectionContext.AddToCollection"

@@ -79,123 +79,123 @@ Source and issue tracker: <a href="https://github.com/hon454/copy-selection-cont
             <action id="CopySelectionContext.Copy"
                     class="com.github.hon454.copyselectioncontext.CopySelectionContextAction"
                     icon="/icons/copyContext.svg">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="C"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="C" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="C" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="C" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="C" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="C" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="C" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="C" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="C" replace-all="true"/>
+                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift Z" second-keystroke="C"/>
+                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift Z" second-keystroke="C" replace-all="true"/>
+                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift Z" second-keystroke="C" replace-all="true"/>
+                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift Z" second-keystroke="C" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift Z" second-keystroke="C" replace-all="true"/>
+                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift Z" second-keystroke="C" replace-all="true"/>
+                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift Z" second-keystroke="C" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift Z" second-keystroke="C" replace-all="true"/>
+                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift Z" second-keystroke="C" replace-all="true"/>
             </action>
 
             <separator/>
 
             <action id="CopySelectionContext.ShowHistory"
                     class="com.github.hon454.copyselectioncontext.ShowCopyHistoryAction">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="H"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="H" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="H" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="H" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="H" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="H" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="H" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="H" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="H" replace-all="true"/>
+                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift Z" second-keystroke="H"/>
+                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift Z" second-keystroke="H" replace-all="true"/>
+                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift Z" second-keystroke="H" replace-all="true"/>
+                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift Z" second-keystroke="H" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift Z" second-keystroke="H" replace-all="true"/>
+                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift Z" second-keystroke="H" replace-all="true"/>
+                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift Z" second-keystroke="H" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift Z" second-keystroke="H" replace-all="true"/>
+                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift Z" second-keystroke="H" replace-all="true"/>
             </action>
 
             <action id="CopySelectionContext.ShowCollection"
                     class="com.github.hon454.copyselectioncontext.ShowContextCollectionAction">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="O"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="O" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="O" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="O" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="O" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="O" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="O" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="O" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="O" replace-all="true"/>
+                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift Z" second-keystroke="O"/>
+                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift Z" second-keystroke="O" replace-all="true"/>
+                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift Z" second-keystroke="O" replace-all="true"/>
+                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift Z" second-keystroke="O" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift Z" second-keystroke="O" replace-all="true"/>
+                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift Z" second-keystroke="O" replace-all="true"/>
+                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift Z" second-keystroke="O" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift Z" second-keystroke="O" replace-all="true"/>
+                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift Z" second-keystroke="O" replace-all="true"/>
             </action>
             <action id="CopySelectionContext.CopyAllCollection"
                     class="com.github.hon454.copyselectioncontext.CopyAllContextCollectionAction">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="F"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="F" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="F" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="F" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="F" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="F" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="F" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="F" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="F" replace-all="true"/>
+                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift Z" second-keystroke="F"/>
+                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift Z" second-keystroke="F" replace-all="true"/>
+                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift Z" second-keystroke="F" replace-all="true"/>
+                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift Z" second-keystroke="F" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift Z" second-keystroke="F" replace-all="true"/>
+                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift Z" second-keystroke="F" replace-all="true"/>
+                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift Z" second-keystroke="F" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift Z" second-keystroke="F" replace-all="true"/>
+                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift Z" second-keystroke="F" replace-all="true"/>
             </action>
             <action id="CopySelectionContext.AddToCollection"
                     class="com.github.hon454.copyselectioncontext.AddToContextCollectionAction">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="A"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="A" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="A" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="A" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="A" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="A" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="A" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="A" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="A" replace-all="true"/>
+                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift Z" second-keystroke="A"/>
+                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift Z" second-keystroke="A" replace-all="true"/>
+                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift Z" second-keystroke="A" replace-all="true"/>
+                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift Z" second-keystroke="A" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift Z" second-keystroke="A" replace-all="true"/>
+                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift Z" second-keystroke="A" replace-all="true"/>
+                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift Z" second-keystroke="A" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift Z" second-keystroke="A" replace-all="true"/>
+                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift Z" second-keystroke="A" replace-all="true"/>
             </action>
 
             <!-- Explicit copy actions -->
             <action id="CopySelectionContext.CopyRelativePath"
                     class="com.github.hon454.copyselectioncontext.CopyRelativePathAction"
                     icon="/icons/copyRelative.svg">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="R"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="R" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="R" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="R" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="R" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="R" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="R" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="R" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="R" replace-all="true"/>
+                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift Z" second-keystroke="R"/>
+                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift Z" second-keystroke="R" replace-all="true"/>
+                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift Z" second-keystroke="R" replace-all="true"/>
+                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift Z" second-keystroke="R" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift Z" second-keystroke="R" replace-all="true"/>
+                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift Z" second-keystroke="R" replace-all="true"/>
+                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift Z" second-keystroke="R" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift Z" second-keystroke="R" replace-all="true"/>
+                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift Z" second-keystroke="R" replace-all="true"/>
             </action>
 
             <action id="CopySelectionContext.CopyAbsolutePath"
                     class="com.github.hon454.copyselectioncontext.CopyAbsolutePathAction"
                     icon="/icons/copyAbsolute.svg">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="P"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="P" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="P" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="P" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="P" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="P" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="P" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="P" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="P" replace-all="true"/>
+                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift Z" second-keystroke="P"/>
+                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift Z" second-keystroke="P" replace-all="true"/>
+                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift Z" second-keystroke="P" replace-all="true"/>
+                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift Z" second-keystroke="P" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift Z" second-keystroke="P" replace-all="true"/>
+                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift Z" second-keystroke="P" replace-all="true"/>
+                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift Z" second-keystroke="P" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift Z" second-keystroke="P" replace-all="true"/>
+                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift Z" second-keystroke="P" replace-all="true"/>
             </action>
 
             <action id="CopySelectionContext.CopyWithCodeContent"
                     class="com.github.hon454.copyselectioncontext.CopyWithCodeContentAction"
                     icon="/icons/copyWithCode.svg">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="B"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="B" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="B" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="B" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="B" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="B" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="B" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="B" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="B" replace-all="true"/>
+                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift Z" second-keystroke="B"/>
+                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift Z" second-keystroke="B" replace-all="true"/>
+                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift Z" second-keystroke="B" replace-all="true"/>
+                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift Z" second-keystroke="B" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift Z" second-keystroke="B" replace-all="true"/>
+                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift Z" second-keystroke="B" replace-all="true"/>
+                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift Z" second-keystroke="B" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift Z" second-keystroke="B" replace-all="true"/>
+                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift Z" second-keystroke="B" replace-all="true"/>
             </action>
 
             <action id="CopySelectionContext.CopyGitPermalink"
                     class="com.github.hon454.copyselectioncontext.CopyGitPermalinkAction">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="L"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="L" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="L" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="L" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="L" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="L" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="L" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="L" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="L" replace-all="true"/>
+                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift Z" second-keystroke="L"/>
+                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift Z" second-keystroke="L" replace-all="true"/>
+                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift Z" second-keystroke="L" replace-all="true"/>
+                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift Z" second-keystroke="L" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift Z" second-keystroke="L" replace-all="true"/>
+                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift Z" second-keystroke="L" replace-all="true"/>
+                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift Z" second-keystroke="L" replace-all="true"/>
+                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift Z" second-keystroke="L" replace-all="true"/>
+                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift Z" second-keystroke="L" replace-all="true"/>
             </action>
 
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>

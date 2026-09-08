@@ -95,7 +95,7 @@ class PluginDescriptorLocalizationTest {
     }
 
     @Test
-    fun `descriptor and shared command table declare the same g prefix defaults`() {
+    fun `descriptor and shared command table declare the same two step defaults`() {
         val actions = descriptor.getElementsByTagName("action")
         val registered = (0 until actions.length)
             .map { actions.item(it) as org.w3c.dom.Element }
@@ -111,13 +111,13 @@ class PluginDescriptorLocalizationTest {
             assertEquals(CopySelectionShortcuts.macKeymapIds + "\$default", declared.keys, actionId)
 
             val default = declared.getValue("\$default")
-            assertEquals("control alt shift G", default.getAttribute("first-keystroke"), actionId)
+            assertEquals("control alt shift Z", default.getAttribute("first-keystroke"), actionId)
             assertEquals(secondKey, default.getAttribute("second-keystroke"), actionId)
             assertEquals("", default.getAttribute("replace-all"), actionId)
 
             CopySelectionShortcuts.macKeymapIds.forEach { keymapId ->
                 val mac = declared.getValue(keymapId)
-                assertEquals("meta alt shift G", mac.getAttribute("first-keystroke"), "$keymapId / $actionId")
+                assertEquals("meta alt shift Z", mac.getAttribute("first-keystroke"), "$keymapId / $actionId")
                 assertEquals(secondKey, mac.getAttribute("second-keystroke"), "$keymapId / $actionId")
                 assertEquals("true", mac.getAttribute("replace-all"), "$keymapId / $actionId")
             }
@@ -131,6 +131,11 @@ class PluginDescriptorLocalizationTest {
         assertFalse(shortcutXml.any { it.getAttribute("second-keystroke").isEmpty() })
         assertFalse(shortcutXml.any { it.getAttribute("first-keystroke") in setOf("control alt C", "meta alt C") })
         assertFalse(shortcutXml.any { it.getAttribute("first-keystroke") == "control alt H" })
+        assertFalse(
+            shortcutXml.any {
+                it.getAttribute("first-keystroke") in setOf("control alt shift G", "meta alt shift G")
+            },
+        )
     }
 
     private fun descriptorPresentationKeys(properties: Properties): Set<String> =
