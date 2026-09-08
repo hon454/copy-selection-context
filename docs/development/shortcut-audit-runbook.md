@@ -76,6 +76,19 @@ Only the nine exact product IDs are excluded when classifying external prefix
 occupancy. Dormant mappings remain visible with `registered=false`. Owner plugin
 IDs, bundled flags and the loaded plugin inventory distinguish contributions.
 
+`build-harness` creates an immutable `manifest.json` beside the diagnostic JAR.
+It records the exact JAR SHA-256, plugin ID and Java/descriptor source hashes,
+plus the available Git revision and dirty-state metadata. Source hashes are the
+binding to the reviewed exporter content; a revision alone does not identify
+uncommitted build inputs. Keep the entire `csc-keymap-audit` directory together.
+The runners reject a missing manifest, stale exporter sources, wrong plugin ID,
+modified JAR or unexpected files before launching. They record and revalidate
+the installed artifact after execution. Launch records, raw exports and baseline
+acceptance all carry the same JAR/manifest hashes. A legacy diagnostic JAR cannot
+be made current by copying it into a new profile. Rebuild from reviewed sources
+and regenerate observations after exporter changes; do not add manifests to old
+JARs or rewrite existing acceptance records.
+
 The headless application starter exports data after application startup. Because
 project startup or optional plugins can register additional actions, repeat the
 export in the GUI after the audit project finishes loading, using Find Action →
@@ -107,14 +120,15 @@ differ. Never label macOS-hosted keymap data as Windows/Linux runtime evidence.
 Output includes the exact launch argv and product identity (`audit-command.json`),
 `audit-console.log`, PID/start/exit records, the complete `keymaps.tsv` and
 `summary.json`. Schema 2 exports record profile/run/PID identity, open projects,
-initialized JSON parent chains, all nine command and watched-action bindings
+harness JAR/manifest hashes, initialized JSON parent chains, all nine command and watched-action bindings
 (including mouse shortcuts and explicit empty lists), and all six probe strokes.
 The parser rejects missing/duplicate rows, invalid schema/columns, mismatched
 completion counts, incomplete per-keymap bindings and missing occupancy for a
 recorded shortcut. A nonzero IDE exit also fails. Interrupted or failed launches
 terminate their own process group and save the exit/cleanup record. Old schema 1
 data requires `summarize --allow-legacy`; it is inspection-only and cannot certify
-parents or become baseline/candidate acceptance evidence. A complete export containing external G-prefix occupancy is evidence
+parents or become baseline/candidate acceptance evidence. A complete export
+containing external G-prefix occupancy is evidence
 of a conflict, not a passing audit. Report it for a product decision; do not
 choose replacement keys or unbind external actions.
 
@@ -123,7 +137,8 @@ plugin directory, then use `launch-gui --app IDE_APP --profile TEST_PROFILE
 --project FIXTURE_PROJECT`. The runner creates a unique `gui-run-UUID` directory,
 private VM options and `gui-command.json`; its VM options set the export location
 and profile/run identities. Save screenshots and accessibility text inside that
-same run directory. Use the GUI export action after the fixture project opens. The nine-key behavioral run should also be repeated without
+same run directory. Use the GUI export action after the fixture project opens.
+The nine-key behavioral run should also be repeated without
 the diagnostic harness. A harness action invocation is only a data export.
 
 ## Native GUI launch and input precautions
@@ -279,13 +294,15 @@ Acceptance checks that the GUI loaded v1.6.0 in the intended four profile paths,
 had the expected project and keymap open, exported complete bindings from the
 recorded PID/run within its lifetime, and exited normally. It verifies each seed's
 keyboard/mouse/empty/deletion contract and binds the raw export, launch records,
-PNG or native JPEG screenshot, accessibility text and unchanged exit config snapshot by hashes.
+PNG or native JPEG screenshot, accessibility text and unchanged exit config
+snapshot by hashes. It also requires the installed harness to match both the
+recorded artifact and the current exporter source hashes.
 The operator attests to what the screenshot and UI actually showed; these hashes
 provide integrity checks, not independent attestation against a fabricated set
 of artifacts. Unit tests use explicitly synthetic evidence, never real GUI PASS.
 
 Accepted baselines are frozen: the launcher refuses to reopen them, and cloning
-revalidates all evidence and current config/product hashes. Source and target
+revalidates all evidence and current config/product/harness hashes. Source and target
 must be disjoint canonical paths (neither equal nor an ancestor of the other),
 including symlink aliases. A target nested under the source is rejected before
 any writes. Preserve the accepted original and work only in a new sibling tree.

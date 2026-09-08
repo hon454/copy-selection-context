@@ -115,6 +115,9 @@ def parse_export(source, allow_legacy=False):
         expected_counts = [len(maps), len(commands)]
     else:
         require({"profileId", "runId", "processId", "projectRoots"} <= set(meta), "missing run identity")
+        require(all(isinstance(meta.get(key), str) and len(meta[key]) == 64
+                    and all(char in "0123456789abcdef" for char in meta[key])
+                    for key in ["harnessJarSha256", "harnessManifestSha256"]), "missing/invalid harness identity")
         require(all(meta[key] not in {"", "null"} for key in ["profileId", "runId", "processId"]), "empty run identity")
         require(int(meta["processId"]) > 0, "process ID")
         roots = json.loads(meta["projectRoots"])

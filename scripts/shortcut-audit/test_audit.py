@@ -54,6 +54,19 @@ class AuditToolTest(unittest.TestCase):
             native_mac=True, removed_action="IntroduceConstant", old_copy="meta alt C", old_history="meta alt H"))
         return root
 
+    def install_harness(self, profile):
+        """Synthetic JAR for validation only; never loaded in an IDE."""
+        directory = profile / "plugins/csc-keymap-audit"
+        jar = directory / audit.HARNESS_JAR
+        jar.parent.mkdir(parents=True)
+        with zipfile.ZipFile(jar, "x") as archive:
+            archive.writestr("META-INF/plugin.xml", (audit.HERE / "plugin.xml").read_bytes())
+            archive.writestr("audit/Synthetic.class", b"SIMULATED validator test; not executable")
+        audit.write_json(directory / "manifest.json", {"schema": 1, "pluginId": audit.HARNESS_ID,
+            "jarSha256": audit.digest(jar), "sources": audit.exporter_sources(),
+            "sourceRevision": None, "sourceTreeDirty": None})
+        return directory
+
     def test_existing_profile_is_never_overwritten(self):
         root = self.prepare()
         before = audit.config_snapshot(root)
@@ -77,13 +90,17 @@ class AuditToolTest(unittest.TestCase):
                 "build": "IC-243.21565.193", "activeKeymap": active, "headless": "false",
                 "registeredActionCount": "500", "profileId": metadata.get("profileId", str(uuid.uuid4())),
                 "runId": context["runId"] if context else str(uuid.uuid4()), "processId": str(pid),
+                "harnessJarSha256": context["harness"]["jarSha256"] if context else "1" * 64,
+                "harnessManifestSha256": context["harness"]["manifestSha256"] if context else "2" * 64,
                 "watchedActions": json.dumps(sorted(WATCHED_IDS)),
                 "projectRoots": json.dumps([context["project"]] if context else [])}
         meta.update({"idea." + name + ".path": str((profile or self.root) / name)
                      for name in ["config", "system", "plugins", "log"]})
         rows = [["META", key, value] for key, value in meta.items()]
         rows += [["META", "os", "Mac OS X", "15.5", "aarch64"],
-                 ["PLUGIN", audit.PRODUCT_ID, "1.6.0", "false", "test/plugin"]]
+                 ["PLUGIN", audit.PRODUCT_ID, "1.6.0", "false", "test/plugin"],
+                 ["PLUGIN", audit.HARNESS_ID, "1", "false",
+                  context["harness"]["directory"] if context else "test/harness"]]
         probes = {name: name.replace("control", "ctrl").rsplit(" ", 1)[0] + " pressed " + name.rsplit(" ", 1)[1]
                   for name in PROBES}
         rows += [["PROBE", name, value] for name, value in sorted(probes.items())]
@@ -119,6 +136,7 @@ class AuditToolTest(unittest.TestCase):
     def gui_fixture(self, source):
         """Synthetic evidence for validator tests only; never real GUI acceptance."""
         metadata = audit.load_profile(source)
+        self.install_harness(source)
         run_id = str(uuid.uuid4())
         directory = source / ("gui-run-" + run_id)
         directory.mkdir()
@@ -235,6 +253,83 @@ class AuditToolTest(unittest.TestCase):
             audit.accept_baseline(args)
         image.write_bytes(b"\xff\xd8\xff\xe0SIMULATED JPEG test fixture")
         audit.accept_baseline(args)
+        audit.validate_acceptance(source)
+
+    def test_harness_rejects_missing_stale_changed_wrong_plugin_and_extra_files(self):
+        source = self.prepare()
+        directory = self.install_harness(source)
+        audit.validate_harness(directory)
+        manifest = directory / "manifest.json"
+        original_manifest = manifest.read_bytes()
+        manifest.unlink()
+        with self.assertRaises(ValueError):
+            audit.validate_harness(directory)
+        manifest.write_bytes(original_manifest)
+        for key, value in [("pluginId", "wrong.plugin"), ("sources", {"old.java": "1" * 64}),
+                           ("jarSha256", "2" * 64)]:
+            with self.subTest(key=key):
+                data = json.loads(original_manifest)
+                data[key] = value
+                manifest.write_text(json.dumps(data))
+                with self.assertRaises(ValueError):
+                    audit.validate_harness(directory)
+        manifest.write_bytes(original_manifest)
+        jar = directory / audit.HARNESS_JAR
+        original_jar = jar.read_bytes()
+        jar.write_bytes(original_jar + b"changed")
+        with self.assertRaisesRegex(ValueError, "JAR changed"):
+            audit.validate_harness(directory)
+        jar.write_bytes(original_jar)
+        (directory / "extra.jar").write_bytes(b"extra")
+        with self.assertRaisesRegex(ValueError, "unexpected harness files"):
+            audit.validate_harness(directory)
+
+    def test_wrong_descriptor_rejected_even_when_jar_digest_matches_manifest(self):
+        source = self.prepare()
+        directory = self.install_harness(source)
+        jar = directory / audit.HARNESS_JAR
+        with zipfile.ZipFile(jar, "w") as archive:
+            archive.writestr("META-INF/plugin.xml", "<idea-plugin><id>wrong.plugin</id></idea-plugin>")
+        manifest = directory / "manifest.json"
+        data = json.loads(manifest.read_text())
+        data["jarSha256"] = audit.digest(jar)
+        manifest.write_text(json.dumps(data))
+        with self.assertRaisesRegex(ValueError, "wrong harness plugin ID"):
+            audit.validate_harness(directory)
+
+    def test_stale_harness_stops_audit_and_gui_before_launch_or_copy(self):
+        source = self.prepare()
+        directory = self.install_harness(source)
+        (directory / "manifest.json").unlink()
+        with mock.patch.object(audit, "run_process") as launch:
+            with self.assertRaises(ValueError):
+                audit.audit(argparse.Namespace(profile=str(source), ide_home=str(self.root / "no-ide"),
+                    harness=str(directory), timeout=10))
+            with self.assertRaises(ValueError):
+                audit.launch_gui(argparse.Namespace(profile=str(source), app=str(self.root / "no-ide"),
+                    project=str(self.root / "project")))
+            launch.assert_not_called()
+
+    def test_harness_change_invalidates_accepted_baseline_and_export_must_match_run(self):
+        source = self.prepare()
+        args = self.gui_fixture(source)
+        raw = Path(args.export)
+        original = raw.read_text()
+        rows = [[audit.parse_export(raw)["metadata"]["harnessJarSha256"], "0" * 64],
+                [audit.parse_export(raw)["metadata"]["harnessManifestSha256"], "0" * 64]]
+        for before, after in rows:
+            raw.write_text(original.replace(before, after))
+            with self.assertRaisesRegex(ValueError, "export harness identity"):
+                audit.accept_baseline(args)
+        raw.write_text(original)
+        audit.accept_baseline(args)
+        directory = source / "plugins/csc-keymap-audit"
+        for path in [directory / audit.HARNESS_JAR, directory / "manifest.json"]:
+            before = path.read_bytes()
+            path.write_bytes(before + b" ")
+            with self.assertRaises(ValueError):
+                audit.validate_acceptance(source)
+            path.write_bytes(before)
         audit.validate_acceptance(source)
 
     def test_changed_config_raw_gui_or_product_invalidates_acceptance(self):

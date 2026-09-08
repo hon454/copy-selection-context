@@ -23,6 +23,8 @@ from evidence import COMMANDS, COMMAND_IDS, PREFIX, PRODUCT_ID, parse_export, re
 
 HERE = Path(__file__).resolve().parent
 CASES = ["pristine", "unrelated-only", "explicit-old", "custom", "unassigned", "removed-ide"]
+HARNESS_ID = PRODUCT_ID + ".audit"
+HARNESS_JAR = "lib/csc-keymap-audit.jar"
 
 
 def digest(path):
@@ -183,6 +185,37 @@ def contained_file(root, name):
     return resolved
 
 
+def exporter_sources():
+    return {path.name: digest(path) for path in sorted([*HERE.glob("*.java"), HERE / "plugin.xml"])}
+
+
+def validate_harness(directory):
+    """Accept only the exact diagnostic artifact built from these exporter sources."""
+    manifest_path = contained_file(directory, "manifest.json")
+    manifest = json.loads(manifest_path.read_text())
+    require(manifest.get("schema") == 1 and manifest.get("pluginId") == HARNESS_ID,
+            "missing or wrong harness manifest identity")
+    require(manifest.get("sources") == exporter_sources(), "stale harness exporter sources; rebuild the harness")
+    jar = contained_file(directory, HARNESS_JAR)
+    require(manifest.get("jarSha256") == digest(jar), "harness JAR changed")
+    files = tree_snapshot(directory, ".")
+    require(set(files) == {"manifest.json", HARNESS_JAR}, "unexpected harness files")
+    with zipfile.ZipFile(jar) as archive:
+        descriptor = archive.read("META-INF/plugin.xml")
+        require(ET.fromstring(descriptor).findtext("id") == HARNESS_ID, "wrong harness plugin ID")
+        require(hashlib.sha256(descriptor).hexdigest() == manifest["sources"]["plugin.xml"],
+                "harness descriptor differs from reviewed source")
+    return {"pluginId": HARNESS_ID, "directory": str(directory),
+            "jarSha256": manifest["jarSha256"], "manifestSha256": digest(manifest_path),
+            "sources": manifest["sources"], "sourceRevision": manifest.get("sourceRevision"),
+            "sourceTreeDirty": manifest.get("sourceTreeDirty")}
+
+
+def harness_properties(identity):
+    return ["-Dcsc.audit.harnessJarSha256=" + identity["jarSha256"],
+            "-Dcsc.audit.harnessManifestSha256=" + identity["manifestSha256"]]
+
+
 def ensure_closed(root):
     lock = root / "config/.lock"
     require(not lock.exists() and not lock.is_symlink(), "stop the profile IDE first")
@@ -234,7 +267,8 @@ def run_process(command, root, directory, context, environment=None, timeout=Non
 def run_context(root, metadata, run_id, mode, build, project=None):
     return {"schema": 1, "runId": run_id, "profileId": metadata["profileId"], "profile": str(root),
             "profileSha256": digest(root / "profile.json"), "productSha256": metadata["productSha256"],
-            "mode": mode, "ideBuild": build, "project": project}
+            "mode": mode, "ideBuild": build, "project": project,
+            "harness": validate_harness(root / "plugins/csc-keymap-audit")}
 
 
 def acceptance_proof(root, run_name, export_name, gui_names, observed_keymap):
@@ -250,19 +284,26 @@ def acceptance_proof(root, run_name, export_name, gui_names, observed_keymap):
     require(start.get("schema") == 1 and end.get("schema") == 1 and start.get("mode") == end.get("mode") == "gui", "not a GUI launch")
     require(type(start.get("pid")) is int and start["pid"] > 0 and start["pid"] == end.get("pid"), "PID evidence mismatch")
     require(type(end.get("exitCode")) is int and end["exitCode"] == 0 and end.get("interrupted") is False, "GUI did not exit cleanly")
-    for key in ["runId", "profileId", "profile", "profileSha256", "productSha256", "ideBuild", "project"]:
+    for key in ["runId", "profileId", "profile", "profileSha256", "productSha256", "ideBuild", "project", "harness"]:
         require(start.get(key) is not None and start.get(key) == end.get(key) == command.get(key), "launch identity mismatch: " + key)
     require(start["profileId"] == metadata["profileId"] and start["profile"] == str(root)
             and start["profileSha256"] == digest(root / "profile.json")
             and start["productSha256"] == metadata["productSha256"], "launch/profile mismatch")
     uuid.UUID(start["runId"])
     require(directory.name == "gui-run-" + start["runId"], "GUI run directory identity mismatch")
+    harness = validate_harness(root / "plugins/csc-keymap-audit")
+    require(start["harness"] == harness, "installed harness differs from GUI launch")
     export_path = contained_file(root, export_name)
     require(export_path.parent == directory.resolve(), "export belongs to another run")
     data = parse_export(export_path)
     meta = data["metadata"]
     require(meta["headless"] == "false" and meta["profileId"] == start["profileId"]
             and meta["runId"] == start["runId"] and int(meta["processId"]) == start["pid"], "export is not from this GUI process")
+    require(meta["harnessJarSha256"] == harness["jarSha256"]
+            and meta["harnessManifestSha256"] == harness["manifestSha256"], "export harness identity mismatch")
+    require(HARNESS_ID in data["plugins"]
+            and Path(data["plugins"][HARNESS_ID][4]).resolve() == Path(harness["directory"]),
+            "GUI loaded the harness from another directory")
     require(meta["build"].split("-", 1)[-1] == start["ideBuild"], "IDE build mismatch")
     require(data["plugins"][PRODUCT_ID][2] == "1.6.0", "GUI did not load v1.6.0")
     for name in ["config", "system", "plugins", "log"]:
@@ -286,6 +327,7 @@ def acceptance_proof(root, run_name, export_name, gui_names, observed_keymap):
             and any(path.suffix == ".txt" for path in gui), "both screenshot and accessibility text are required")
     files = [start_path, end_path, command_path, export_path, *gui]
     return {"profileId": metadata["profileId"], "runId": start["runId"], "keymap": observed_keymap,
+            "harness": harness,
             "files": {str(path.relative_to(root)): digest(path) for path in files},
             "configSnapshot": config_snapshot(root), "finishedUtc": end["finishedUtc"]}
 
@@ -349,6 +391,7 @@ def validate_seed_bindings(metadata, data):
 
 def build(args):
     home, output = Path(args.ide_home).resolve(), Path(args.output).resolve()
+    sources = exporter_sources()
     output.mkdir(parents=True, exist_ok=False)
     classes = output / "classes"
     classes.mkdir()
@@ -361,6 +404,17 @@ def build(args):
         archive.write(HERE / "plugin.xml", "META-INF/plugin.xml")
         for path in classes.rglob("*.class"):
             archive.write(path, str(path.relative_to(classes)))
+    revision = subprocess.run(["git", "-C", str(HERE), "rev-parse", "HEAD"],
+                              capture_output=True, text=True)
+    status = subprocess.run(["git", "-C", str(HERE), "status", "--porcelain", "--", "."],
+                            capture_output=True, text=True)
+    require(sources == exporter_sources(), "exporter sources changed while compiling")
+    directory = jar.parent.parent
+    write_json(directory / "manifest.json", {"schema": 1, "pluginId": HARNESS_ID,
+        "createdUtc": datetime.now(timezone.utc).isoformat(), "jarSha256": digest(jar), "sources": sources,
+        "sourceRevision": revision.stdout.strip() if revision.returncode == 0 else None,
+        "sourceTreeDirty": bool(status.stdout.strip()) if status.returncode == 0 else None})
+    validate_harness(directory)
     print(jar)
 
 
@@ -371,7 +425,9 @@ def audit(args):
     require(not (root / "acceptance.json").exists(), "accepted baselines are immutable; use a clone")
     run_id = str(uuid.uuid4())
     probe = Path(args.harness).resolve()
+    validate_harness(probe)
     shutil.copytree(probe, root / "plugins/csc-keymap-audit", dirs_exist_ok=False)
+    harness = validate_harness(root / "plugins/csc-keymap-audit")
     product_info_path = home / "Resources/product-info.json"
     if not product_info_path.exists():
         product_info_path = home / "product-info.json"
@@ -390,12 +446,19 @@ def audit(args):
                f"-Didea.home.path={home}", f"-Didea.properties.file={root / 'idea.properties'}",
                f"-XX:ErrorFile={root / 'log/hs_err_%p.log'}", f"-XX:HeapDumpPath={root / 'log/heap.hprof'}"]
     command += [f"-Didea.{name}.path={root / name}" for name in ["config", "system", "plugins", "log"]]
+    command += harness_properties(harness)
     if metadata.get("removedAction"):
         command.append("-Dcsc.audit.removedAction=" + metadata["removedAction"])
     command += ["-cp", classpath, "com.intellij.idea.Main", "csc-keymap-audit", str(root / "keymaps.tsv")]
     context = run_context(root, metadata, run_id, "headless", info["buildNumber"])
     write_json(root / "audit-command.json", {**context, "argv": command, "productInfo": info})
     run_process(command, root, root, context, timeout=args.timeout, log_name="audit-console.log")
+    require(context["harness"] == validate_harness(root / "plugins/csc-keymap-audit"),
+            "harness changed during audit")
+    exported = parse_export(root / "keymaps.tsv")["metadata"]
+    require(exported["harnessJarSha256"] == context["harness"]["jarSha256"]
+            and exported["harnessManifestSha256"] == context["harness"]["manifestSha256"],
+            "audit export harness identity mismatch")
     summarize(root / "keymaps.tsv", root / "summary.json")
 
 
@@ -404,6 +467,7 @@ def launch_gui(args):
     metadata = load_profile(root)
     ensure_closed(root)
     require(not (root / "acceptance.json").exists(), "accepted baselines are immutable; use a clone")
+    harness = validate_harness(root / "plugins/csc-keymap-audit")
     run_id = str(uuid.uuid4())
     info_path = app / "Contents/Resources/product-info.json"
     info = json.loads(info_path.read_text())
@@ -417,7 +481,8 @@ def launch_gui(args):
         stream.write(original_options + f"\n-XX:ErrorFile={root / 'log/hs_err_%p.log'}\n"
                      + f"-XX:HeapDumpPath={root / 'log/heap.hprof'}\n"
                      + f"-Dcsc.audit.output={run_directory}\n"
-                     + f"-Dcsc.audit.profileId={metadata['profileId']}\n-Dcsc.audit.runId={run_id}\n")
+                     + f"-Dcsc.audit.profileId={metadata['profileId']}\n-Dcsc.audit.runId={run_id}\n"
+                     + "\n".join(harness_properties(harness)) + "\n")
         if metadata.get("removedAction"):
             stream.write("-Dcsc.audit.removedAction=" + metadata["removedAction"] + "\n")
     environment = os.environ.copy()
@@ -429,6 +494,8 @@ def launch_gui(args):
     write_json(run_directory / "gui-command.json", {**context, "argv": command, "productInfo": info,
                                            "properties": str(root / "idea.properties"), "vmOptions": str(vmoptions)})
     run_process(command, root, run_directory, context, environment)
+    require(context["harness"] == validate_harness(root / "plugins/csc-keymap-audit"),
+            "harness changed during GUI run")
 
 
 def summarize(source, target, allow_legacy=False):

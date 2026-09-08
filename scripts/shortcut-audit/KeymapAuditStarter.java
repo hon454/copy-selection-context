@@ -81,6 +81,8 @@ public final class KeymapAuditStarter implements ApplicationStarter {
         row(rows, "META", "profileId", System.getProperty("csc.audit.profileId"));
         row(rows, "META", "runId", System.getProperty("csc.audit.runId"));
         row(rows, "META", "processId", ProcessHandle.current().pid());
+        row(rows, "META", "harnessJarSha256", System.getProperty("csc.audit.harnessJarSha256"));
+        row(rows, "META", "harnessManifestSha256", System.getProperty("csc.audit.harnessManifestSha256"));
         row(rows, "META", "watchedActions", "[" + watched.stream().map(KeymapAuditStarter::jsonString)
             .collect(java.util.stream.Collectors.joining(",")) + "]");
         row(rows, "META", "projectRoots", "[" + Arrays.stream(ProjectManager.getInstance().getOpenProjects())
