@@ -13,6 +13,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
 import java.awt.event.MouseEvent
+import java.nio.file.Files
 import java.util.concurrent.FutureTask
 
 class ContextCollectionOutputFixtureTest : BasePlatformTestCase() {
@@ -181,7 +182,8 @@ class ContextCollectionOutputFixtureTest : BasePlatformTestCase() {
 
     fun testTwoProjectsRecopyAndDelayedPublisherPathsUseOneSequenceWithoutCrossProjectEffects() {
         capture("A.kt", "A")
-        val other = requireNotNull(ProjectManager.getInstance().createProject("copy-order-B", myFixture.tempDirPath + "/copy-order-B"))
+        val otherProjectPath = Files.createTempDirectory("copy-selection-context-copy-order-b-")
+        val other = requireNotNull(ProjectManager.getInstance().createProject("copy-order-B", otherProjectPath.toString()))
         val a = CopyResultPublisher.getInstance(project)
         val b = CopyResultPublisher.getInstance(other)
         val aHistory = CopyHistoryService.getInstance(project).state
@@ -216,7 +218,10 @@ class ContextCollectionOutputFixtureTest : BasePlatformTestCase() {
                 Disposer.dispose(harness.command)
                 Disposer.dispose(harness.output)
             }
-        } finally { if (!other.isDisposed) ApplicationManager.getApplication().runWriteAction { Disposer.dispose(other) } }
+        } finally {
+            if (!other.isDisposed) ApplicationManager.getApplication().runWriteAction { Disposer.dispose(other) }
+            otherProjectPath.toFile().deleteRecursively()
+        }
     }
 
     fun testOutputDisposalUnsubscribesAndDropsPayloadAndCommand() {
@@ -242,7 +247,8 @@ class ContextCollectionOutputFixtureTest : BasePlatformTestCase() {
         capture("A.kt", "A")
         val first = Harness()
         first.computeAndFlush()
-        val other = requireNotNull(ProjectManager.getInstance().createProject("output-B", myFixture.tempDirPath + "/output-B"))
+        val otherProjectPath = Files.createTempDirectory("copy-selection-context-output-b-")
+        val other = requireNotNull(ProjectManager.getInstance().createProject("output-B", otherProjectPath.toString()))
         val jobs = ArrayDeque<FutureTask<Unit>>()
         val ui = ArrayDeque<() -> Unit>()
         val second = ContextCollectionOutputService.createForTest(other, ContextCollectionService.getInstance(other), settings,
@@ -260,7 +266,10 @@ class ContextCollectionOutputFixtureTest : BasePlatformTestCase() {
             assertTrue(second.snapshot() is ContextCollectionOutputState.Calculating)
             first.computeAndFlush()
             assertTrue(first.output.snapshot() is ContextCollectionOutputState.Computed)
-        } finally { if (!other.isDisposed) ApplicationManager.getApplication().runWriteAction { Disposer.dispose(other) } }
+        } finally {
+            if (!other.isDisposed) ApplicationManager.getApplication().runWriteAction { Disposer.dispose(other) }
+            otherProjectPath.toFile().deleteRecursively()
+        }
     }
 
     fun testBackgroundReadActionLoadRestoresSynchronouslyWithoutWaitingForEdtAndInvalidatesBeforeSignalDelivery() {

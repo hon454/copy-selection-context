@@ -27,7 +27,7 @@ class CiWorkflowTest {
                 setOf("CERTIFICATE_CHAIN", "PRIVATE_KEY", "PRIVATE_KEY_PASSWORD"),
             "Publish to JetBrains Marketplace" to setOf("PUBLISH_TOKEN"),
         )
-        val steps = workflowSteps("release.yml")
+        val steps = workflowSteps("release.yml", "release")
         expected.keys.forEach { steps.stepNamed(it) }
         steps.forEach { step ->
             val name = step.scalarForKey("name")
@@ -50,7 +50,7 @@ class CiWorkflowTest {
 
     @Test
     fun `release shell sources never interpolate workflow expressions`() {
-        workflowSteps("release.yml").forEach { step ->
+        workflowSteps("release.yml", "release").forEach { step ->
             val command = step.valueForKey("run") as? ScalarNode
             assertFalse(
                 command?.value.orEmpty().contains("${'$'}{{"),
@@ -61,7 +61,7 @@ class CiWorkflowTest {
 
     @Test
     fun `release env inputs preserve validated outputs and canonical artifact bindings`() {
-        val steps = workflowSteps("release.yml")
+        val steps = workflowSteps("release.yml", "release")
         val expected = mapOf(
             "Generate release notes from changelog" to mapOf(
                 "RELEASE_VERSION" to "${'$'}{{ steps.version.outputs.version }}",
@@ -95,10 +95,244 @@ class CiWorkflowTest {
     }
 
     @Test
-    fun `release validates before packaging and publication`() {
-        assertValidationPipeline(
-            workflowName = "release.yml",
-            publicationStep = "Create GitHub Release",
+    fun `release publication requires the complete reusable validation gate`() {
+        val workflow = readWorkflowMapping("release.yml")
+        val validationWorkflow = readWorkflowMapping("release-validation.yml")
+
+        assertReleasePublicationGate(workflow)
+        listOf("failure", "cancelled", "skipped").forEach { result ->
+            assertFalse(
+                releaseCanPublishForValidationResult(workflow, result),
+                "A $result validation must block every publication step",
+            )
+        }
+        assertTrue(releaseCanPublishForValidationResult(workflow, "success"))
+
+        val requiredResults =
+            mapOf(
+                "ubuntu-latest" to "success",
+                "macos-latest" to "success",
+                "windows-latest" to "success",
+                "linux-compatibility" to "success",
+            )
+        assertTrue(releaseCanPublishForRequiredResults(workflow, validationWorkflow, requiredResults))
+        requiredResults.keys.forEach { requiredJob ->
+            listOf("failure", "cancelled", "skipped").forEach { result ->
+                assertFalse(
+                    releaseCanPublishForRequiredResults(
+                        workflow,
+                        validationWorkflow,
+                        requiredResults + (requiredJob to result),
+                    ),
+                    "$requiredJob=$result must block publication",
+                )
+            }
+        }
+
+        listOf(
+            "release-gate-missing-needs.yml",
+            "release-gate-permissive-job-condition.yml",
+            "release-gate-permissive-publication-step.yml",
+            "release-gate-failure-publication-step.yml",
+        ).forEach { fixture ->
+            assertFailsWith<AssertionError>("Negative release fixture must fail closed: $fixture") {
+                assertReleasePublicationGate(
+                    readYamlMapping(Path.of("src", "test", "fixtures", "workflows", fixture)),
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `release validation runs all OS tests and Linux IDE compatibility without publication`() {
+        val workflow = readWorkflowMapping("release-validation.yml")
+        val source = readWorkflow("release-validation.yml")
+        val triggers = workflow.mappingForKey("on")
+        assertEquals(
+            setOf("workflow_call", "workflow_dispatch", "push"),
+            triggers.keyNames(),
+            "The validation workflow must support release reuse, post-merge dispatch, and pre-merge branch pushes",
+        )
+        assertEquals(
+            listOf("codex/verify-*"),
+            triggers.mappingForKey("push").sequenceForKey("branches").scalarValues(),
+        )
+        assertEquals(listOf("contents: read"), workflowPermissions("release-validation.yml"))
+        assertFalse(source.contains("secrets."), "Validation must not receive repository secrets")
+        assertFalse(
+            listOf("action-gh-release", "publishPlugin", "signPlugin", "attest").any(source::contains),
+            "The validation-only workflow must not contain release or Marketplace publication operations",
+        )
+
+        val jobs = workflow.mappingForKey("jobs")
+        val osTests = jobs.mappingForKey("os-tests")
+        assertOsMatrixTestCoverage(workflow)
+        assertEquals("${'$'}{{ matrix.os }}", osTests.scalarForKey("runs-on"))
+        assertTrue(osTests.valueForKey("if") == null, "Every OS matrix row must start unconditionally")
+        assertTrue(osTests.valueForKey("continue-on-error") == null, "OS failures must fail the matrix")
+        val strategy = osTests.mappingForKey("strategy")
+        assertEquals("false", strategy.scalarForKey("fail-fast"))
+        assertEquals(
+            listOf("ubuntu-latest", "macos-latest", "windows-latest"),
+            strategy.mappingForKey("matrix").sequenceForKey("os").scalarValues(),
+        )
+
+        val osSteps = osTests.sequenceForKey("steps").mappingValues()
+        val windowsBashSelector = osSteps.stepNamed("Select Git Bash for Windows child processes")
+        assertEquals("runner.os == 'Windows'", windowsBashSelector.scalarForKey("if"))
+        assertEquals("pwsh", windowsBashSelector.scalarForKey("shell"))
+        assertTrue(
+            windowsBashSelector.scalarForKey("run").contains("BASH_EXE=") &&
+                windowsBashSelector.scalarForKey("run").contains("${'$'}env:GITHUB_ENV") &&
+                windowsBashSelector.scalarForKey("run").contains("bin\\bash.exe"),
+            "Windows must expose the reviewed Git Bash executable to Gradle child processes",
+        )
+        val windowsBashCheck = osSteps.stepNamed("Check Windows Bash prerequisites")
+        assertEquals("runner.os == 'Windows'", windowsBashCheck.scalarForKey("if"))
+        assertEquals("pwsh", windowsBashCheck.scalarForKey("shell"))
+        assertTrue(
+            windowsBashCheck.scalarForKey("run").contains("& ${'$'}env:BASH_EXE"),
+            "The prerequisite check must execute the same Bash path used by tests",
+        )
+        val shellDrivenTests =
+            listOf(
+                "ReleaseNotesGenerationTest.kt",
+                "ReleaseArtifactSelectionTest.kt",
+                "ReleaseChecksumGenerationTest.kt",
+                "ReleaseVersionParityTest.kt",
+            )
+        shellDrivenTests.forEach { fileName ->
+            val source = Files.readString(Path.of("src", "test", "kotlin", "com", "github", "hon454", "copyselectioncontext", fileName))
+            assertTrue(
+                source.contains("TestShell.bashExecutable()"),
+                "$fileName must use the workflow-selected Bash executable on Windows",
+            )
+        }
+        val testSteps =
+            mapOf(
+                "Run Linux test suite and generate Kotlin coverage" to
+                    Pair("matrix.os == 'ubuntu-latest'", "./gradlew"),
+                "Run macOS test suite" to Pair("matrix.os == 'macos-latest'", "./gradlew"),
+                "Run Windows test suite" to Pair("matrix.os == 'windows-latest'", ".\\gradlew.bat"),
+            )
+        testSteps.forEach { (name, expected) ->
+            val step = osSteps.stepNamed(name)
+            assertEquals(expected.first, step.scalarForKey("if"), "$name must run for exactly its matrix row")
+            val command = step.scalarForKey("run")
+            assertTrue(command.startsWith(expected.second), "$name must use the OS-specific Gradle wrapper")
+            assertTrue(command.contains("allTests") && command.contains("--continue"), "$name must run both test partitions")
+        }
+        assertTrue(
+            osSteps.stepNamed("Run Linux test suite and generate Kotlin coverage").scalarForKey("run")
+                .contains("koverXmlReport") &&
+                osSteps.stepNamed("Run Linux test suite and generate Kotlin coverage").scalarForKey("run")
+                    .contains("koverHtmlReport"),
+            "Coverage is generated once on Linux instead of on every OS",
+        )
+        val osReports = osSteps.stepNamed("Upload OS validation reports")
+        assertEquals("always()", osReports.scalarForKey("if"))
+        assertEquals("release-validation-${'$'}{{ matrix.os }}", osReports.mappingForKey("with").scalarForKey("name"))
+        assertRequiredTestReportPaths(osReports.mappingForKey("with").scalarForKey("path"))
+
+        val compatibility = jobs.mappingForKey("linux-compatibility")
+        assertLinuxCompatibilityJob(workflow)
+        assertEquals("ubuntu-latest", compatibility.scalarForKey("runs-on"))
+        assertTrue(compatibility.valueForKey("strategy") == null, "Plugin Verifier must run once, not as an OS matrix")
+        val compatibilitySteps = compatibility.sequenceForKey("steps").mappingValues()
+        assertEquals(
+            "./gradlew verifyPlugin --stacktrace --console=plain",
+            compatibilitySteps.stepNamed("Verify plugin compatibility").scalarForKey("run"),
+        )
+        val compatibilityReports = compatibilitySteps.stepNamed("Upload IDE compatibility reports")
+        assertEquals("always()", compatibilityReports.scalarForKey("if"))
+        assertEquals(
+            "release-validation-linux-ide-compatibility",
+            compatibilityReports.mappingForKey("with").scalarForKey("name"),
+        )
+
+        val gate = jobs.mappingForKey("validation-gate")
+        assertReusableValidationGate(workflow)
+        assertEquals("always()", gate.scalarForKey("if"))
+        assertEquals(setOf("os-tests", "linux-compatibility"), gate.jobNeeds())
+        val gateStep = gate.sequenceForKey("steps").mappingValues().stepNamed("Require successful OS and IDE validation")
+        val gateEnv = gateStep.mappingForKey("env")
+        assertEquals("${'$'}{{ needs.os-tests.result }}", gateEnv.scalarForKey("OS_TESTS_RESULT"))
+        assertEquals(
+            "${'$'}{{ needs.linux-compatibility.result }}",
+            gateEnv.scalarForKey("IDE_COMPATIBILITY_RESULT"),
+        )
+        assertTrue(
+            gateStep.scalarForKey("run").contains("!= \"success\""),
+            "The reusable workflow must fail when either required job fails, is cancelled, or is skipped",
+        )
+
+        val buildScript = Files.readString(Path.of("build.gradle.kts"))
+        val expectedTargets =
+            listOf(
+                listOf("minimum-intellij-idea-community", "IntellijIdeaCommunity", "2024.3", "243.21565.193"),
+                listOf("latest-intellij-idea", "IntellijIdea", "2026.2.2", "262.10315.125"),
+                listOf("latest-rider", "Rider", "2026.2.1", "262.9437.287"),
+            )
+        expectedTargets.flatten().forEach { marker ->
+            assertTrue(buildScript.contains(marker), "Missing explicit verification target marker: $marker")
+        }
+        assertTrue(buildScript.contains("create(target.type, target.ideVersion)"))
+        assertFalse(buildScript.contains("recommended()"), "Verifier targets must not drift with an implicit recommendation")
+
+        assertFailsWith<AssertionError>("A matrix row without a runnable Windows test must fail closed") {
+            assertOsMatrixTestCoverage(
+                readYamlMapping(
+                    Path.of("src", "test", "fixtures", "workflows", "release-validation-skipped-windows.yml"),
+                ),
+            )
+        }
+        assertFailsWith<AssertionError>("A matrix exclusion must not remove a required OS row") {
+            assertOsMatrixTestCoverage(
+                readYamlMapping(
+                    Path.of("src", "test", "fixtures", "workflows", "release-validation-excluded-windows.yml"),
+                ),
+            )
+        }
+        assertFailsWith<AssertionError>("A validation gate missing an IDE prerequisite must fail closed") {
+            assertReusableValidationGate(
+                readYamlMapping(
+                    Path.of("src", "test", "fixtures", "workflows", "release-validation-missing-gate-need.yml"),
+                ),
+            )
+        }
+        listOf(
+            "release-validation-gate-and.yml",
+            "release-validation-gate-exit-zero.yml",
+        ).forEach { fixture ->
+            assertFailsWith<AssertionError>("A permissive aggregate gate must fail closed: $fixture") {
+                assertReusableValidationGate(
+                    readYamlMapping(Path.of("src", "test", "fixtures", "workflows", fixture)),
+                )
+            }
+        }
+        assertFailsWith<AssertionError>("Skipped or optional Plugin Verifier validation must fail closed") {
+            assertLinuxCompatibilityJob(
+                readYamlMapping(
+                    Path.of("src", "test", "fixtures", "workflows", "release-validation-optional-verifier.yml"),
+                ),
+            )
+        }
+        assertFailsWith<AssertionError>("A conditionally skipped Plugin Verifier must fail closed") {
+            assertLinuxCompatibilityJob(
+                readYamlMapping(
+                    Path.of("src", "test", "fixtures", "workflows", "release-validation-skipped-verifier.yml"),
+                ),
+            )
+        }
+        assertOsMatrixTestCoverage(
+            readYamlMapping(
+                Path.of("src", "test", "fixtures", "workflows", "release-validation-os-positive.yml"),
+            ),
+        )
+        assertLinuxCompatibilityJob(
+            readYamlMapping(
+                Path.of("src", "test", "fixtures", "workflows", "release-validation-compatibility-positive.yml"),
+            ),
         )
     }
 
@@ -116,7 +350,7 @@ class CiWorkflowTest {
             "name: Generate and verify release checksum",
             "name: Generate release ZIP attestation",
             "name: Verify release ZIP attestation",
-            "name: Upload validation reports",
+            "name: Upload release build diagnostics",
             "name: Create GitHub Release",
             "name: Publish to JetBrains Marketplace",
         )
@@ -177,7 +411,7 @@ class CiWorkflowTest {
             "name: Setup Gradle",
             "name: Ensure gradlew is executable",
             "name: Generate release notes from changelog",
-            "name: Run test suite",
+            "name: Build plugin",
         )
         val generationCommand =
             "bash scripts/generate-release-notes.sh \\\n" +
@@ -319,9 +553,19 @@ class CiWorkflowTest {
             "build.yml must keep the default GITHUB_TOKEN read-only",
         )
         assertEquals(
-            listOf("contents: write", "id-token: write", "attestations: write"),
+            listOf("contents: read"),
             workflowPermissions("release.yml"),
-            "release.yml needs release publication and artifact attestation permissions only",
+            "release.yml must keep its workflow-level token read-only",
+        )
+        assertEquals(
+            listOf("contents: write", "id-token: write", "attestations: write"),
+            jobPermissions("release.yml", "release"),
+            "Only the gated Linux release job may publish and attest the canonical artifact",
+        )
+        assertEquals(
+            listOf("contents: read"),
+            jobPermissions("release.yml", "validation"),
+            "The reusable validation call must not inherit publication permissions",
         )
     }
 
@@ -475,7 +719,7 @@ class CiWorkflowTest {
         workflowName: String,
         publicationStep: String,
     ) {
-        val steps = workflowSteps(workflowName)
+        val steps = workflowSteps(workflowName, "build")
         val detektStep = steps.stepNamed("Run Kotlin static analysis")
         val coverageStep = steps.stepNamed("Run test suite and generate Kotlin coverage")
         val reportStep = steps.stepNamed("Upload validation reports")
@@ -627,20 +871,232 @@ class CiWorkflowTest {
         )
     }
 
+    private fun assertReleasePublicationGate(workflow: MappingNode) {
+        val jobs = workflow.mappingForKey("jobs")
+        val validation = jobs.mappingForKey("validation")
+        val release = jobs.mappingForKey("release")
+        assertEquals(
+            "./.github/workflows/release-validation.yml",
+            validation.scalarForKey("uses"),
+            "Release must invoke the repository's non-publishing validation workflow",
+        )
+        assertEquals(setOf("validation"), release.jobNeeds(), "Publication must directly require validation")
+        assertEquals(
+            "needs.validation.result == 'success'",
+            release.scalarForKey("if"),
+            "Failure, cancellation, or skipping must not satisfy the publication job condition",
+        )
+        assertEquals("ubuntu-latest", release.scalarForKey("runs-on"))
+        assertTrue(release.valueForKey("strategy") == null, "Canonical artifact publication must not be a matrix")
+
+        val publicationStepNames = setOf("Create GitHub Release", "Publish to JetBrains Marketplace")
+        val publicationSteps =
+            jobs.value.flatMap { jobEntry ->
+                val jobName = (jobEntry.keyNode as ScalarNode).value
+                val job = jobEntry.valueNode as? MappingNode ?: return@flatMap emptyList()
+                val steps = (job.valueForKey("steps") as? SequenceNode)?.mappingValues().orEmpty()
+                steps.mapNotNull { step ->
+                    step.scalarForKeyOrNull("name")
+                        ?.takeIf(publicationStepNames::contains)
+                        ?.let { Triple(jobName, it, step) }
+                }
+            }
+        assertEquals(
+            publicationStepNames,
+            publicationSteps.map { it.second }.toSet(),
+            "Both GitHub Release and Marketplace publication steps are required",
+        )
+        assertTrue(
+            publicationSteps.all { it.first == "release" },
+            "Every publication step must remain inside the gated Linux release job",
+        )
+        publicationSteps.forEach { (_, name, step) ->
+            assertTrue(step.valueForKey("continue-on-error") == null, "$name must fail the release job")
+            val expectedCondition =
+                if (name == "Publish to JetBrains Marketplace") {
+                    "steps.release-mode.outputs.publish == 'true'"
+                } else {
+                    null
+                }
+            assertEquals(
+                expectedCondition,
+                step.scalarForKeyOrNull("if"),
+                "$name must not bypass prerequisite failures",
+            )
+        }
+    }
+
+    private fun releaseCanPublishForValidationResult(
+        workflow: MappingNode,
+        validationResult: String,
+    ): Boolean {
+        val release = workflow.mappingForKey("jobs").mappingForKey("release")
+        return release.jobNeeds() == setOf("validation") &&
+            release.scalarForKeyOrNull("if") == "needs.validation.result == 'success'" &&
+            validationResult == "success"
+    }
+
+    private fun releaseCanPublishForRequiredResults(
+        releaseWorkflow: MappingNode,
+        validationWorkflow: MappingNode,
+        results: Map<String, String>,
+    ): Boolean {
+        assertOsMatrixTestCoverage(validationWorkflow)
+        assertReusableValidationGate(validationWorkflow)
+        assertEquals(
+            setOf("ubuntu-latest", "macos-latest", "windows-latest", "linux-compatibility"),
+            results.keys,
+            "Every required OS row and compatibility job must have an explicit result",
+        )
+        val aggregateResult = if (results.values.all { it == "success" }) "success" else "failure"
+        return releaseCanPublishForValidationResult(releaseWorkflow, aggregateResult)
+    }
+
+    private fun assertRequiredTestReportPaths(reportPaths: String) {
+        assertTrue(
+            listOf(
+                "build/reports/tests/test/",
+                "build/test-results/test/",
+                "build/reports/tests/platformTest/",
+                "build/test-results/platformTest/",
+            ).all(reportPaths::contains),
+            "Both unit and platform test reports must be preserved for every OS",
+        )
+    }
+
+    private fun assertOsMatrixTestCoverage(workflow: MappingNode) {
+        val osTests = workflow.mappingForKey("jobs").mappingForKey("os-tests")
+        assertEquals("${'$'}{{ matrix.os }}", osTests.scalarForKey("runs-on"))
+        assertTrue(osTests.valueForKey("if") == null, "Every OS matrix row must start unconditionally")
+        assertTrue(osTests.valueForKey("continue-on-error") == null, "OS failures must fail the matrix")
+        val strategy = osTests.mappingForKey("strategy")
+        assertEquals("false", strategy.scalarForKey("fail-fast"))
+        val matrix = strategy.mappingForKey("matrix")
+        assertEquals(
+            setOf("os"),
+            matrix.keyNames(),
+            "The OS matrix must not use include or exclude to add, replace, or remove required rows",
+        )
+        val matrixOperatingSystems = matrix.sequenceForKey("os").scalarValues()
+        assertEquals(
+            listOf("ubuntu-latest", "macos-latest", "windows-latest"),
+            matrixOperatingSystems,
+            "The release test matrix must contain every required operating system",
+        )
+        val steps = osTests.sequenceForKey("steps").mappingValues()
+        val expectedTests =
+            mapOf(
+                "ubuntu-latest" to
+                    Triple(
+                        "matrix.os == 'ubuntu-latest'",
+                        "bash",
+                        "./gradlew allTests koverXmlReport koverHtmlReport --continue --stacktrace --console=plain",
+                    ),
+                "macos-latest" to
+                    Triple(
+                        "matrix.os == 'macos-latest'",
+                        "bash",
+                        "./gradlew allTests --continue --stacktrace --console=plain",
+                    ),
+                "windows-latest" to
+                    Triple(
+                        "matrix.os == 'windows-latest'",
+                        "pwsh",
+                        ".\\gradlew.bat allTests --continue --stacktrace --console=plain",
+                    ),
+            )
+        expectedTests.forEach { (operatingSystem, expected) ->
+            val matchingSteps =
+                steps.filter { step ->
+                    step.scalarForKeyOrNull("if") == expected.first &&
+                        step.scalarForKeyOrNull("run").orEmpty().contains("allTests")
+                }
+            assertEquals(
+                1,
+                matchingSteps.size,
+                "$operatingSystem must have exactly one non-optional allTests step",
+            )
+            assertTrue(
+                matchingSteps.single().valueForKey("continue-on-error") == null,
+                "$operatingSystem tests must fail the matrix row",
+            )
+            assertEquals(expected.second, matchingSteps.single().scalarForKey("shell"))
+            assertEquals(
+                expected.third,
+                matchingSteps.single().scalarForKey("run").normalizedWhitespace(),
+                "$operatingSystem must run the fail-closed task set with its native wrapper and shell",
+            )
+        }
+    }
+
+    private fun assertReusableValidationGate(workflow: MappingNode) {
+        val gate = workflow.mappingForKey("jobs").mappingForKey("validation-gate")
+        assertEquals("always()", gate.scalarForKey("if"))
+        assertEquals(setOf("os-tests", "linux-compatibility"), gate.jobNeeds())
+        assertEquals("ubuntu-latest", gate.scalarForKey("runs-on"))
+        assertTrue(gate.valueForKey("continue-on-error") == null, "The aggregate gate must fail the workflow")
+        val step = gate.sequenceForKey("steps").mappingValues().single()
+        assertEquals("Require successful OS and IDE validation", step.scalarForKey("name"))
+        assertTrue(step.valueForKey("if") == null, "The aggregate assertion step must always run with its gate job")
+        assertTrue(step.valueForKey("continue-on-error") == null, "The aggregate assertion must fail closed")
+        val environment = step.mappingForKey("env")
+        assertEquals(setOf("OS_TESTS_RESULT", "IDE_COMPATIBILITY_RESULT"), environment.keyNames())
+        assertEquals("${'$'}{{ needs.os-tests.result }}", environment.scalarForKey("OS_TESTS_RESULT"))
+        assertEquals(
+            "${'$'}{{ needs.linux-compatibility.result }}",
+            environment.scalarForKey("IDE_COMPATIBILITY_RESULT"),
+        )
+        assertEquals(
+            """
+            if [ "${'$'}OS_TESTS_RESULT" != "success" ] || [ "${'$'}IDE_COMPATIBILITY_RESULT" != "success" ]; then
+              echo "::error::Release validation did not complete successfully."
+              exit 1
+            fi
+            """.trimIndent(),
+            step.scalarForKey("run").trim(),
+            "The gate must reject every non-success result and exit non-zero",
+        )
+    }
+
+    private fun assertLinuxCompatibilityJob(workflow: MappingNode) {
+        val compatibility = workflow.mappingForKey("jobs").mappingForKey("linux-compatibility")
+        assertEquals("ubuntu-latest", compatibility.scalarForKey("runs-on"))
+        assertTrue(compatibility.valueForKey("strategy") == null, "Plugin Verifier must run once on Linux")
+        assertTrue(compatibility.valueForKey("if") == null, "IDE compatibility must not be skipped")
+        assertTrue(
+            compatibility.valueForKey("continue-on-error") == null,
+            "IDE compatibility failures must fail validation",
+        )
+        val expectedCommands =
+            mapOf(
+                "Run Kotlin static analysis" to "./gradlew detekt --stacktrace --console=plain",
+                "Verify plugin project and structure" to
+                    "./gradlew verifyPluginProjectConfiguration verifyPluginStructure --stacktrace --console=plain",
+                "Verify plugin compatibility" to "./gradlew verifyPlugin --stacktrace --console=plain",
+            )
+        val steps = compatibility.sequenceForKey("steps").mappingValues()
+        expectedCommands.forEach { (name, expectedCommand) ->
+            val step = steps.stepNamed(name)
+            assertTrue(step.valueForKey("if") == null, "$name must run unconditionally")
+            assertTrue(step.valueForKey("continue-on-error") == null, "$name must fail closed")
+            assertEquals(expectedCommand, step.scalarForKey("run").normalizedWhitespace())
+        }
+    }
+
     private fun readWorkflow(workflowName: String): String {
         val path = Path.of(".github", "workflows", workflowName)
         assertTrue(Files.isRegularFile(path), "Workflow not found: $path")
-        return Files.readString(path)
+        return Files.readString(path).replace("\r\n", "\n")
     }
 
     private fun readWorkflowMapping(workflowName: String): MappingNode =
         readYamlMapping(Path.of(".github", "workflows", workflowName))
 
-    private fun workflowSteps(workflowName: String): List<MappingNode> {
-        val jobs = readWorkflowMapping(workflowName).mappingForKey("jobs")
-        assertEquals(1, jobs.value.size, "$workflowName must keep one ordered validation job")
-        val job = jobs.value.single().valueNode as? MappingNode
-            ?: throw AssertionError("$workflowName must define its validation job as a mapping")
+    private fun workflowSteps(
+        workflowName: String,
+        jobName: String,
+    ): List<MappingNode> {
+        val job = readWorkflowMapping(workflowName).mappingForKey("jobs").mappingForKey(jobName)
         return job.sequenceForKey("steps").value.map { step ->
             step as? MappingNode ?: throw AssertionError("$workflowName contains a non-mapping step")
         }
@@ -651,13 +1107,20 @@ class CiWorkflowTest {
 
     private fun readYamlMapping(path: Path): MappingNode {
         assertTrue(Files.isRegularFile(path), "YAML configuration is required: $path")
+        return parseYamlMapping(Files.readString(path), path.toString())
+    }
+
+    private fun parseYamlMapping(
+        yaml: String,
+        source: String,
+    ): MappingNode {
         val settings =
             LoadSettings
                 .builder()
-                .setLabel(path.toString())
+                .setLabel(source)
                 .setAllowDuplicateKeys(false)
                 .build()
-        return Compose(settings).composeString(Files.readString(path)).orElseThrow() as MappingNode
+        return Compose(settings).composeString(yaml).orElseThrow() as MappingNode
     }
 
     private fun assertWorkflowActionReferencesAreImmutable(
@@ -736,9 +1199,15 @@ class CiWorkflowTest {
 
     private fun MappingNode.valueForKey(key: String): Node? = entriesForKey(key).singleOrNull()?.value
 
+    private fun MappingNode.keyNames(): Set<String> =
+        value.map { entry -> (entry.keyNode as ScalarNode).value }.toSet()
+
     private fun MappingNode.scalarForKey(key: String): String =
         (valueForKey(key) as? ScalarNode)?.value
             ?: throw AssertionError("Missing scalar Dependabot key: $key")
+
+    private fun MappingNode.scalarForKeyOrNull(key: String): String? =
+        (valueForKey(key) as? ScalarNode)?.value
 
     private fun MappingNode.mappingForKey(key: String): MappingNode =
         valueForKey(key) as? MappingNode
@@ -747,6 +1216,20 @@ class CiWorkflowTest {
     private fun MappingNode.sequenceForKey(key: String): SequenceNode =
         valueForKey(key) as? SequenceNode
             ?: throw AssertionError("Missing sequence Dependabot key: $key")
+
+    private fun SequenceNode.scalarValues(): List<String> = value.map { (it as ScalarNode).value }
+
+    private fun SequenceNode.mappingValues(): List<MappingNode> =
+        value.map { node -> node as? MappingNode ?: throw AssertionError("Expected a mapping sequence item") }
+
+    private fun MappingNode.jobNeeds(): Set<String> =
+        when (val needs = valueForKey("needs")) {
+            is ScalarNode -> setOf(needs.value)
+            is SequenceNode -> needs.scalarValues().toSet()
+            else -> emptySet()
+        }
+
+    private fun String.normalizedWhitespace(): String = trim().split(Regex("""\s+""")).joinToString(" ")
 
     private fun workflowWithStep(step: String): String =
         """
@@ -766,6 +1249,19 @@ class CiWorkflowTest {
 
     private fun workflowPermissions(workflowName: String): List<String> =
         readWorkflowMapping(workflowName)
+            .mappingForKey("permissions")
+            .value
+            .map { permission ->
+                "${(permission.keyNode as ScalarNode).value}: ${(permission.valueNode as ScalarNode).value}"
+            }
+
+    private fun jobPermissions(
+        workflowName: String,
+        jobName: String,
+    ): List<String> =
+        readWorkflowMapping(workflowName)
+            .mappingForKey("jobs")
+            .mappingForKey(jobName)
             .mappingForKey("permissions")
             .value
             .map { permission ->

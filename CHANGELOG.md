@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Skip selected and current-line text capture when standard copy actions produce path-only output (#108)
+- Validate release candidates on Linux, macOS, and Windows while keeping IDE compatibility checks and canonical publication on one gated Linux path (#102)
 
 ### Performance
 

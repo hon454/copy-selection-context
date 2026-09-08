@@ -129,7 +129,7 @@ class DocumentationSyncTest {
 
         val kotlinVersion = capture(buildScript, "id\\(\"org\\.jetbrains\\.kotlin\\.jvm\"\\)\\s+version\\s+\"([^\"]+)\"")
         val intellijPluginVersion = capture(buildScript, "id\\(\"org\\.jetbrains\\.intellij\\.platform\"\\)\\s+version\\s+\"([^\"]+)\"")
-        val intellijPlatformVersion = capture(buildScript, "intellijIdeaCommunity\\(\"([^\"]+)\"\\)")
+        val intellijPlatformVersion = capture(buildScript, "minimumSupportedIdeVersion\\s*=\\s*\"([^\"]+)\"")
         val koverVersion = capture(buildScript, "id\\(\"org\\.jetbrains\\.kotlinx\\.kover\"\\)\\s+version\\s+\"([^\"]+)\"")
         val jvmVersion = capture(buildScript, "jvmToolchain\\((\\d+)\\)")
         val minimumBuild = capture(buildScript, "sinceBuild\\.set\\(\"([^\"]+)\"\\)")

@@ -1,0 +1,13 @@
+name: Optional Plugin Verifier
+on: push
+jobs:
+  linux-compatibility:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Kotlin static analysis
+        run: ./gradlew detekt --stacktrace --console=plain
+      - name: Verify plugin project and structure
+        run: ./gradlew verifyPluginProjectConfiguration verifyPluginStructure --stacktrace --console=plain
+      - name: Verify plugin compatibility
+        continue-on-error: true
+        run: ./gradlew verifyPlugin --stacktrace --console=plain

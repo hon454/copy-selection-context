@@ -1,0 +1,16 @@
+name: Publication after failure
+on: push
+jobs:
+  validation:
+    uses: ./.github/workflows/release-validation.yml
+  release:
+    needs: validation
+    if: needs.validation.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub Release
+        if: failure()
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
+      - name: Publish to JetBrains Marketplace
+        if: steps.release-mode.outputs.publish == 'true'
+        run: ./gradlew publishPlugin

@@ -86,7 +86,7 @@ class ReleaseVersionParityTest {
 
     @Test
     fun `release workflow preserves deterministic version and changelog inputs`() {
-        val workflow = Files.readString(projectRoot.resolve(".github/workflows/release.yml"))
+        val workflow = readNormalized(projectRoot.resolve(".github/workflows/release.yml"))
         val releaseNotesGenerator = Files.readString(projectRoot.resolve("scripts/generate-release-notes.sh"))
 
         assertTrue(
@@ -129,8 +129,8 @@ class ReleaseVersionParityTest {
     @Test
     fun `workflow rejects command substitutions as literal tag data`(@TempDir tempDir: Path) {
         val tags = listOf(
-            "v${'$'}(printf${'$'}{IFS}TAG_COMMAND_EXECUTED)",
-            "v`printf${'$'}{IFS}TAG_COMMAND_EXECUTED`",
+            "v${'$'}(cat<<<TAG_COMMAND_EXECUTED)",
+            "v`cat<<<TAG_COMMAND_EXECUTED`",
         )
         tags.forEachIndexed { index, tag ->
             val refCheck = ProcessBuilder("git", "check-ref-format", "refs/tags/$tag").start()
@@ -141,8 +141,8 @@ class ReleaseVersionParityTest {
 
     @Test
     fun `boundary regression detects reverting env input to shell interpolation`(@TempDir tempDir: Path) {
-        val tag = "v${'$'}(printf${'$'}{IFS}TAG_COMMAND_EXECUTED)"
-        val workflow = Files.readString(projectRoot.resolve(".github/workflows/release.yml"))
+        val tag = "v${'$'}(cat<<<TAG_COMMAND_EXECUTED)"
+        val workflow = readNormalized(projectRoot.resolve(".github/workflows/release.yml"))
         val unsafeWorkflow = workflow.replace(
             "\"${'$'}GITHUB_REF_NAME\"",
             "\"${'$'}{{ github.ref_name }}\"",
@@ -183,7 +183,7 @@ class ReleaseVersionParityTest {
     }
 
     private fun runVerifier(tag: String, buildFile: Path? = null): CommandResult {
-        val command = mutableListOf("bash", verifier.toString(), tag)
+        val command = mutableListOf(TestShell.bashExecutable(), verifier.toString(), tag)
         buildFile?.let { command.add(it.toString()) }
         val process = ProcessBuilder(command)
             .directory(projectRoot.toFile())
@@ -211,7 +211,7 @@ class ReleaseVersionParityTest {
     private fun runWorkflowVersionBoundary(
         tag: String,
         tempDir: Path,
-        workflow: String = Files.readString(projectRoot.resolve(".github/workflows/release.yml")),
+        workflow: String = readNormalized(projectRoot.resolve(".github/workflows/release.yml")),
     ): WorkflowResult {
         val root = Load(LoadSettings.builder().build()).loadFromString(workflow) as Map<*, *>
         val job = (root["jobs"] as Map<*, *>)["release"] as Map<*, *>
@@ -226,7 +226,7 @@ class ReleaseVersionParityTest {
         steps.forEachIndexed { index, step ->
             val outputFile = Files.createFile(tempDir.resolve("step-$index-output"))
             val builder = ProcessBuilder(
-                "bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c",
+                TestShell.bashExecutable(), "--noprofile", "--norc", "-e", "-o", "pipefail", "-c",
                 renderExpressions(step["run"] as String, context),
             ).directory(projectRoot.toFile()).redirectErrorStream(true)
             val environment = builder.environment()
@@ -259,6 +259,8 @@ class ReleaseVersionParityTest {
         Regex("""\$\{\{\s*(.*?)\s*}}""").replace(source) { match ->
             context.getValue(match.groupValues[1])
         }
+
+    private fun readNormalized(path: Path): String = Files.readString(path).replace("\r\n", "\n")
 
     private data class WorkflowResult(val exitCode: Int, val output: String, val outputs: Map<String, String>)
 

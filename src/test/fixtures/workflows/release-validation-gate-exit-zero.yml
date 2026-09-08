@@ -1,0 +1,20 @@
+name: Permissive aggregate exit
+on: push
+jobs:
+  validation-gate:
+    name: Require every release validation
+    if: always()
+    needs:
+      - os-tests
+      - linux-compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require successful OS and IDE validation
+        env:
+          OS_TESTS_RESULT: ${{ needs.os-tests.result }}
+          IDE_COMPATIBILITY_RESULT: ${{ needs.linux-compatibility.result }}
+        run: |
+          if [ "$OS_TESTS_RESULT" != "success" ] || [ "$IDE_COMPATIBILITY_RESULT" != "success" ]; then
+            echo "::error::Release validation did not complete successfully."
+            exit 0
+          fi

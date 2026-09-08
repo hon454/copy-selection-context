@@ -72,10 +72,7 @@ class ReleaseArtifactSelectionTest {
         val result = selectArtifact(tempDir, distributions, signed = true)
 
         assertEquals(0, result.exitCode, result.output)
-        assertEquals(
-            listOf("path=$signedZip", "signed=true"),
-            Files.readAllLines(result.outputFile),
-        )
+        assertSelectedArtifact(result.outputFile, signedZip, signed = true)
     }
 
     @Test
@@ -87,10 +84,7 @@ class ReleaseArtifactSelectionTest {
         val result = selectArtifact(tempDir, distributions, signed = false)
 
         assertEquals(0, result.exitCode, result.output)
-        assertEquals(
-            listOf("path=$unsignedZip", "signed=false"),
-            Files.readAllLines(result.outputFile),
-        )
+        assertSelectedArtifact(result.outputFile, unsignedZip, signed = false)
     }
 
     @Test
@@ -131,7 +125,7 @@ class ReleaseArtifactSelectionTest {
         environment: Map<String, String>,
         outputFile: Path,
     ): ScriptResult {
-        val processBuilder = ProcessBuilder(listOf("bash", script.toString()) + arguments)
+        val processBuilder = ProcessBuilder(listOf(TestShell.bashExecutable(), script.toString()) + arguments)
             .directory(projectRoot.toFile())
             .redirectErrorStream(true)
         listOf("CERTIFICATE_CHAIN", "PRIVATE_KEY", "PUBLISH_TOKEN").forEach {
@@ -141,6 +135,21 @@ class ReleaseArtifactSelectionTest {
         val process = processBuilder.start()
         val output = process.inputStream.bufferedReader().use { it.readText() }
         return ScriptResult(process.waitFor(), output, outputFile)
+    }
+
+    private fun assertSelectedArtifact(
+        outputFile: Path,
+        expectedPath: Path,
+        signed: Boolean,
+    ) {
+        val outputLines = Files.readAllLines(outputFile)
+        assertEquals(2, outputLines.size)
+        assertTrue(outputLines.first().startsWith("path="), "Selector must publish the canonical path output key")
+        assertEquals(
+            expectedPath.normalize(),
+            Path.of(outputLines.first().removePrefix("path=")).normalize(),
+        )
+        assertEquals("signed=$signed", outputLines.last())
     }
 
     private data class ScriptResult(
