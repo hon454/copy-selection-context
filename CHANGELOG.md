@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Report clipboard write failures for standard copies, Git permalinks, collection Copy All, history and status re-copy even when success notifications are disabled, while suppressing duplicate, superseded and disposed-request errors without retrying.
+- Prepare Context Collection preview geometry in the background and render visible text fragments so long bidirectional lines remain responsive without truncating display, selection, or copying (#103)
 
 ## [1.5.1] - 2026-09-08
 

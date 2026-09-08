@@ -94,7 +94,11 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | File | Responsibility |
 |------|----------------|
 | `ContextCollectionPresentation.kt` | Bounded escaped rows, localized source/time metadata and stable selection helpers |
-| `ContextCollectionTextViewer.kt` | Content-owned read-only Swing documents prepared off EDT and discarded on supersession/disposal |
+| `ContextCollectionTextViewer.kt` | Content-owned native text documents and cancellable preparation requests, cleared on supersession/content or project disposal |
+| `ContextCollectionTextLayout.kt` | Immutable paragraph bidi/shaping geometry and binary-search line/cell indexes prepared off EDT |
+| `ContextCollectionTextView.kt` | Native text area with a custom Swing View for visible fragments, logical/visual caret mapping and selection painting |
+| `ContextCollectionTextRaster.kt` | Background glyph masks, caret coordinates and indexed native mouse hits for oversized indivisible shaping clusters |
+| `ContextCollectionTextNavigation.kt` | Cached line-boundary actions that avoid native per-character Home/End and line-selection scans |
 | `ContextCollectionPanel.kt` | Keyboard-accessible collection management consuming shared snapshots/output/copy |
 | `ContextCollectionToolWindowFactory.kt` / `ToolWindowFactoryAdapter.java` | Lazy right tool window with one non-closeable content and its disposable; public Java adapter avoids Kotlin bridges to internal platform defaults |
 | `ShowContextCollectionAction.kt` | No-editor, assignable localized open action with no default shortcut |
@@ -160,4 +164,4 @@ Gradle separates reusable pure unit execution (`test`) from IntelliJ application
 
 ## Collection tool window
 
-The declarative right-hand Context Collection tool window initializes only when opened and owns one non-closeable content. Its disposable owns snapshot/source/output subscriptions and both read-only plain-text viewer documents. Detached documents are populated on a pooled thread and installed only for the current viewer generation. Disposal clears documents and list models; session captures remain service-owned. Source-only updates repaint labels without replacing output. Stable IDs preserve list selection through additions/reordering; removal selects the nearest survivor. Clear confirmation defaults to Cancel and validates the captured revision. Output bytes, warnings and Copy All use the #75 service/command unchanged.
+The declarative right-hand Context Collection tool window initializes only when opened and owns one non-closeable content. Its disposable owns snapshot/source/output subscriptions and both read-only plain-text viewer documents. Detached documents and complete paragraph geometry are prepared on a pooled thread and installed only for the current viewer generation. Native JTextArea documents, TransferHandler and accessibility retain every original code unit. Line action keys use cached boundaries while preserving selection and other native actions. ContextCollectionTextView reads cached dimensions and indexes visible lines/fragments instead of invoking Swing whole-paragraph layout. Cancellation clears the payload and prepared document inside a request even while its EDT callback remains queued. Disposal clears documents, pending request resources and list models; session captures remain service-owned. Source-only updates repaint labels without replacing output. Stable IDs preserve list selection through additions/reordering; removal selects the nearest survivor. Clear confirmation defaults to Cancel and validates the captured revision. Output bytes, warnings and Copy All use the #75 service/command unchanged.

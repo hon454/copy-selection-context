@@ -43,11 +43,12 @@ internal class ContextCollectionPanel(
             arrayOf(msg("clear"), CopySelectionBundle.message("collection.copy.cancel")), 1, Messages.getWarningIcon()) == 0
     },
     private val report: (String) -> Unit = { Messages.showWarningDialog(project, it, msg("clear")) },
+    viewerFactory: (Project, String) -> ContextCollectionTextViewer = ::ContextCollectionTextViewer,
 ) : JPanel(BorderLayout(0, 6)), Disposable {
     private val model = DefaultListModel<ContextCollectionItem>()
     val itemList = JBList(model)
-    internal val capturedViewer = ContextCollectionTextViewer(project, msg("captured"))
-    internal val outputViewer = ContextCollectionTextViewer(project, msg("output"))
+    internal val capturedViewer = viewerFactory(project, msg("captured"))
+    internal val outputViewer = viewerFactory(project, msg("output"))
     private val metadata = textLabel(msg("metadata.name"))
     internal val summary = textLabel(msg("summary.name"))
     internal val outputStatus = textLabel(msg("output.status"))
