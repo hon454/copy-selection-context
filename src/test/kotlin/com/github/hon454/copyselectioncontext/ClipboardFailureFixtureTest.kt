@@ -12,6 +12,8 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
@@ -22,6 +24,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.replaceService
 import com.intellij.testFramework.TestActionEvent
+import com.intellij.testFramework.LightVirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.Consumer
 import io.mockk.every
@@ -269,7 +272,7 @@ class ClipboardFailureFixtureTest : BasePlatformTestCase() {
         Harness(project).use { harness ->
             WriteCommandAction.runWriteCommandAction(project) { harness.editor.document.setText("x".repeat(262144)) }
             harness.collection.clear()
-            harness.collection.capture(harness.editor, myFixture.file.virtualFile, PathType.RELATIVE)
+            harness.collection.capture(harness.editor, harness.file, PathType.RELATIVE)
             CopySelectionSettings.getInstance().state.apply { outputFormat = "template"; customFormatTemplate = "{code}".repeat(17) }
             harness.start(Route.COLLECTION)
             assertEquals(listOf(CopySelectionBundle.message("collection.copy.overflow")), harness.collectionErrors)
@@ -278,6 +281,9 @@ class ClipboardFailureFixtureTest : BasePlatformTestCase() {
         }
         reset()
         Harness(project).use { harness ->
+            WriteCommandAction.runWriteCommandAction(project) { harness.editor.document.setText("a second snapshot") }
+            harness.collection.capture(harness.editor, harness.file, PathType.RELATIVE)
+            assertEquals(2, harness.collection.snapshot().items.size)
             harness.collection.setIncludeCode(false)
             harness.allowConfirm = false
             harness.start(Route.COLLECTION)
@@ -332,7 +338,10 @@ class ClipboardFailureFixtureTest : BasePlatformTestCase() {
         var confirmations = 0
         var duringConfirmation: () -> Unit = {}
         var historyPopupClosed = false
-        val editor: Editor = if (owner === project) myFixture.editor else EditorFactory.getInstance().createEditor(myFixture.editor.document, owner)
+        val file: VirtualFile = if (owner === project) myFixture.file.virtualFile else
+            LightVirtualFile("private-source-B.txt", PlainTextFileType.INSTANCE, "private code credential")
+        val editor: Editor = if (owner === project) myFixture.editor else
+            EditorFactory.getInstance().createEditor(requireNotNull(FileDocumentManager.getInstance().getDocument(file)), owner)
         val collection = ContextCollectionService.getInstance(owner)
         private val coordinator = ClipboardRequestCoordinator.getInstance()
         private val reporter = CopyFailureReporter.createForTest(coordinator, { !owner.isDisposed }, errors::addLast,
@@ -369,7 +378,7 @@ class ClipboardFailureFixtureTest : BasePlatformTestCase() {
             owner.replaceService(ContextCollectionCopyCommand::class.java, command, scope)
             collection.clear()
             collection.setIncludeCode(true)
-            collection.capture(editor, myFixture.file.virtualFile, PathType.RELATIVE)
+            assertTrue(collection.capture(editor, file, PathType.RELATIVE) is ContextCollectionAddResult.Added)
             CopyHistoryService.getInstance(owner).clear()
             CopyHistoryService.getInstance(owner).addEntry("history/status payload", 10)
             widget.update("history/status payload")
@@ -404,7 +413,7 @@ class ClipboardFailureFixtureTest : BasePlatformTestCase() {
                 when (it) {
                     CommonDataKeys.PROJECT.name -> owner
                     CommonDataKeys.EDITOR.name -> editor.takeIf { editorAvailable }
-                    CommonDataKeys.VIRTUAL_FILE.name -> myFixture.file.virtualFile.takeIf { editorAvailable }
+                    CommonDataKeys.VIRTUAL_FILE.name -> file.takeIf { editorAvailable }
                     else -> null
                 }
             }))
