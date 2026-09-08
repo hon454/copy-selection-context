@@ -115,7 +115,10 @@ class ReleaseVersionParityTest {
 
     @Test
     fun `workflow rejects missing mismatched and malformed tags without outputs`(@TempDir tempDir: Path) {
-        listOf("", "v9.9.9", "3.14.1", "v3.14.1-rc.1").forEachIndexed { index, tag ->
+        val version = canonicalVersion(projectRoot.resolve("build.gradle.kts"))
+        val invalidTags = listOf("", "v${differentSemanticVersion(version)}", "3.14.1", "v3.14.1-rc.1")
+
+        invalidTags.forEachIndexed { index, tag ->
             val result = runWorkflowVersionBoundary(tag, tempDir.resolve(index.toString()))
 
             assertEquals(1, result.exitCode, result.output)
@@ -172,6 +175,11 @@ class ReleaseVersionParityTest {
     private fun writeCanonicalBuildFile(path: Path, version: String): Path {
         Files.writeString(path, "version = \"$version\"")
         return path
+    }
+
+    private fun differentSemanticVersion(version: String): String {
+        val (major, minor, patch) = version.split('.').map(String::toInt)
+        return "$major.$minor.${patch + 1}"
     }
 
     private fun runVerifier(tag: String, buildFile: Path? = null): CommandResult {
