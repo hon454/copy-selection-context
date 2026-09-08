@@ -36,6 +36,7 @@ import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
 import java.awt.datatransfer.Transferable
 import java.awt.event.MouseEvent
+import java.nio.file.Files
 import java.util.concurrent.FutureTask
 
 /** Real entry points and platform owners; writes fail before touching the real clipboard. */
@@ -320,8 +321,12 @@ class ClipboardFailureFixtureTest : BasePlatformTestCase() {
     private fun copied(): String? = realClipboard.getContents(DataFlavor.stringFlavor)
 
     private fun withOtherProject(action: (Project) -> Unit) {
-        val other = requireNotNull(ProjectManager.getInstance().createProject("clipboard-B", myFixture.tempDirPath + "/clipboard-B"))
-        try { action(other) } finally { if (!other.isDisposed) disposeProject(other) }
+        val directory = Files.createTempDirectory("copy-selection-context-clipboard-B-")
+        val other = requireNotNull(ProjectManager.getInstance().createProject("clipboard-B", directory.toString()))
+        try { action(other) } finally {
+            if (!other.isDisposed) disposeProject(other)
+            directory.toFile().deleteRecursively()
+        }
     }
 
     private fun disposeProject(owner: Project) = ApplicationManager.getApplication().runWriteAction { Disposer.dispose(owner) }
