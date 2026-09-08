@@ -175,7 +175,7 @@ class GitHeadTargetValidatorTest {
         repo.write(".gitattributes", "*.txt diff=fixture filter=fixture\n")
         repo.commit("source.txt", "original\n")
         val marker = tempDir.resolve("helper-was-run")
-        val script = "echo invoked > '${marker.toString().replace("'", "'\\''")}'"
+        val script = "echo invoked > '${marker.toString().replace('\\', '/').replace("'", "'\\''")}'"
         repo.command("config", "diff.fixture.textconv", script)
         repo.command("config", "diff.external", script)
         repo.command("config", "filter.fixture.smudge", script)
@@ -184,7 +184,10 @@ class GitHeadTargetValidatorTest {
         repo.command("config", "url.ext::fixture-helper.insteadOf", "https://github.com/")
         assertEquals(GitHeadContentState.CLEAN, success(repo.input("source.txt", "original\n")).state)
         val objectId = repo.command("rev-parse", "HEAD:source.txt").trim()
-        Files.delete(repo.root.resolve(".git/objects/${objectId.take(2)}/${objectId.drop(2)}"))
+        val looseObject = repo.root.resolve(".git/objects/${objectId.take(2)}/${objectId.drop(2)}")
+        // Git marks loose objects read-only on Windows; remove that fixture-only flag before deleting.
+        if (SystemGitExecutable.isWindows) Files.setAttribute(looseObject, "dos:readonly", false)
+        Files.delete(looseObject)
         repo.command("config", "remote.origin.promisor", "true")
         repo.command("config", "extensions.partialClone", "origin")
         failure(repo.input("source.txt", "original\n"), GitPermalinkFailureReason.GIT_EXECUTION_FAILED)

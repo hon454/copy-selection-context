@@ -70,7 +70,7 @@ class GitPermalinkFixtureTest : BasePlatformTestCase() {
         } finally {
             // The platform clears fixture fields during super.tearDown().
             val repositoryDirectory = directory
-            try { super.tearDown() } finally { repositoryDirectory.toFile().deleteRecursively() }
+            try { super.tearDown() } finally { com.intellij.openapi.util.io.FileUtil.delete(repositoryDirectory.toFile()) }
         }
     }
 
@@ -218,11 +218,12 @@ class GitPermalinkFixtureTest : BasePlatformTestCase() {
     private fun assertExternalSourceChangeRejected(change: (Path) -> Unit) {
         edit("dirty\n$ORIGINAL")
         val file = myFixture.file.virtualFile
+        val capturedVfsPath = file.path
         val action = harness().apply { onConfirm = {
             change(directory.resolve("source.txt"))
             // Cached VFS identity is still valid; the final BGT source check must detect this.
             assertTrue(file.isValid)
-            assertEquals(directory.resolve("source.txt").toString(), file.path)
+            assertEquals(capturedVfsPath, file.path)
         } }
         action.start(); action.background(); action.ui(); action.background(); action.ui()
         assertEquals(1, action.confirmations)
