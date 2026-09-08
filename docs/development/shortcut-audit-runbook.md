@@ -76,6 +76,51 @@ Only the nine exact product IDs are excluded when classifying external prefix
 occupancy. Dormant mappings remain visible with `registered=false`. Owner plugin
 IDs, bundled flags and the loaded plugin inventory distinguish contributions.
 
+### Comparing replacement prefixes
+
+The six original schema-2 probes are retained as the G/C/H baseline. They do
+not establish that another prefix is free. Start a **fresh observation profile**
+with `audit --stroke-inventory` or `launch-gui --stroke-inventory` to request a
+complete companion named `EXPORT.tsv.strokes.tsv` from the same EDT capture.
+The optional companion has its own schema 1 and binds the original export's
+filename and SHA-256. It includes the registered-ID snapshot, each keymap and
+ancestor's source IDs, and every effective shortcut list (including empty,
+mouse, dormant, single-stroke and two-stroke entries) for their union. Per-map
+and final counts are checked, as are the original nine/watched bindings and
+all six original probe occupancies and ownership fields. A missing companion,
+missing action/ancestor row or mismatched export is an error, never a zero.
+
+```bash
+python3 scripts/shortcut-audit/audit.py launch-gui \
+  --app IDE_APP --profile FRESH_OBSERVATION_PROFILE --project FIXTURE_PROJECT \
+  --stroke-inventory
+# Invoke Export CSC Keymap Audit in the GUI, then quit that owned IDE.
+python3 scripts/shortcut-audit/audit.py compare-prefixes \
+  --export IC_EXPORT.tsv --export IDEA_EXPORT.tsv --export RIDER_EXPORT.tsv \
+  --output NEW_PREFIX_COMPARISON.json
+```
+
+The default comparison covers A–Z and F1–F24 with both Ctrl+Alt+Shift and
+Meta+Alt+Shift. Repeated `--key J --key F13` narrows it explicitly. Every first
+stroke match counts, regardless of its second key or whether the action is
+currently registered. Only the exact nine product IDs are excluded from
+external conflicts; their occupancies remain separately listed. Results retain
+all source identities, loaded plugins, keymap chains, action IDs/owners and
+full shortcut lists, so a zero is bounded to the recorded combinations. A
+platform action may return duplicate shortcuts: the companion preserves every
+entry and its counts, while comparison reports one occupancy per identical
+stroke and records `occurrencesInApiList` rather than inflating conflicts. A
+candidate's availability on physical keyboards, Fn/media handling, macOS or
+desktop interception, input layout and Korean IME remain separate real-input
+requirements. F13–F24 may be unoccupied yet unavailable on ordinary keyboards.
+No candidate is selected or applied to the product by this tool.
+
+Preserve old harness directories, exports and accepted profiles unchanged.
+Use their pinned exporter revision for revalidation: a newer exporter correctly
+rejects their old source manifest. Collect replacement-prefix inventories with
+the new reviewed harness in separate profiles; never install it into a frozen
+v6 baseline or relabel old six-probe data as complete-inventory evidence.
+
 `build-harness` creates an immutable `manifest.json` beside the diagnostic JAR.
 It records the exact JAR SHA-256, plugin ID and Java/descriptor source hashes,
 plus the available Git revision and dirty-state metadata. Source hashes are the

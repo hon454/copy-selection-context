@@ -31,7 +31,7 @@ def unescape(cell):
     return "".join(output)
 
 
-def shortcuts(value):
+def shortcuts(value, allow_duplicates=False):
     items = json.loads(value)
     require(isinstance(items, list), "shortcuts must be a JSON array")
     for item in items:
@@ -46,7 +46,7 @@ def shortcuts(value):
         else:
             require(set(item) == {"kind", "display"} and item["kind"] == "other"
                     and isinstance(item["display"], str) and bool(item["display"]), "non-keyboard shortcut fields")
-    require(len({json.dumps(item, sort_keys=True) for item in items}) == len(items), "duplicate shortcut")
+    require(allow_duplicates or len({json.dumps(item, sort_keys=True) for item in items}) == len(items), "duplicate shortcut")
     return items
 
 

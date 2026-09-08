@@ -19,6 +19,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 from evidence import COMMANDS, COMMAND_IDS, PREFIX, PRODUCT_ID, parse_export, require
+from strokes import compare_prefixes, parse_inventory
 
 
 HERE = Path(__file__).resolve().parent
@@ -447,10 +448,13 @@ def audit(args):
                f"-XX:ErrorFile={root / 'log/hs_err_%p.log'}", f"-XX:HeapDumpPath={root / 'log/heap.hprof'}"]
     command += [f"-Didea.{name}.path={root / name}" for name in ["config", "system", "plugins", "log"]]
     command += harness_properties(harness)
+    if getattr(args, "stroke_inventory", False):
+        command.append("-Dcsc.audit.strokeInventory=true")
     if metadata.get("removedAction"):
         command.append("-Dcsc.audit.removedAction=" + metadata["removedAction"])
     command += ["-cp", classpath, "com.intellij.idea.Main", "csc-keymap-audit", str(root / "keymaps.tsv")]
     context = run_context(root, metadata, run_id, "headless", info["buildNumber"])
+    context["strokeInventory"] = bool(getattr(args, "stroke_inventory", False))
     write_json(root / "audit-command.json", {**context, "argv": command, "productInfo": info})
     run_process(command, root, root, context, timeout=args.timeout, log_name="audit-console.log")
     require(context["harness"] == validate_harness(root / "plugins/csc-keymap-audit"),
@@ -460,6 +464,8 @@ def audit(args):
             and exported["harnessManifestSha256"] == context["harness"]["manifestSha256"],
             "audit export harness identity mismatch")
     summarize(root / "keymaps.tsv", root / "summary.json")
+    if context["strokeInventory"]:
+        parse_inventory(root / "keymaps.tsv")
 
 
 def launch_gui(args):
@@ -485,12 +491,15 @@ def launch_gui(args):
                      + "\n".join(harness_properties(harness)) + "\n")
         if metadata.get("removedAction"):
             stream.write("-Dcsc.audit.removedAction=" + metadata["removedAction"] + "\n")
+        if getattr(args, "stroke_inventory", False):
+            stream.write("-Dcsc.audit.strokeInventory=true\n")
     environment = os.environ.copy()
     variable = info["envVarBaseName"]
     environment[variable + "_PROPERTIES"] = str(root / "idea.properties")
     environment[variable + "_VM_OPTIONS"] = str(vmoptions)
     command = [str(launcher), str(Path(args.project).resolve())]
     context = run_context(root, metadata, run_id, "gui", info["buildNumber"], str(Path(args.project).resolve()))
+    context["strokeInventory"] = bool(getattr(args, "stroke_inventory", False))
     write_json(run_directory / "gui-command.json", {**context, "argv": command, "productInfo": info,
                                            "properties": str(root / "idea.properties"), "vmOptions": str(vmoptions)})
     run_process(command, root, run_directory, context, environment)
@@ -537,11 +546,22 @@ def main():
     for option in ["ide-home", "profile", "harness"]:
         collect.add_argument("--" + option, required=True)
     collect.add_argument("--timeout", type=int, default=120)
+    collect.add_argument("--stroke-inventory", action="store_true",
+                         help="Also export all effective shortcuts for prefix comparison")
     collect.set_defaults(run=audit)
     gui = commands.add_parser("launch-gui")
     for option in ["app", "profile", "project"]:
         gui.add_argument("--" + option, required=True)
+    gui.add_argument("--stroke-inventory", action="store_true",
+                     help="GUI export also writes a complete .strokes.tsv companion")
     gui.set_defaults(run=launch_gui)
+    compare = commands.add_parser("compare-prefixes")
+    compare.add_argument("--export", dest="exports", action="append", required=True,
+                         help="Schema-2 export with a matching complete inventory companion; repeat for IDEs")
+    compare.add_argument("--key", dest="keys", action="append",
+                         help="Candidate A-Z or F1-F24; defaults to all 50 keys with Ctrl/Meta+Alt+Shift")
+    compare.add_argument("--output", required=True)
+    compare.set_defaults(run=lambda args: write_json(Path(args.output), compare_prefixes(args.exports, args.keys)))
     accept = commands.add_parser("accept-baseline")
     for option in ["profile", "run-directory", "export", "observed-keymap", "performer", "notes"]:
         accept.add_argument("--" + option, required=True)

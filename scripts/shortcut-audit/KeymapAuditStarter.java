@@ -50,12 +50,8 @@ public final class KeymapAuditStarter implements ApplicationStarter {
     @Override public void main(List<String> args) {
         try {
             if (args.size() != 2) throw new IllegalArgumentException("Expected output TSV path");
-            List<String> rows = new ArrayList<>();
-            ApplicationManager.getApplication().invokeAndWait(() -> collect(rows));
-            // Refuse to replace previous evidence. The runner supplies a fresh filename.
-            Files.write(Path.of(args.get(1)), rows, StandardCharsets.UTF_8,
-                StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
-            System.out.println("CSC_KEYMAP_AUDIT_COMPLETE rows=" + rows.size());
+            writeExport(Path.of(args.get(1)));
+            System.out.println("CSC_KEYMAP_AUDIT_COMPLETE " + args.get(1));
             System.exit(0);
         } catch (Throwable error) {
             error.printStackTrace();
@@ -63,10 +59,36 @@ public final class KeymapAuditStarter implements ApplicationStarter {
         }
     }
 
-    static void collect(List<String> rows) {
+    static void writeExport(Path output) throws Exception {
+        List<String> rows = new ArrayList<>();
+        StrokeInventory inventory = Boolean.getBoolean("csc.audit.strokeInventory") ? new StrokeInventory() : null;
+        var application = ApplicationManager.getApplication();
+        if (application.isDispatchThread()) collect(rows, inventory);
+        else application.invokeAndWait(() -> collect(rows, inventory));
+        byte[] audit = (String.join("\n", rows) + "\n").getBytes(StandardCharsets.UTF_8);
+        Path companion = output.resolveSibling(output.getFileName() + ".strokes.tsv");
+        // Neither file is a replacement for older evidence. A missing companion
+        // after interruption cannot produce a prefix-comparison verdict.
+        if (Files.exists(output) || inventory != null && Files.exists(companion)) {
+            throw new IllegalStateException("Evidence path already exists");
+        }
+        Files.write(output, audit, StandardOpenOption.CREATE_NEW);
+        if (inventory != null) inventory.write(companion, output.getFileName().toString(), audit);
+    }
+
+    static void collect(List<String> rows, StrokeInventory inventory) {
         var manager = ActionManager.getInstance();
         var keymaps = KeymapManagerEx.getInstanceEx();
         var info = ApplicationInfo.getInstance();
+        // Initialize the nine product actions before taking the registered-ID
+        // snapshot used consistently by both exports and every keymap scan.
+        for (String command : COMMANDS) {
+            if (manager.getAction(PREFIX + command) == null) {
+                throw new IllegalStateException("Product action is not loaded: " + PREFIX + command);
+            }
+        }
+        Set<String> registered = new TreeSet<>(manager.getActionIdList(""));
+        if (inventory != null) inventory.registered(registered);
         Set<String> watched = new TreeSet<>(BASELINE_ACTIONS);
         String removedAction = System.getProperty("csc.audit.removedAction");
         if (removedAction != null && !removedAction.isBlank()) watched.add(removedAction);
@@ -77,7 +99,8 @@ public final class KeymapAuditStarter implements ApplicationStarter {
         row(rows, "META", "os", System.getProperty("os.name"), System.getProperty("os.version"), System.getProperty("os.arch"));
         row(rows, "META", "activeKeymap", keymaps.getActiveKeymap().getName());
         row(rows, "META", "headless", ApplicationManager.getApplication().isHeadlessEnvironment());
-        row(rows, "META", "registeredActionCount", manager.getActionIdList("").size());
+        row(rows, "META", "registeredActionCount", registered.size());
+        if (inventory != null) row(rows, "META", "strokeInventory", "complete-v1");
         row(rows, "META", "profileId", System.getProperty("csc.audit.profileId"));
         row(rows, "META", "runId", System.getProperty("csc.audit.runId"));
         row(rows, "META", "processId", ProcessHandle.current().pid());
@@ -116,12 +139,17 @@ public final class KeymapAuditStarter implements ApplicationStarter {
                 .map(KeymapAuditStarter::jsonString).collect(java.util.stream.Collectors.joining(",")) + "]");
             // Include dormant mappings, action aliases and inherited action IDs as well as
             // registered actions. Keymap.getShortcuts supplies effective inherited values.
-            Set<String> ids = new TreeSet<>(manager.getActionIdList(""));
-            for (Keymap node = keymap; node != null; node = node.getParent()) ids.addAll(node.getActionIdList());
+            Set<String> ids = new TreeSet<>(registered);
+            for (Keymap node = keymap; node != null; node = node.getParent()) {
+                Set<String> sourceIds = new TreeSet<>(node.getActionIdList());
+                ids.addAll(sourceIds);
+                if (inventory != null) inventory.source(keymap.getName(), node.getName(), sourceIds);
+            }
             for (String command : COMMANDS) ids.add(PREFIX + command);
             ids.addAll(watched);
             for (String id : ids) {
                 Shortcut[] shortcuts = keymap.getShortcuts(id);
+                if (inventory != null) inventory.action(keymap.getName(), id, shortcuts, manager);
                 if (watched.contains(id)
                     || COMMANDS.stream().anyMatch(command -> id.equals(PREFIX + command))) {
                     row(rows, "BINDING", keymap.getName(), id, shortcutsJson(shortcuts));
@@ -142,6 +170,7 @@ public final class KeymapAuditStarter implements ApplicationStarter {
                     }
                 }
             }
+            if (inventory != null) inventory.keymap(keymap.getName(), ids.size());
         }
         long bindings = rows.stream().filter(value -> value.startsWith("BINDING\t")).count();
         long occupancies = rows.stream().filter(value -> value.startsWith("OCCUPANCY\t")).count();
@@ -149,7 +178,7 @@ public final class KeymapAuditStarter implements ApplicationStarter {
             "bindings", bindings, "occupancies", occupancies, "rows", rows.size() + 1);
     }
 
-    private static String shortcutsJson(Shortcut[] shortcuts) {
+    static String shortcutsJson(Shortcut[] shortcuts) {
         List<String> values = new ArrayList<>();
         for (Shortcut shortcut : shortcuts) {
             if (shortcut instanceof KeyboardShortcut keyboard) {
@@ -165,7 +194,7 @@ public final class KeymapAuditStarter implements ApplicationStarter {
         return "[" + String.join(",", values) + "]";
     }
 
-    private static String jsonString(String value) {
+    static String jsonString(String value) {
         if (value == null) return "null";
         StringBuilder result = new StringBuilder("\"");
         for (char character : value.toCharArray()) {
@@ -176,7 +205,7 @@ public final class KeymapAuditStarter implements ApplicationStarter {
         return result.append('"').toString();
     }
 
-    private static void row(List<String> rows, Object... cells) {
+    static void row(List<String> rows, Object... cells) {
         List<String> values = new ArrayList<>();
         for (Object cell : cells) values.add(String.valueOf(cell).replace("\\", "\\\\")
             .replace("\t", "\\t").replace("\r", "\\r").replace("\n", "\\n"));
