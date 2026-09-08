@@ -3,6 +3,7 @@ set -euo pipefail
 
 release_tag="${1:-${GITHUB_REF_NAME:-}}"
 build_file="${2:-build.gradle.kts}"
+output_file="${3:-}"
 
 if [[ -z "$release_tag" ]]; then
   echo "::error::Release tag is required (argument 1 or GITHUB_REF_NAME)." >&2
@@ -36,3 +37,9 @@ if [[ "$canonical_version" != "$tag_version" ]]; then
 fi
 
 echo "Version verified: $release_tag"
+
+# Only validated values may become inputs to later workflow steps. Keep the
+# standalone verifier usable without a GitHub Actions output file.
+if [[ -n "$output_file" ]]; then
+  printf 'version=%s\ntag=%s\n' "$tag_version" "$release_tag" >> "$output_file"
+fi

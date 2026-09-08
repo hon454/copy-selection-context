@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.snakeyaml.engine.v2.api.Load
+import org.snakeyaml.engine.v2.api.LoadSettings
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -67,7 +69,7 @@ class ReleaseVersionParityTest {
         val releaseNotesGenerator = Files.readString(projectRoot.resolve("scripts/generate-release-notes.sh"))
 
         assertTrue(
-            workflow.contains("bash scripts/verify-release-version.sh \"${'$'}{{ steps.version.outputs.tag }}\""),
+            workflow.contains("bash scripts/verify-release-version.sh \"${'$'}GITHUB_REF_NAME\""),
             workflow
         )
         assertFalse(workflow.contains("grep -oP"), workflow)
@@ -79,6 +81,53 @@ class ReleaseVersionParityTest {
             releaseNotesGenerator.contains("--project-version \"${'$'}release_version\""),
             releaseNotesGenerator,
         )
+    }
+
+    @Test
+    fun `workflow publishes version outputs only after matching tag validation`(@TempDir tempDir: Path) {
+        val version = canonicalVersion(projectRoot.resolve("build.gradle.kts"))
+        val result = runWorkflowVersionBoundary("v$version", tempDir)
+
+        assertEquals(0, result.exitCode, result.output)
+        assertEquals(mapOf("version" to version, "tag" to "v$version"), result.outputs)
+    }
+
+    @Test
+    fun `workflow rejects missing mismatched and malformed tags without outputs`(@TempDir tempDir: Path) {
+        listOf("", "v9.9.9", "1.5.0", "v1.5.0-rc.1").forEachIndexed { index, tag ->
+            val result = runWorkflowVersionBoundary(tag, tempDir.resolve(index.toString()))
+
+            assertEquals(1, result.exitCode, result.output)
+            assertTrue(result.outputs.isEmpty(), "Invalid tag must not reach downstream outputs: $result")
+        }
+    }
+
+    @Test
+    fun `workflow rejects command substitutions as literal tag data`(@TempDir tempDir: Path) {
+        val tags = listOf(
+            "v${'$'}(printf${'$'}{IFS}TAG_COMMAND_EXECUTED)",
+            "v`printf${'$'}{IFS}TAG_COMMAND_EXECUTED`",
+        )
+        tags.forEachIndexed { index, tag ->
+            val refCheck = ProcessBuilder("git", "check-ref-format", "refs/tags/$tag").start()
+            assertEquals(0, refCheck.waitFor(), "The harmless regression input must be a valid Git ref")
+            assertLiteralRejection(tag, runWorkflowVersionBoundary(tag, tempDir.resolve(index.toString())))
+        }
+    }
+
+    @Test
+    fun `boundary regression detects reverting env input to shell interpolation`(@TempDir tempDir: Path) {
+        val tag = "v${'$'}(printf${'$'}{IFS}TAG_COMMAND_EXECUTED)"
+        val workflow = Files.readString(projectRoot.resolve(".github/workflows/release.yml"))
+        val unsafeWorkflow = workflow.replace(
+            "\"${'$'}GITHUB_REF_NAME\"",
+            "\"${'$'}{{ github.ref_name }}\"",
+        )
+        assertFalse(workflow == unsafeWorkflow, "Mutation must change the actual workflow boundary")
+        val result = runWorkflowVersionBoundary(tag, tempDir, unsafeWorkflow)
+
+        assertTrue(result.output.contains("vTAG_COMMAND_EXECUTED"), result.output)
+        org.junit.jupiter.api.assertThrows<AssertionError> { assertLiteralRejection(tag, result) }
     }
 
     @Test
@@ -105,10 +154,77 @@ class ReleaseVersionParityTest {
         val process = ProcessBuilder(command)
             .directory(projectRoot.toFile())
             .redirectErrorStream(true)
+            .apply { environment().remove("GITHUB_REF_NAME") }
             .start()
         val output = process.inputStream.bufferedReader().use { it.readText() }
         return CommandResult(process.waitFor(), output)
     }
 
     private data class CommandResult(val exitCode: Int, val output: String)
+
+    private fun assertLiteralRejection(tag: String, result: WorkflowResult) {
+        assertEquals(1, result.exitCode, result.output)
+        assertTrue(
+            result.output.contains("Release tag must use v<major>.<minor>.<patch>: $tag"),
+            "The workflow must reject the original tag without evaluating substitutions: ${result.output}",
+        )
+        assertTrue(result.outputs.isEmpty(), "Rejected tags must not produce version outputs: $result")
+    }
+
+    // Execute the checked-in run source with Actions-style expression substitution
+    // and step outputs. Passing the tag only as a script argv would miss the bug.
+    // Only the pre-JDK version boundary is executed, with no inherited credentials.
+    private fun runWorkflowVersionBoundary(
+        tag: String,
+        tempDir: Path,
+        workflow: String = Files.readString(projectRoot.resolve(".github/workflows/release.yml")),
+    ): WorkflowResult {
+        val root = Load(LoadSettings.builder().build()).loadFromString(workflow) as Map<*, *>
+        val job = (root["jobs"] as Map<*, *>)["release"] as Map<*, *>
+        val steps = (job["steps"] as List<*>).map { it as Map<*, *> }
+            .takeWhile { it["name"] != "Set up JDK 21" }
+            .filter { it["run"] is String }
+        assertTrue(steps.isNotEmpty(), "The workflow must validate the version before JDK setup")
+        val context = mutableMapOf("github.ref_name" to tag, "github.ref" to "refs/tags/$tag")
+        val outputs = mutableMapOf<String, String>()
+        val log = StringBuilder()
+        Files.createDirectories(tempDir)
+        steps.forEachIndexed { index, step ->
+            val outputFile = Files.createFile(tempDir.resolve("step-$index-output"))
+            val builder = ProcessBuilder(
+                "bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c",
+                renderExpressions(step["run"] as String, context),
+            ).directory(projectRoot.toFile()).redirectErrorStream(true)
+            val environment = builder.environment()
+            val executablePath = environment["PATH"].orEmpty()
+            environment.clear()
+            environment.putAll(mapOf(
+                "PATH" to executablePath,
+                "GITHUB_REF_NAME" to tag,
+                "GITHUB_REF" to "refs/tags/$tag",
+                "GITHUB_OUTPUT" to outputFile.toString(),
+            ))
+            (step["env"] as? Map<*, *>)?.forEach { (key, value) ->
+                environment[key as String] = renderExpressions(value as String, context)
+            }
+            val process = builder.start()
+            log.append(process.inputStream.bufferedReader().use { it.readText() })
+            val exitCode = process.waitFor()
+            Files.readAllLines(outputFile).forEach { line ->
+                val key = line.substringBefore('=')
+                val value = line.substringAfter('=')
+                outputs[key] = value
+                context["steps.${step["id"]}.outputs.$key"] = value
+            }
+            if (exitCode != 0) return WorkflowResult(exitCode, log.toString(), outputs)
+        }
+        return WorkflowResult(0, log.toString(), outputs)
+    }
+
+    private fun renderExpressions(source: String, context: Map<String, String>): String =
+        Regex("""\$\{\{\s*(.*?)\s*}}""").replace(source) { match ->
+            context.getValue(match.groupValues[1])
+        }
+
+    private data class WorkflowResult(val exitCode: Int, val output: String, val outputs: Map<String, String>)
 }
