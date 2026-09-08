@@ -141,6 +141,33 @@ class ContextCollectionTextViewerFixtureTest : BasePlatformTestCase() {
         }
     }
 
+    fun testInstallDoesNotReanalyseParagraphDirectionOnEdt() {
+        for (orientation in listOf(java.awt.ComponentOrientation.LEFT_TO_RIGHT, java.awt.ComponentOrientation.RIGHT_TO_LEFT)) {
+            lateinit var prepared: PlainDocument
+            var directionWritesOnEdt = 0
+            val harness = Harness { text, font, context, checkCancelled ->
+                ContextCollectionTextViewer.prepareDocument(text, font, context, checkCancelled).also { document ->
+                    val properties = object : java.util.Hashtable<Any, Any>() {
+                        override fun put(key: Any, value: Any): Any? {
+                            if (key == java.awt.font.TextAttribute.RUN_DIRECTION && application.isDispatchThread) directionWritesOnEdt++
+                            return super.put(key, value)
+                        }
+                    }
+                    for (key in document.documentProperties.keys()) properties[key] = document.getProperty(key)
+                    document.documentProperties = properties
+                    prepared = document
+                }
+            }
+            harness.area.componentOrientation = orientation
+            harness.viewer.show("ا".repeat(131072))
+            harness.compute()
+            assertEquals(!orientation.isLeftToRight, prepared.getProperty(java.awt.font.TextAttribute.RUN_DIRECTION))
+            harness.flush()
+            assertSame(prepared, harness.area.document)
+            assertEquals(0, directionWritesOnEdt)
+        }
+    }
+
     fun testNativeSelectAllAndRangeTransferKeepCompleteUnicodeDocumentsThrough4MiB() {
         val harness = Harness()
         val examples = listOf("small preview\n", "x".repeat(262144), "가".repeat(87381) + "x",

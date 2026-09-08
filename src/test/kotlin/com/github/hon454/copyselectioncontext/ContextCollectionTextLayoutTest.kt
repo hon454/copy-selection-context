@@ -143,12 +143,18 @@ class ContextCollectionTextLayoutTest {
             "ا" + "\u064B".repeat(1536) + "ب")) {
             val expected = TextLayout(text, font, context)
             val model = prepare(text).lines.single()
-            val cell = model.logical.single()
-            assertTrue(cell.raster != null)
+            val coverage = model.logical.joinToString { "${it.start}..${it.end}(raster=${it.raster != null})" }
+            assertTrue(model.logical.any { it.raster != null }, "${text.first()}: $coverage")
             for (halfPixel in -1..(expected.advance * 2).toInt()) {
                 val x = halfPixel / 2f
                 for (y in listOf(-5f, 0f, 3f)) {
-                    assertEquals(expected.hitTestChar(x, y), cell.hit(x, y), "${text.first()} x=$x y=$y")
+                    // Font engines may put the following glyph in its own cell. Exercise the
+                    // same visible-cell lookup as the view and compare global logical hits.
+                    val cell = requireNotNull(model.cellAtX(x))
+                    val hit = requireNotNull(cell.hit(x - cell.x, y))
+                    val global = if (hit.isLeadingEdge) TextHitInfo.leading(cell.start + hit.charIndex)
+                        else TextHitInfo.trailing(cell.start + hit.charIndex)
+                    assertEquals(expected.hitTestChar(x, y), global, "${text.first()} x=$x y=$y cells=$coverage")
                 }
             }
         }

@@ -7,6 +7,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindowManager
 import java.awt.Font
 import java.awt.font.FontRenderContext
+import java.awt.font.TextAttribute
 import java.beans.PropertyChangeListener
 import java.util.concurrent.CancellationException
 import java.util.concurrent.Future
@@ -34,6 +35,7 @@ internal class ContextCollectionTextViewer private constructor(
     private var shownText: String? = null
     private var renderFont: Font? = null
     private var renderContext: FontRenderContext? = null
+    private var renderDirection: Boolean? = null
     private val selectionListener = CaretListener { component.repaint() }
     private val displayListener = PropertyChangeListener { event ->
         if (!disposed && event.propertyName in setOf("font", "graphicsConfiguration", "UI")) {
@@ -59,10 +61,12 @@ internal class ContextCollectionTextViewer private constructor(
         if (disposed || project.isDisposed) return
         val font = component.font
         val context = component.getFontMetrics(font).fontRenderContext
-        if (shownText == text && renderFont == font && renderContext == context) return
+        val direction = if (component.componentOrientation.isLeftToRight) TextAttribute.RUN_DIRECTION_LTR else TextAttribute.RUN_DIRECTION_RTL
+        if (shownText == text && renderFont == font && renderContext == context && renderDirection == direction) return
         shownText = text
         renderFont = font
         renderContext = context
+        renderDirection = direction
         val ticket = ++generation
         pendingRequest?.cancel()
         pendingRequest = null
@@ -72,7 +76,12 @@ internal class ContextCollectionTextViewer private constructor(
         pendingRequest = work
         val future = background {
             val value = work.text() ?: return@background
-            val document = try { prepare(value, font, context, work::checkCancelled) }
+            val document = try {
+                prepare(value, font, context, work::checkCancelled).also {
+                    if (it.getProperty(TextAttribute.RUN_DIRECTION) != direction) it.putProperty(TextAttribute.RUN_DIRECTION, direction)
+                    work.checkCancelled()
+                }
+            }
                 catch (_: CancellationException) { return@background }
             if (!work.complete(document)) return@background
             // The queue holds a cancellable request, never a captured document or text payload.
@@ -98,6 +107,7 @@ internal class ContextCollectionTextViewer private constructor(
         shownText = null
         renderFont = null
         renderContext = null
+        renderDirection = null
         component.removeCaretListener(selectionListener)
         component.removePropertyChangeListener(displayListener)
         component.document = PlainDocument()
@@ -137,6 +147,8 @@ internal class ContextCollectionTextViewer private constructor(
         internal fun prepareDocument(text: String, font: Font, context: FontRenderContext, checkCancelled: () -> Unit): PlainDocument {
             val geometry = ContextCollectionTextLayout.prepare(text, font, context, checkCancelled)
             val document = PlainDocument()
+            // JTextComponent.setDocument otherwise changes this on EDT, reanalysing all bidi text.
+            document.putProperty(TextAttribute.RUN_DIRECTION, TextAttribute.RUN_DIRECTION_LTR)
             checkCancelled()
             // One detached insertion avoids repeatedly reanalysing the growing bidi paragraph.
             document.insertString(0, text, null)

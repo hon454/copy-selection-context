@@ -76,6 +76,9 @@ Font or graphics-configuration changes prepare fresh geometry with the new rende
 Oversized masks retain native logical mouse-hit semantics through worker-prepared character centers
 grouped by physical font metrics and indexed along x; zero-advance ties keep logical character order.
 Tabs preserve the affinity of their clicked edge next to bidirectional runs.
+The detached document also receives the component's run-direction property on the worker. Leaving
+it unset makes `JTextComponent.setDocument` call `AbstractDocument.updateBidi` over the entire document
+on EDT, even with a custom view. A controlled fixture counts zero direction-property writes at install.
 
 `ContextCollectionTextLayoutTest` compares whole-paragraph shaping and visual caret positions, verifies
 raw line/cell coverage and counts viewport work. `ContextCollectionTextViewerFixtureTest` controls
