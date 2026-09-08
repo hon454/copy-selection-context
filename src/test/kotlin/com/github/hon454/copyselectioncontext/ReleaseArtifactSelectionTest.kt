@@ -72,10 +72,7 @@ class ReleaseArtifactSelectionTest {
         val result = selectArtifact(tempDir, distributions, signed = true)
 
         assertEquals(0, result.exitCode, result.output)
-        assertEquals(
-            listOf("path=$signedZip", "signed=true"),
-            Files.readAllLines(result.outputFile),
-        )
+        assertSelectedArtifact(result.outputFile, signedZip, signed = true)
     }
 
     @Test
@@ -87,10 +84,7 @@ class ReleaseArtifactSelectionTest {
         val result = selectArtifact(tempDir, distributions, signed = false)
 
         assertEquals(0, result.exitCode, result.output)
-        assertEquals(
-            listOf("path=$unsignedZip", "signed=false"),
-            Files.readAllLines(result.outputFile),
-        )
+        assertSelectedArtifact(result.outputFile, unsignedZip, signed = false)
     }
 
     @Test
@@ -141,6 +135,20 @@ class ReleaseArtifactSelectionTest {
         val process = processBuilder.start()
         val output = process.inputStream.bufferedReader().use { it.readText() }
         return ScriptResult(process.waitFor(), output, outputFile)
+    }
+
+    private fun assertSelectedArtifact(
+        outputFile: Path,
+        expectedPath: Path,
+        signed: Boolean,
+    ) {
+        val outputLines = Files.readAllLines(outputFile)
+        assertEquals(2, outputLines.size)
+        assertEquals(
+            expectedPath.normalize(),
+            Path.of(outputLines.first().removePrefix("path=")).normalize(),
+        )
+        assertEquals("signed=$signed", outputLines.last())
     }
 
     private data class ScriptResult(

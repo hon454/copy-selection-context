@@ -1086,7 +1086,7 @@ class CiWorkflowTest {
     private fun readWorkflow(workflowName: String): String {
         val path = Path.of(".github", "workflows", workflowName)
         assertTrue(Files.isRegularFile(path), "Workflow not found: $path")
-        return Files.readString(path)
+        return Files.readString(path).replace("\r\n", "\n")
     }
 
     private fun readWorkflowMapping(workflowName: String): MappingNode =

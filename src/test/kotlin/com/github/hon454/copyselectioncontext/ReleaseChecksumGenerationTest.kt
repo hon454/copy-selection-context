@@ -28,10 +28,14 @@ class ReleaseChecksumGenerationTest {
         val expectedDigest = MessageDigest.getInstance("SHA-256")
             .digest(artifactBytes)
             .joinToString("") { byte -> "%02x".format(byte) }
+        val checksumContents = Files.readString(checksumFile)
+        val checksumLine = checksumContents.trimEnd('\r', '\n')
+        assertEquals(expectedDigest, checksumLine.substringBefore(' '))
         assertEquals(
-            "$expectedDigest  ${pluginZip.fileName}\n",
-            Files.readString(checksumFile),
+            pluginZip.fileName.toString(),
+            checksumLine.substringAfter(' ').trimStart().removePrefix("*"),
         )
+        assertTrue(checksumContents.endsWith("\n"), "SHA256SUMS must end with a newline")
     }
 
     @Test
