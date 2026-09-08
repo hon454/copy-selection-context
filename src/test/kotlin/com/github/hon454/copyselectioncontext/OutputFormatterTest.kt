@@ -14,6 +14,41 @@ class OutputFormatterTest {
     }
 
     @Test
+    fun `shared fence builder recognizes CommonMark closing fences after up to three spaces`() {
+        for (spaces in 0..3) {
+            assertEquals("````", MarkdownCodeFence.forCode(" ".repeat(spaces) + "```"))
+            assertEquals("`````", MarkdownCodeFence.forCode(" ".repeat(spaces) + "```` \t"))
+        }
+        assertEquals("``````", MarkdownCodeFence.forCode("  ```\n   `````\t\n ` ```"))
+    }
+
+    @Test
+    fun `shared fence builder keeps safe indented and suffixed lines byte compatible`() {
+        assertEquals("```", MarkdownCodeFence.forCode("    ```"))
+        assertEquals("```", MarkdownCodeFence.forCode("\t```"))
+        assertEquals("```", MarkdownCodeFence.forCode("prefix ```"))
+        assertEquals("```", MarkdownCodeFence.forCode("  ```kotlin"))
+        assertEquals("````", MarkdownCodeFence.forCode("```kotlin"), "column zero behavior must remain unchanged")
+    }
+
+    @Test
+    fun `built-in formatters preserve indented fences and every line ending byte-for-byte`() {
+        for (lineEnding in listOf("\n", "\r\n", "\r")) {
+            val code = "before${lineEnding}  ``` \t${lineEnding}after"
+            val context = FormatContext("sample.md", 1, 3, code, "markdown")
+
+            assertEquals(
+                " @sample.md#L1-3 \n````markdown\n$code\n````",
+                ClaudeCodeFormatter().format(context),
+            )
+            assertEquals(
+                "sample.md:1-3\n````markdown\n$code\n````",
+                PathLineFormatter().format(context),
+            )
+        }
+    }
+
+    @Test
     fun `built-in formatter outputs remain byte-for-byte stable`() {
         val context = FormatContext(
             path = "src\\App.kt",

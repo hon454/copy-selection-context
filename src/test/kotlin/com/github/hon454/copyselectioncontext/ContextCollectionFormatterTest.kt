@@ -24,6 +24,24 @@ class ContextCollectionFormatterTest {
         assertEquals("", ready(listOf(first.copy(language = ""))).language)
     }
 
+    @Test fun `builtins preserve indented fences in multi item and snapshot output with exact bytes`() {
+        val lineEnding = "\r\n"
+        val code = "before${lineEnding}  ```\t${lineEnding}after"
+        val first = item(1, "src/A.md", code, "markdown")
+        val historical = first.copy(id = 2, captureNumber = 2, code = "older\r   ```` \rcontent")
+        val other = item(3, "src/B.md", "safe\n    ```\n\t```\n  ```markdown", "markdown")
+
+        val result = ready(listOf(first, historical, other))
+
+        val expected = "[Snapshot #1 · 2026-09-04T07:30:00.000Z]\n" +
+            "src/A.md:10\n````markdown\n$code\n````\n\n" +
+            "[Snapshot #2 · 2026-09-04T07:30:00.000Z]\n" +
+            "src/A.md:10\n`````markdown\n${historical.code}\n`````\n\n" +
+            "src/B.md:10\n```markdown\n${other.code}\n```"
+        assertEquals(expected, result.payload)
+        assertEquals(expected.toByteArray(Charsets.UTF_8).size, result.bytes)
+    }
+
     @Test fun `conflicts group source location not display path and labels survive reorder`() {
         val first = item(1, "src/A.kt", "old")
         val second = first.copy(id = 2, captureNumber = 2, displayPath = "/project/src/A.kt", code = "new")
@@ -147,11 +165,11 @@ class ContextCollectionFormatterTest {
         assertEquals(source.code + "\n", result.payload)
     }
 
-    @Test fun `snapshot annotation overhead participates at both exact size thresholds`() {
+    @Test fun `indented fences and snapshot overhead participate at both exact size thresholds`() {
         for (limit in listOf(ContextCollectionFormatter.WARNING_BYTES, ContextCollectionFormatter.MAX_BYTES)) {
             val count = if (limit == ContextCollectionFormatter.WARNING_BYTES) 2 else 8
             val ticks = if (count == 2) 40000 else 174000
-            val base = (1..count).map { id -> item(id.toLong(), code = "`".repeat(ticks) + "\n$id")
+            val base = (1..count).map { id -> item(id.toLong(), code = "  " + "`".repeat(ticks) + " \t\n$id")
                 .copy(sourceLocation = ContextCollectionSourceLocation(1, "file:///A.kt")) }
             val initial = ready(base)
             for (delta in -1..1) {
