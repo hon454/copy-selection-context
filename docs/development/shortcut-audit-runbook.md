@@ -153,6 +153,15 @@ A zero there means only that the selected modifier has no external first-stroke
 match in those recorded maps. It is not a product execution or physical-input
 verdict, and opposite-modifier entries are never discarded.
 
+If a product's `product-info.json` omits `javaExecutablePath`, inspect that
+distribution's bundled runtime and pass its absolute path to `audit` using
+`--java-executable`. The tool accepts only an executable inside the selected
+IDE home, resolves symlinks, and rejects overriding an existing metadata path.
+It records the explicit selection and executable hash in run evidence without
+altering product metadata. Runtime resolution fails before installing the
+diagnostic harness into a fresh profile. This option does not change licensing
+or initialization behavior; a runtime license rejection remains a blocked run.
+
 Preserve old harness directories, exports and accepted profiles unchanged.
 Use their pinned exporter revision for revalidation: a newer exporter correctly
 rejects their old source manifest. Collect replacement-prefix inventories with

@@ -74,6 +74,32 @@ class AuditToolTest(unittest.TestCase):
             self.prepare()
         self.assertEqual(before, audit.config_snapshot(root))
 
+    def test_headless_java_uses_metadata_or_explicit_inspected_bundled_runtime(self):
+        home = self.root / "IDE/Contents"
+        java = home / "jbr/Contents/Home/bin/java"
+        java.parent.mkdir(parents=True)
+        java.write_text("synthetic executable path fixture")
+        java.chmod(0o700)
+        info = home / "Resources/product-info.json"
+        self.assertEqual(audit.headless_java(home, info, {"javaExecutablePath": "../jbr/Contents/Home/bin/java"}),
+                         (java, "product-info"))
+        self.assertEqual(audit.headless_java(home, info, {}, str(java)), (java, "explicit-bundled-runtime"))
+
+    def test_headless_java_rejects_missing_external_relative_or_conflicting_runtime(self):
+        home = self.root / "IDE/Contents"
+        home.mkdir(parents=True)
+        external = self.root / "java"
+        external.write_text("synthetic executable path fixture")
+        external.chmod(0o700)
+        link = home / "java"
+        link.symlink_to(external)
+        cases = [({}, None), ({}, "jbr/bin/java"), ({}, str(external)), ({}, str(link)),
+                 ({}, str(home / "missing")), ({"javaExecutablePath": "../../java"}, None),
+                 ({"javaExecutablePath": "java"}, str(external))]
+        for launch, explicit in cases:
+            with self.subTest(launch=launch, explicit=explicit), self.assertRaises(ValueError):
+                audit.headless_java(home, home / "Resources/product-info.json", launch, explicit)
+
     def test_explicit_old_uses_observed_effective_mac_values(self):
         root = self.prepare("explicit-old")
         keymap = ET.parse(root / "config/keymaps/audit.xml").getroot()

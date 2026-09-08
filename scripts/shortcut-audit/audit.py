@@ -419,6 +419,18 @@ def build(args):
     print(jar)
 
 
+def headless_java(home, product_info_path, launch, explicit=None):
+    declared = launch.get("javaExecutablePath")
+    require(not (declared and explicit), "product metadata already declares Java; an override is not allowed")
+    require(bool(declared) or bool(explicit),
+            "product metadata omits Java; supply --java-executable after inspecting the bundled runtime")
+    require(not explicit or Path(explicit).is_absolute(), "explicit Java path must be absolute")
+    java = (product_info_path.parent / declared if declared else Path(explicit)).resolve()
+    require(java.is_relative_to(home.resolve()) and java.is_file() and os.access(java, os.X_OK),
+            "Java must be an executable file within the selected IDE home")
+    return java, "product-info" if declared else "explicit-bundled-runtime"
+
+
 def audit(args):
     home, root = Path(args.ide_home).resolve(), Path(args.profile).resolve()
     metadata = load_profile(root)
@@ -427,15 +439,15 @@ def audit(args):
     run_id = str(uuid.uuid4())
     probe = Path(args.harness).resolve()
     validate_harness(probe)
-    shutil.copytree(probe, root / "plugins/csc-keymap-audit", dirs_exist_ok=False)
-    harness = validate_harness(root / "plugins/csc-keymap-audit")
     product_info_path = home / "Resources/product-info.json"
     if not product_info_path.exists():
         product_info_path = home / "product-info.json"
     info = json.loads(product_info_path.read_text())
     launch = next(item for item in info["launch"] if item["os"] == "macOS" and item["arch"] == "aarch64")
-    # Resolve product-info-relative paths; do not guess native/JBR names.
-    java = (product_info_path.parent / launch["javaExecutablePath"]).resolve()
+    # Resolve metadata or an explicitly inspected bundled runtime; never guess.
+    java, java_source = headless_java(home, product_info_path, launch, getattr(args, "java_executable", None))
+    shutil.copytree(probe, root / "plugins/csc-keymap-audit", dirs_exist_ok=False)
+    harness = validate_harness(root / "plugins/csc-keymap-audit")
     classpath = os.pathsep.join(str(home / "lib" / name) for name in launch["bootClassPathJarNames"])
     # Gradle's cached transform is the Contents directory itself, without an
     # enclosing .app. Resolve that form before the general bundle placeholder.
@@ -455,6 +467,7 @@ def audit(args):
     command += ["-cp", classpath, "com.intellij.idea.Main", "csc-keymap-audit", str(root / "keymaps.tsv")]
     context = run_context(root, metadata, run_id, "headless", info["buildNumber"])
     context["strokeInventory"] = bool(getattr(args, "stroke_inventory", False))
+    context["javaSelection"] = {"source": java_source, "path": str(java), "sha256": digest(java)}
     write_json(root / "audit-command.json", {**context, "argv": command, "productInfo": info})
     run_process(command, root, root, context, timeout=args.timeout, log_name="audit-console.log")
     require(context["harness"] == validate_harness(root / "plugins/csc-keymap-audit"),
@@ -546,6 +559,8 @@ def main():
     for option in ["ide-home", "profile", "harness"]:
         collect.add_argument("--" + option, required=True)
     collect.add_argument("--timeout", type=int, default=120)
+    collect.add_argument("--java-executable",
+                         help="Inspected bundled Java path, only when product-info omits javaExecutablePath")
     collect.add_argument("--stroke-inventory", action="store_true",
                          help="Also export all effective shortcuts for prefix comparison")
     collect.set_defaults(run=audit)
