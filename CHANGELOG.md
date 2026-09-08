@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Skip selected and current-line text capture when standard copy actions produce path-only output (#108)
 
+### Performance
+
+- Skip source-status scans, state allocation and EDT scheduling for unrelated document changes in context collections while preserving file and ancestor move/delete detection.
+
 ## [1.5.1] - 2026-09-08
 
 ### Fixed

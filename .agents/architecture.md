@@ -96,7 +96,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `ContextCollectionItem.kt` | Immutable captures, source locations, snapshots and typed add results |
 | `ContextCollectionStore.kt` | Pure bounded capture transaction and session mutation engine |
 | `ContextCollectionService.kt` | Project-only session service and editor capture adapter |
-| `ContextCollectionSourceTracker.kt` | Stable live-source identity and separate immutable status revision |
+| `ContextCollectionSourceTracker.kt` | Stable live-source identity, immutable file-to-capture index, unrelated-document fast path and conservative structural VFS checks |
 | `ContextCollectionSubscriptions.kt` | Disposable snapshot listeners with safe callback failure isolation |
 | `AddToContextCollectionAction.kt` | Localized add-only action without copy effects |
 | `CustomStatusBarWidgetAdapter.java` | Public custom-widget bridge that avoids Kotlin-generated deprecated status API methods |
