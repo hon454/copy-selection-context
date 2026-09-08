@@ -8,7 +8,6 @@ import java.awt.font.TextAttribute
 import java.awt.font.TextHitInfo
 import java.awt.font.TextLayout
 import java.awt.font.TextMeasurer
-import java.awt.geom.Point2D
 import java.text.AttributedString
 import java.text.Bidi
 import kotlin.math.ceil
@@ -34,10 +33,18 @@ internal class ContextCollectionTextLayout private constructor(
             internal set
         var visualIndex: Int = 0
             internal set
+        var leadingBoundary: Float? = null
+            internal set
+        var trailingBoundary: Float? = null
+            internal set
         val leftOverhang: Float = layout?.bounds?.let { max(0f, -it.x.toFloat()) } ?: raster?.leftOverhang ?: 0f
         val rightOverhang: Float = layout?.bounds?.let { max(0f, it.maxX.toFloat() - width) } ?: raster?.rightOverhang ?: 0f
         val isTab: Boolean get() = layout == null && raster == null
-        fun caretX(hit: TextHitInfo): Float = if (layout != null) baselineX(layout, hit) else raster?.caretX(hit) ?: 0f
+        fun caretX(hit: TextHitInfo): Float {
+            if (hit.isLeadingEdge && hit.insertionIndex == 0) leadingBoundary?.let { return it }
+            if (!hit.isLeadingEdge && hit.insertionIndex == end - start) trailingBoundary?.let { return it }
+            return if (layout != null) caretX(layout, hit) else raster?.caretX(hit) ?: 0f
+        }
         fun hit(x: Float, y: Float): TextHitInfo? = layout?.hitTestChar(x, y) ?: raster?.hit(x, y)
         fun next(hit: TextHitInfo, right: Boolean): TextHitInfo? = if (layout != null) {
             if (right) layout.getNextRightHit(hit) else layout.getNextLeftHit(hit)
@@ -58,6 +65,28 @@ internal class ContextCollectionTextLayout private constructor(
         private val drawable = visual.filter { it.width > 0f || it.leftOverhang > 0f || it.rightOverhang > 0f }
         private val leftOverhang = visual.maxOfOrNull { it.leftOverhang } ?: 0f
         private val rightOverhang = visual.maxOfOrNull { it.rightOverhang } ?: 0f
+        private val forwardMaxima = FloatArray(visual.size).also { maxima ->
+            var maximum = Float.NEGATIVE_INFINITY
+            for ((index, cell) in visual.withIndex()) {
+                val last = cell.x + if (cell.isTab) 0f else cell.caretX(TextHitInfo.leading(if (cell.rtl) 0 else cell.end - cell.start - 1))
+                maximum = max(maximum, last)
+                maxima[index] = maximum
+            }
+        }
+
+        /** ParagraphView's vertical motion chooses the first forward caret at or beyond x. */
+        fun forwardPositionAt(x: Float): Int {
+            val index = upperBound(visual.size) { forwardMaxima[it] < x }
+            val cell = visual.getOrNull(index) ?: return end
+            if (cell.isTab) return cell.start
+            val length = cell.end - cell.start
+            fun offset(visualOffset: Int) = if (cell.rtl) length - visualOffset - 1 else visualOffset
+            fun caret(visualOffset: Int) = cell.x + cell.caretX(TextHitInfo.leading(offset(visualOffset)))
+            val first = upperBound(length) { caret(it) < x }.coerceAtMost(length - 1)
+            val at = caret(first)
+            val last = upperBound(length) { caret(it) <= at }.minus(1).coerceAtLeast(first)
+            return cell.start + offset(last)
+        }
 
         fun cellAtOffset(offset: Int, backward: Boolean = false): Cell? {
             if (logical.isEmpty()) return null
@@ -111,10 +140,10 @@ internal class ContextCollectionTextLayout private constructor(
         const val CELL_CHARACTERS = 512
         val DOCUMENT_PROPERTY = Any()
 
-        // hitToPoint is the glyph's baseline position; getCaretInfo[0] averages neighbouring glyphs.
-        fun baselineX(layout: TextLayout, hit: TextHitInfo): Float = Point2D.Float().also { layout.hitToPoint(hit, it) }.x
+        // GlyphPainter2 positions the native caret at getCaretInfo[0], including overlapping marks.
+        fun caretX(layout: TextLayout, hit: TextHitInfo): Float = layout.getCaretInfo(hit)[0]
 
-        fun prepare(text: String, font: Font, context: FontRenderContext, checkCancelled: () -> Unit): ContextCollectionTextLayout {
+        fun prepare(text: String, font: Font, context: FontRenderContext, leftToRight: Boolean = true, checkCancelled: () -> Unit): ContextCollectionTextLayout {
             val metrics = font.getLineMetrics("Ag", context)
             var ascent = metrics.ascent
             var descent = metrics.descent + metrics.leading
@@ -128,12 +157,12 @@ internal class ContextCollectionTextLayout private constructor(
                 val cells = ArrayList<Cell>()
                 val visual = ArrayList<Cell>()
                 var x = 0f
-                var leftToRight = true
+                var paragraphLeftToRight = leftToRight
                 if (start < end) {
                     val value = text.substring(start, end)
                     // Resolve the complete paragraph once, including embeddings, isolates and tabs.
-                    val bidi = Bidi(value, Bidi.DIRECTION_DEFAULT_LEFT_TO_RIGHT)
-                    leftToRight = bidi.baseIsLeftToRight()
+                    val bidi = Bidi(value, if (leftToRight) Bidi.DIRECTION_LEFT_TO_RIGHT else Bidi.DIRECTION_RIGHT_TO_LEFT)
+                    paragraphLeftToRight = bidi.baseIsLeftToRight()
                     val simple = value.all { it in ' '..'~' || it == '\t' } &&
                         font.attributes[TextAttribute.LIGATURES] != TextAttribute.LIGATURES_ON &&
                         font.attributes[TextAttribute.KERNING] != TextAttribute.KERNING_ON
@@ -222,9 +251,23 @@ internal class ContextCollectionTextLayout private constructor(
                         x += cell.width
                         visual.add(cell)
                     }
+                    if (!simple && cells.size > 1 && '\t' !in value) {
+                        // A boundary caret may average glyph edges from both bidi runs. Preserve
+                        // that paragraph context without retaining or querying the full layout on EDT.
+                        val whole = if (bidi.runCount == 1) requireNotNull(measurers[bidi.getRunLevel(0) % 2]).second
+                        else TextLayout(AttributedString(value).apply {
+                            addAttribute(TextAttribute.FONT, font)
+                            addAttribute(TextAttribute.RUN_DIRECTION, if (leftToRight) TextAttribute.RUN_DIRECTION_LTR else TextAttribute.RUN_DIRECTION_RTL)
+                        }.iterator, context)
+                        for (cell in cells) {
+                            checkCancelled()
+                            cell.leadingBoundary = caretX(whole, TextHitInfo.leading(cell.start - start)) - cell.x
+                            cell.trailingBoundary = caretX(whole, TextHitInfo.trailing(cell.end - start - 1)) - cell.x
+                        }
+                    }
                 }
                 visual.forEachIndexed { index, cell -> cell.visualIndex = index }
-                lines.add(Line(start, end, cells, visual, x, leftToRight))
+                lines.add(Line(start, end, cells, visual, x, paragraphLeftToRight))
                 width = max(width, x)
                 start = end + 1
             } while (start <= text.length)

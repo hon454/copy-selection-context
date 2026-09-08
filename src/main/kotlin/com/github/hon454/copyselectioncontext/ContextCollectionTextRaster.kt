@@ -95,8 +95,8 @@ internal class ContextCollectionTextRaster private constructor(
             val trailing = FloatArray(count + 1)
             for (offset in 0..count) {
                 if (offset % ContextCollectionTextLayout.CELL_CHARACTERS == 0) checkCancelled()
-                leading[offset] = ContextCollectionTextLayout.baselineX(layout, TextHitInfo.leading(offset))
-                trailing[offset] = ContextCollectionTextLayout.baselineX(layout, TextHitInfo.trailing(offset - 1))
+                leading[offset] = ContextCollectionTextLayout.caretX(layout, TextHitInfo.leading(offset))
+                trailing[offset] = ContextCollectionTextLayout.caretX(layout, TextHitInfo.trailing(offset - 1))
             }
             fun real(hit: TextHitInfo): TextHitInfo =
                 if (hit.charIndex !in 0 until count) layout.getVisualOtherHit(hit) else hit

@@ -19,6 +19,9 @@ internal fun installCollectionLineNavigation(area: JTextArea) {
                 val row = model.lines[model.lineAtOffset(target.caretPosition)]
                 val boundary = if (end) row.end else row.start
                 if (vertical && target.caretPosition == boundary) {
+                    if (!end) {
+                        if (select) target.moveCaretPosition(boundary) else target.caretPosition = boundary
+                    }
                     val caret = target.caret
                     val bidiCaret = caret as? DefaultCaret
                     val bias = bidiCaret?.dotBias ?: Position.Bias.Forward

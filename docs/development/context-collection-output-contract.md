@@ -72,20 +72,29 @@ Every request owns its current payload and detached prepared document. Supersess
 project disposal cancel work and empty both references even if an EDT callback is already queued.
 The callback captures only that cancellable request and installs only the current generation in a live
 project/content. Unchanged preview text/font/context preserves the current document and selection.
-Font or graphics-configuration changes prepare fresh geometry with the new rendering context.
+Font, graphics-configuration or writing-direction changes prepare fresh geometry with the new context.
 Oversized masks retain native logical mouse-hit semantics through worker-prepared character centers
 grouped by physical font metrics and indexed along x; zero-advance ties keep logical character order.
 Tabs preserve the affinity of their clicked edge next to bidirectional runs.
 The detached document also receives the component's run-direction property on the worker. Leaving
 it unset makes `JTextComponent.setDocument` call `AbstractDocument.updateBidi` over the entire document
-on EDT, even with a custom view. A controlled fixture counts zero direction-property writes at install.
+on EDT, even with a custom view. Direction changes detach the old document before Swing writes that
+property. A controlled fixture counts zero writes to the populated document on EDT at either boundary.
+The same component direction is used for document bidi analysis and prepared paragraph geometry.
+Boundary caret coordinates retain their whole-paragraph context, including ligatures and invisible
+direction controls. Moving between artificial cells skips duplicate stops without dropping distinct
+logical selections at real bidi boundaries.
 
 `ContextCollectionTextLayoutTest` compares whole-paragraph shaping and visual caret positions, verifies
 raw line/cell coverage and counts viewport work. `ContextCollectionTextViewerFixtureTest` controls
 worker and EDT queues, exercises stale completion and disposal without sleeps, and copies full and
 partial original text through the native transfer handler up to 4 MiB. It belongs to the isolated
 `platformTest` partition. The profiler below has no automatic wall-clock pass/fail threshold and does
-not substitute for actual IDE GUI verification.
+not substitute for actual IDE GUI verification. Native Swing action comparisons cover ordinary input,
+cell boundaries, tabs, row actions and oversized combining clusters, including the actual caret bias
+and position. Mixed bidi traversal additionally checks every valid whole-paragraph AWT caret and the
+exact substring copied at each step. This avoids reproducing `GlyphPainter2` behavior that can skip
+an Arabic run when a mixed paragraph is divided into separate Swing views.
 
 ### Reproducible before/after profile
 

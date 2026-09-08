@@ -20,7 +20,7 @@ internal class ContextCollectionTextViewer private constructor(
     name: String,
     private val background: (() -> Unit) -> Future<*>,
     private val dispatch: (() -> Unit) -> Unit,
-    private val prepare: (String, Font, FontRenderContext, () -> Unit) -> PlainDocument,
+    private val prepare: (String, Font, FontRenderContext, Boolean, () -> Unit) -> PlainDocument,
 ) : Disposable {
     val component = ContextCollectionTextArea().apply {
         isEditable = false
@@ -38,7 +38,7 @@ internal class ContextCollectionTextViewer private constructor(
     private var renderDirection: Boolean? = null
     private val selectionListener = CaretListener { component.repaint() }
     private val displayListener = PropertyChangeListener { event ->
-        if (!disposed && event.propertyName in setOf("font", "graphicsConfiguration", "UI")) {
+        if (!disposed && event.propertyName in setOf("font", "graphicsConfiguration", "UI", "componentOrientation")) {
             shownText?.let(::show)
         }
     }
@@ -61,7 +61,8 @@ internal class ContextCollectionTextViewer private constructor(
         if (disposed || project.isDisposed) return
         val font = component.font
         val context = component.getFontMetrics(font).fontRenderContext
-        val direction = if (component.componentOrientation.isLeftToRight) TextAttribute.RUN_DIRECTION_LTR else TextAttribute.RUN_DIRECTION_RTL
+        val componentDirection = component.componentOrientation.isLeftToRight
+        val direction = if (componentDirection) TextAttribute.RUN_DIRECTION_LTR else TextAttribute.RUN_DIRECTION_RTL
         if (shownText == text && renderFont == font && renderContext == context && renderDirection == direction) return
         shownText = text
         renderFont = font
@@ -77,7 +78,7 @@ internal class ContextCollectionTextViewer private constructor(
         val future = background {
             val value = work.text() ?: return@background
             val document = try {
-                prepare(value, font, context, work::checkCancelled).also {
+                prepare(value, font, context, componentDirection, work::checkCancelled).also {
                     if (it.getProperty(TextAttribute.RUN_DIRECTION) != direction) it.putProperty(TextAttribute.RUN_DIRECTION, direction)
                     work.checkCancelled()
                 }
@@ -144,11 +145,11 @@ internal class ContextCollectionTextViewer private constructor(
     }
 
     companion object {
-        internal fun prepareDocument(text: String, font: Font, context: FontRenderContext, checkCancelled: () -> Unit): PlainDocument {
-            val geometry = ContextCollectionTextLayout.prepare(text, font, context, checkCancelled)
+        internal fun prepareDocument(text: String, font: Font, context: FontRenderContext, leftToRight: Boolean = true, checkCancelled: () -> Unit): PlainDocument {
+            val geometry = ContextCollectionTextLayout.prepare(text, font, context, leftToRight, checkCancelled)
             val document = PlainDocument()
             // JTextComponent.setDocument otherwise changes this on EDT, reanalysing all bidi text.
-            document.putProperty(TextAttribute.RUN_DIRECTION, TextAttribute.RUN_DIRECTION_LTR)
+            document.putProperty(TextAttribute.RUN_DIRECTION, if (leftToRight) TextAttribute.RUN_DIRECTION_LTR else TextAttribute.RUN_DIRECTION_RTL)
             checkCancelled()
             // One detached insertion avoids repeatedly reanalysing the growing bidi paragraph.
             document.insertString(0, text, null)
@@ -159,7 +160,7 @@ internal class ContextCollectionTextViewer private constructor(
 
         internal fun createForTest(project: Project, name: String, background: (() -> Unit) -> Future<*>,
             dispatch: (() -> Unit) -> Unit,
-            prepare: (String, Font, FontRenderContext, () -> Unit) -> PlainDocument = ::prepareDocument): ContextCollectionTextViewer =
+            prepare: (String, Font, FontRenderContext, Boolean, () -> Unit) -> PlainDocument = ::prepareDocument): ContextCollectionTextViewer =
             ContextCollectionTextViewer(project, name, background, dispatch, prepare)
     }
 }

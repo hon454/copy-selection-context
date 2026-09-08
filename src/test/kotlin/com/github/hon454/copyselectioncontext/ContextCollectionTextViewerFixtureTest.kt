@@ -30,13 +30,13 @@ class ContextCollectionTextViewerFixtureTest : BasePlatformTestCase() {
     fun testLatePreparedAAndQueuedAInstallCannotReplaceB() {
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
-        val harness = Harness(ignoreCancellation = true) { text, font, context, checkCancelled ->
+        val harness = Harness(ignoreCancellation = true) { text, font, context, leftToRight, checkCancelled ->
             if (text == "A") {
                 entered.countDown()
                 check(release.await(30, TimeUnit.SECONDS))
                 // Simulate an uncooperative operation finishing after its request was cancelled.
-                ContextCollectionTextViewer.prepareDocument(text, font, context) {}
-            } else ContextCollectionTextViewer.prepareDocument(text, font, context, checkCancelled)
+                ContextCollectionTextViewer.prepareDocument(text, font, context, leftToRight) {}
+            } else ContextCollectionTextViewer.prepareDocument(text, font, context, leftToRight, checkCancelled)
         }
         harness.viewer.show("A")
         val old = requireNotNull(harness.viewer.pendingRequest)
@@ -81,10 +81,10 @@ class ContextCollectionTextViewerFixtureTest : BasePlatformTestCase() {
 
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
-        val during = Harness(ignoreCancellation = true) { text, font, context, checkCancelled ->
+        val during = Harness(ignoreCancellation = true) { text, font, context, leftToRight, checkCancelled ->
             entered.countDown()
             check(release.await(30, TimeUnit.SECONDS))
-            ContextCollectionTextViewer.prepareDocument(text, font, context, checkCancelled)
+            ContextCollectionTextViewer.prepareDocument(text, font, context, leftToRight, checkCancelled)
         }
         during.viewer.show("ا".repeat(131072))
         val preparing = requireNotNull(during.viewer.pendingRequest)
@@ -145,8 +145,8 @@ class ContextCollectionTextViewerFixtureTest : BasePlatformTestCase() {
         for (orientation in listOf(java.awt.ComponentOrientation.LEFT_TO_RIGHT, java.awt.ComponentOrientation.RIGHT_TO_LEFT)) {
             lateinit var prepared: PlainDocument
             var directionWritesOnEdt = 0
-            val harness = Harness { text, font, context, checkCancelled ->
-                ContextCollectionTextViewer.prepareDocument(text, font, context, checkCancelled).also { document ->
+            val harness = Harness { text, font, context, leftToRight, checkCancelled ->
+                ContextCollectionTextViewer.prepareDocument(text, font, context, leftToRight, checkCancelled).also { document ->
                     val properties = object : java.util.Hashtable<Any, Any>() {
                         override fun put(key: Any, value: Any): Any? {
                             if (key == java.awt.font.TextAttribute.RUN_DIRECTION && application.isDispatchThread) directionWritesOnEdt++
@@ -164,6 +164,16 @@ class ContextCollectionTextViewerFixtureTest : BasePlatformTestCase() {
             assertEquals(!orientation.isLeftToRight, prepared.getProperty(java.awt.font.TextAttribute.RUN_DIRECTION))
             harness.flush()
             assertSame(prepared, harness.area.document)
+            assertEquals(0, directionWritesOnEdt)
+            val flipped = if (orientation.isLeftToRight) java.awt.ComponentOrientation.RIGHT_TO_LEFT else java.awt.ComponentOrientation.LEFT_TO_RIGHT
+            harness.area.componentOrientation = flipped
+            assertEquals(0, directionWritesOnEdt)
+            assertEquals(0, harness.area.document.length)
+            harness.compute()
+            harness.flush()
+            assertEquals(!flipped.isLeftToRight, prepared.getProperty(java.awt.font.TextAttribute.RUN_DIRECTION))
+            assertSame(prepared, harness.area.document)
+            assertEquals(131072, harness.area.document.length)
             assertEquals(0, directionWritesOnEdt)
         }
     }
@@ -338,7 +348,7 @@ class ContextCollectionTextViewerFixtureTest : BasePlatformTestCase() {
     }
 
     private inner class Harness(owner: Project = project, ignoreCancellation: Boolean = false, register: Boolean = true,
-        prepare: (String, Font, FontRenderContext, () -> Unit) -> PlainDocument = ContextCollectionTextViewer::prepareDocument) {
+        prepare: (String, Font, FontRenderContext, Boolean, () -> Unit) -> PlainDocument = ContextCollectionTextViewer::prepareDocument) {
         val jobs = ArrayDeque<FutureTask<Unit>>()
         val ui = ConcurrentLinkedDeque<() -> Unit>()
         var preparations = 0
@@ -346,10 +356,10 @@ class ContextCollectionTextViewerFixtureTest : BasePlatformTestCase() {
             object : FutureTask<Unit>({ work() }) {
                 override fun cancel(interrupt: Boolean): Boolean = if (ignoreCancellation) false else super.cancel(interrupt)
             }.also(jobs::addLast)
-        }, ui::addLast) { text, font, context, checkCancelled ->
+        }, ui::addLast) { text, font, context, leftToRight, checkCancelled ->
             check(!SwingUtilities.isEventDispatchThread())
             preparations++
-            prepare(text, font, context, checkCancelled)
+            prepare(text, font, context, leftToRight, checkCancelled)
         }.also { if (register) Disposer.register(testRootDisposable, it) }
         val area get() = viewer.component
         fun start(): java.util.concurrent.Future<*> {

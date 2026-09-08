@@ -15,6 +15,14 @@ import javax.swing.text.View
 
 /** The same native component is used by the plugin, fixture tests and the standalone profiler. */
 internal open class ContextCollectionTextArea : JTextArea() {
+    override fun setComponentOrientation(orientation: java.awt.ComponentOrientation) {
+        if (componentOrientation.isLeftToRight == orientation.isLeftToRight) return
+        // JTextComponent writes RUN_DIRECTION before firing its orientation event. Release the
+        // installed document first so the viewer listener can rebuild it without an EDT bidi pass.
+        if (document?.getProperty(ContextCollectionTextLayout.DOCUMENT_PROPERTY) != null) document = javax.swing.text.PlainDocument()
+        super.setComponentOrientation(orientation)
+    }
+
     override fun updateUI() {
         setUI(object : BasicTextAreaUI() {
             override fun create(element: Element): View = ContextCollectionTextView(element)
@@ -101,9 +109,9 @@ internal class ContextCollectionTextView(element: Element) : View(element) {
         val origin = allocation.bounds
         val row = ((y - origin.y) / model.lineHeight).toInt().coerceIn(model.lines.indices)
         val line = model.lines[row]
-        if (x <= origin.x || x >= origin.x + line.width) {
-            val atStart = (x <= origin.x) == line.leftToRight
-            bias[0] = if (atStart) Position.Bias.Backward else Position.Bias.Forward
+        if (x < origin.x || x >= origin.x + line.width) {
+            val atStart = (x < origin.x) == line.leftToRight
+            bias[0] = if (atStart) Position.Bias.Forward else Position.Bias.Backward
             return if (atStart) line.start else line.end
         }
         val cell = line.cellAtX(x - origin.x) ?: return line.start
@@ -128,9 +136,16 @@ internal class ContextCollectionTextView(element: Element) : View(element) {
         val row = model.lineAtOffset(position)
         if (direction == SwingConstants.NORTH || direction == SwingConstants.SOUTH) {
             val bounds = modelToView(position, allocation, bias).bounds2D
-            val x = area.caret.magicCaretPosition?.x?.toFloat() ?: bounds.x.toFloat()
+            // Swing's bidi ParagraphView enters the next paragraph at position -1. With no
+            // remembered column it uses x=0; plain text keeps the current physical column.
+            val x = area.caret.magicCaretPosition?.x?.toFloat()
+                ?: if (document.getProperty("i18n") == true) allocation.bounds.x.toFloat() else bounds.x.toFloat()
             val nextRow = row + if (direction == SwingConstants.NORTH) -1 else 1
             if (nextRow !in model.lines.indices) return position.also { biasRet[0] = bias }
+            if (document.getProperty("i18n") == true) {
+                biasRet[0] = Position.Bias.Forward
+                return model.lines[nextRow].forwardPositionAt(x - allocation.bounds.x)
+            }
             return viewToModel(x, allocation.bounds.y + (nextRow + 0.5f) * model.lineHeight, allocation, biasRet)
         }
         require(direction == SwingConstants.EAST || direction == SwingConstants.WEST)
@@ -138,14 +153,38 @@ internal class ContextCollectionTextView(element: Element) : View(element) {
         val line = model.lines[row]
         val located = line.locate(position, bias == Position.Bias.Backward)
         val cell = located?.first
+        if (position == line.end && bias == Position.Bias.Forward && right != line.leftToRight && cell != null) {
+            // Native bidi rows expose their terminal newline separately from the last glyph run.
+            val edge = cell.edge(right)
+            if (cell.start + edge.insertionIndex != position) return hitPosition(cell, edge, biasRet)
+        }
         val hit = located?.let { it.first.next(it.second, right) }
         if (hit != null && cell != null) return hitPosition(cell, cell.realHit(hit), biasRet)
         if (cell != null && cell.isTab && (((right != cell.rtl) && position < cell.end) || ((right == cell.rtl) && position > cell.start))) {
-            biasRet[0] = Position.Bias.Forward
-            return if (right != cell.rtl) cell.end else cell.start
+            val atEnd = right != cell.rtl
+            biasRet[0] = if (atEnd) Position.Bias.Backward else Position.Bias.Forward
+            return if (atEnd) cell.end else cell.start
         }
         val adjacent = cell?.let { line.visual.getOrNull(it.visualIndex + if (right) 1 else -1) }
-        if (adjacent != null) return visualEdge(adjacent, right, biasRet)
+        if (adjacent != null) {
+            // GlyphPainter2 enters an LTR run from the right before its trailing space.
+            if (!right && !adjacent.rtl && !adjacent.isTab &&
+                Character.isSpaceChar(document.getText(adjacent.end - 1, 1)[0])) {
+                biasRet[0] = Position.Bias.Forward
+                return adjacent.end - 1
+            }
+            val edge = adjacent.edge(right)
+            // Bidi runs can share a physical edge while naming different logical selections.
+            if (adjacent.start + edge.insertionIndex != position) return hitPosition(adjacent, edge, biasRet)
+            // A split within one run must not introduce an extra key press at the same offset.
+            val inside = if (adjacent.isTab) adjacent.edge(!right) else adjacent.next(edge, right)
+            return if (adjacent.isTab) hitPosition(adjacent, requireNotNull(inside), biasRet)
+                else hitPosition(adjacent, adjacent.realHit(inside ?: edge), biasRet)
+        }
+        if (right == line.leftToRight && position != line.end) {
+            biasRet[0] = Position.Bias.Forward
+            return line.end
+        }
         val next = model.lines.getOrNull(row + if (right) 1 else -1)
             ?: return position.also { biasRet[0] = bias }
         return (if (right) next.visual.firstOrNull() else next.visual.lastOrNull())?.let {

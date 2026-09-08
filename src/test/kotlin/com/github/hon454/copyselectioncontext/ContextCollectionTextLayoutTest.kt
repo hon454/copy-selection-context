@@ -19,7 +19,19 @@ import kotlin.test.assertTrue
 class ContextCollectionTextLayoutTest {
     private val font = Font(Font.MONOSPACED, Font.PLAIN, 13)
     private val context = FontRenderContext(AffineTransform(), true, false)
+    private fun reference(text: String) = TextLayout(AttributedString(text).apply {
+        addAttribute(TextAttribute.FONT, font)
+        addAttribute(TextAttribute.RUN_DIRECTION, TextAttribute.RUN_DIRECTION_LTR)
+    }.iterator, context)
     private fun prepare(text: String) = ContextCollectionTextLayout.prepare(text, font, context) {}
+    private fun visualHits(layout: TextLayout): List<TextHitInfo> {
+        var first = layout.hitTestChar(0f, 0f)
+        while (true) first = layout.getNextLeftHit(first) ?: break
+        val hits = ArrayList<TextHitInfo>()
+        var hit: TextHitInfo? = first
+        while (hit != null) { hits.add(hit); hit = layout.getNextRightHit(hit) }
+        return hits
+    }
 
     @Test
     fun `chunk geometry matches whole paragraph bidi and contextual shaping`() {
@@ -34,17 +46,14 @@ class ContextCollectionTextLayoutTest {
         )
         val errors = mutableListOf<String>()
         for ((example, text) in examples.withIndex()) {
-            val expected = TextLayout(AttributedString(text).apply { addAttribute(TextAttribute.FONT, font) }.iterator, context)
+            val expected = reference(text)
             val actual = prepare(text).lines.single()
             assertTrue(abs(expected.advance - actual.width) < 0.1f, "example $example width: ${expected.advance} != ${actual.width}")
-            var hit: TextHitInfo? = expected.hitTestChar(-1f, 0f)
-            while (hit != null) {
-                val current = hit
+            for (current in visualHits(expected)) {
                 val offset = current.insertionIndex
-                val referenceX = java.awt.geom.Point2D.Float().also { expected.hitToPoint(current, it) }.x
+                val referenceX = expected.getCaretInfo(current)[0]
                 val actualX = actual.caretX(offset, !current.isLeadingEdge)
                 if (abs(referenceX - actualX) >= 0.01f) errors.add("example $example visual offset $offset: $referenceX != $actualX")
-                hit = expected.getNextRightHit(current)
             }
             val width = kotlin.math.ceil(expected.advance).toInt() + 8
             fun image(draw: (java.awt.Graphics2D) -> Unit): BufferedImage =
@@ -141,20 +150,36 @@ class ContextCollectionTextLayoutTest {
     fun `oversized masks retain mouse access to internal glyph boundaries`() {
         for (text in listOf("a" + "\u0301".repeat(1536) + "b", "א" + "\u05B0".repeat(1536) + "ב",
             "ا" + "\u064B".repeat(1536) + "ب")) {
-            val expected = TextLayout(text, font, context)
-            val model = prepare(text).lines.single()
+            val expected = reference(text)
+            val prepared = prepare(text)
+            val model = prepared.lines.single()
             val coverage = model.logical.joinToString { "${it.start}..${it.end}(raster=${it.raster != null})" }
             assertTrue(model.logical.any { it.raster != null }, "${text.first()}: $coverage")
-            for (halfPixel in -1..(expected.advance * 2).toInt()) {
-                val x = halfPixel / 2f
-                for (y in listOf(-5f, 0f, 3f)) {
-                    // Font engines may put the following glyph in its own cell. Exercise the
-                    // same visible-cell lookup as the view and compare global logical hits.
-                    val cell = requireNotNull(model.cellAtX(x))
-                    val hit = requireNotNull(cell.hit(x - cell.x, y))
-                    val global = if (hit.isLeadingEdge) TextHitInfo.leading(cell.start + hit.charIndex)
-                        else TextHitInfo.trailing(cell.start + hit.charIndex)
-                    assertEquals(expected.hitTestChar(x, y), global, "${text.first()} x=$x y=$y cells=$coverage")
+            javax.swing.SwingUtilities.invokeAndWait {
+                val area = ContextCollectionTextArea().apply {
+                    font = this@ContextCollectionTextLayoutTest.font
+                    document = javax.swing.text.PlainDocument().apply {
+                        insertString(0, text, null)
+                        putProperty(ContextCollectionTextLayout.DOCUMENT_PROPERTY, prepared)
+                    }
+                    setSize(500, 300)
+                }
+                val view = area.ui.getRootView(area).getView(0)
+                val allocation = java.awt.Rectangle(0, 0, 500, 300)
+                for (halfPixel in -1..(expected.advance * 2).toInt()) {
+                    val x = halfPixel / 2f
+                    for (y in listOf(-5f, 0f, 3f)) {
+                        val bias = arrayOf(javax.swing.text.Position.Bias.Forward)
+                        val offset = view.viewToModel(x, y + prepared.ascent, allocation, bias)
+                        val global = if (bias[0] == javax.swing.text.Position.Bias.Forward) TextHitInfo.leading(offset)
+                            else TextHitInfo.trailing(offset - 1)
+                        val referenceHit = expected.hitTestChar(x, y)
+                        val message = "${text.first()} x=$x y=$y cells=$coverage"
+                        assertEquals(referenceHit.insertionIndex, global.insertionIndex, message)
+                        assertTrue(global == referenceHit || global == expected.getVisualOtherHit(referenceHit), message)
+                        assertEquals(ContextCollectionTextLayout.caretX(expected, referenceHit),
+                            model.caretX(global.insertionIndex, !global.isLeadingEdge), 0.01f, message)
+                    }
                 }
             }
         }
@@ -180,6 +205,11 @@ class ContextCollectionTextLayoutTest {
                     val hit = view.viewToModel(tab.x + tab.width * if (right) 0.75f else 0.25f, 5f, allocation, bias)
                     val returned = view.modelToView(hit, allocation, bias[0]).bounds2D.x
                     assertEquals((tab.x + if (right) tab.width else 0f).toDouble(), returned, 0.01, text)
+                    val arrowBias = arrayOf(javax.swing.text.Position.Bias.Forward)
+                    val moved = view.getNextVisualPositionFrom(hit, bias[0], allocation,
+                        if (right) javax.swing.SwingConstants.WEST else javax.swing.SwingConstants.EAST, arrowBias)
+                    assertEquals((tab.x + if (right) 0f else tab.width).toDouble(),
+                        view.modelToView(moved, allocation, arrowBias[0]).bounds2D.x, 0.01, "$text arrow across tab")
                 }
             }
         }
@@ -191,7 +221,7 @@ class ContextCollectionTextLayoutTest {
         val names = listOf("caret-begin-line", "caret-end-line", "selection-begin-line", "selection-end-line",
             "caret-begin-line-and-up", "caret-end-line-and-down", "select-line")
         // Preserve native action semantics on small inputs, including repeated up/down edge moves.
-        for (text in listOf("first\nsecond\nlast", "abc\nאבג\nمرحبا")) {
+        for (text in listOf("first\nsecond\nlast", "abc\nאבג\nمرحبا", "abcdefghij\nאבג", "a\tb\nאבג")) {
             val geometry = prepare(text)
             javax.swing.SwingUtilities.invokeAndWait {
                 val reference = javax.swing.JTextArea(text).apply { font = this@ContextCollectionTextLayoutTest.font; setSize(500, 300) }
@@ -203,13 +233,21 @@ class ContextCollectionTextLayoutTest {
                     }
                     setSize(500, 300)
                 }
+                for (area in listOf(reference, candidate)) {
+                    val image = BufferedImage(500, 300, BufferedImage.TYPE_INT_ARGB)
+                    val graphics = image.createGraphics()
+                    try { area.paint(graphics) } finally { graphics.dispose() }
+                }
                 for (name in names) for (offset in text.indices) {
                     reference.caretPosition = offset
                     candidate.caretPosition = offset
-                    repeat(2) {
+                    reference.caret.magicCaretPosition = null
+                    candidate.caret.magicCaretPosition = null
+                    repeat(2) { step ->
+                        val before = "text=$text $name at $offset step=$step ref=${reference.caretPosition}/${(reference.caret as javax.swing.text.DefaultCaret).dotBias}/${reference.caret.magicCaretPosition}/${reference.modelToView2D(reference.caretPosition)} candidate=${candidate.caretPosition}/${(candidate.caret as javax.swing.text.DefaultCaret).dotBias}/${candidate.caret.magicCaretPosition}/${candidate.modelToView2D(candidate.caretPosition)}"
                         for (area in listOf(reference, candidate)) area.actionMap.get(name)
                             .actionPerformed(java.awt.event.ActionEvent(area, 0, name))
-                        assertEquals(reference.caretPosition, candidate.caretPosition, "$name at $offset")
+                        assertEquals(reference.caretPosition, candidate.caretPosition, before)
                         assertEquals(reference.selectionStart, candidate.selectionStart, "$name at $offset")
                         assertEquals(reference.selectionEnd, candidate.selectionEnd, "$name at $offset")
                     }
@@ -237,6 +275,116 @@ class ContextCollectionTextLayoutTest {
                     assertEquals(if (name.contains("begin")) 0 else text.length, area.caretPosition)
                     if (name.startsWith("selection")) assertEquals(text.length / 2, area.selectionEnd - area.selectionStart)
                     if (name == "select-line") assertEquals(text, area.selectedText)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `arrows cross cell boundaries without an extra logical or physical stop`() {
+        for (text in listOf("x".repeat(1024), "ا".repeat(1024), "abc " + "שלום".repeat(300) + " xyz", "123 שלום abc",
+            "a" + "\u0301".repeat(1536) + "b", "א" + "\u05B0".repeat(1536) + "ב", "ا" + "\u064B".repeat(1536) + "ب")) {
+            val geometry = prepare(text)
+            val reference = reference(text)
+            val hits = visualHits(reference)
+            javax.swing.SwingUtilities.invokeAndWait {
+                val area = ContextCollectionTextArea().apply {
+                    font = this@ContextCollectionTextLayoutTest.font
+                    document = javax.swing.text.PlainDocument().apply {
+                        insertString(0, text, null)
+                        putProperty(ContextCollectionTextLayout.DOCUMENT_PROPERTY, geometry)
+                    }
+                    setSize(geometry.width.toInt() + 1, 300)
+                }
+                val image = BufferedImage(500, 300, BufferedImage.TYPE_INT_ARGB)
+                val graphics = image.createGraphics()
+                try { graphics.clipRect(0, 0, 500, 300); area.paint(graphics) } finally { graphics.dispose() }
+                for (right in listOf(true, false)) {
+                    val ordered = if (right) hits else hits.asReversed()
+                    // Swing also exposes the terminal newline as a caret stop in bidi rows.
+                    // Its native action sequence is the oracle for row boundaries; the separate
+                    // TextLayout test verifies every glyph caret coordinate and contextual shape.
+                    val native = javax.swing.JTextArea(text).apply {
+                        font = this@ContextCollectionTextLayoutTest.font
+                        setSize(area.width, area.height)
+                    }
+                    val nativeGraphics = image.createGraphics()
+                    try { nativeGraphics.clipRect(0, 0, 500, 300); native.paint(nativeGraphics) } finally { nativeGraphics.dispose() }
+                    val initial = ordered.first()
+                    for (target in listOf(native, area)) (target.caret as javax.swing.text.DefaultCaret).setDot(initial.insertionIndex,
+                        if (initial.isLeadingEdge) javax.swing.text.Position.Bias.Forward else javax.swing.text.Position.Bias.Backward)
+                    val action = if (right) javax.swing.text.DefaultEditorKit.selectionForwardAction else javax.swing.text.DefaultEditorKit.selectionBackwardAction
+                    repeat(text.length * 2 + 4) { step ->
+                        val beforeAction = "prefix=${text.take(4)} $action step=$step native=${native.caretPosition} candidate=${area.caretPosition}"
+                        for (target in listOf(native, area)) target.actionMap.get(action).actionPerformed(java.awt.event.ActionEvent(target, 0, action))
+                        assertEquals(native.caretPosition, area.caretPosition, beforeAction)
+                        assertEquals(native.selectionStart, area.selectionStart, beforeAction)
+                        assertEquals(native.selectionEnd, area.selectionEnd, beforeAction)
+                        assertEquals(native.selectedText, area.selectedText, beforeAction)
+                        fun caretX(target: javax.swing.JTextArea): Double {
+                            val caret = target.caret as javax.swing.text.DefaultCaret
+                            return target.ui.modelToView2D(target, caret.dot, caret.dotBias).x
+                        }
+                        assertEquals(caretX(native), caretX(area), 0.01, beforeAction)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `mixed bidi keys reach every paragraph caret and copy the original selected range`() {
+        // Swing GlyphPainter2 can skip the Arabic run in these inputs. Its sequence is not an
+        // accessibility oracle: require every whole-paragraph TextLayout caret to remain reachable.
+        for (text in listOf("abc مرحبا 123 שלום xyz", "مرحبا 123 world שלום",
+            "before \u202Bשלום 123 مرحبا\u202C after", "a \u2067مرحبا 123\u2069 z")) {
+            val geometry = prepare(text)
+            val reference = reference(text)
+            val hits = visualHits(reference)
+            val coordinates = hits.flatMap { listOf(it, reference.getVisualOtherHit(it)) }
+                .groupBy { reference.getCaretInfo(it)[0] }
+                .mapValues { (_, aliases) -> aliases.map { it.insertionIndex }.toSet() }
+            javax.swing.SwingUtilities.invokeAndWait {
+                val area = ContextCollectionTextArea().apply {
+                    font = this@ContextCollectionTextLayoutTest.font
+                    document = javax.swing.text.PlainDocument().apply {
+                        insertString(0, text, null)
+                        putProperty(ContextCollectionTextLayout.DOCUMENT_PROPERTY, geometry)
+                    }
+                    setSize(500, 300)
+                }
+                val graphics = BufferedImage(500, 300, BufferedImage.TYPE_INT_ARGB).createGraphics()
+                try { area.paint(graphics) } finally { graphics.dispose() }
+                val clipboard = java.awt.datatransfer.Clipboard("mixed bidi selection")
+                for (right in listOf(true, false)) {
+                    val first = if (right) hits.first() else hits.last()
+                    val caret = area.caret as javax.swing.text.DefaultCaret
+                    caret.setDot(first.insertionIndex, if (first.isLeadingEdge) javax.swing.text.Position.Bias.Forward else javax.swing.text.Position.Bias.Backward)
+                    val anchor = caret.dot
+                    val visited = HashSet<Float>()
+                    var previousX: Float? = null
+                    for (step in 0..text.length * 4 + 16) {
+                        val x = area.ui.modelToView2D(area, caret.dot, caret.dotBias).x.toFloat()
+                        val expectedX = coordinates.keys.firstOrNull { abs(it - x) < 0.01f }
+                        assertTrue(expectedX != null && caret.dot in coordinates.getValue(expectedX), "$text right=$right step=$step dot=${caret.dot}/${caret.dotBias} x=$x")
+                        visited.add(requireNotNull(expectedX))
+                        previousX?.let { assertTrue(if (right) x >= it else x <= it, "Keys must follow the visual direction") }
+                        previousX = x
+                        val from = minOf(anchor, caret.dot)
+                        val to = maxOf(anchor, caret.dot)
+                        val selected = text.substring(from, to)
+                        assertEquals(selected.ifEmpty { null }, area.selectedText)
+                        if (selected.isNotEmpty()) {
+                            area.transferHandler.exportToClipboard(area, clipboard, javax.swing.TransferHandler.COPY)
+                            assertEquals(selected, clipboard.getData(java.awt.datatransfer.DataFlavor.stringFlavor))
+                        }
+                        val previous = caret.dot to x
+                        val action = if (right) javax.swing.text.DefaultEditorKit.selectionForwardAction else javax.swing.text.DefaultEditorKit.selectionBackwardAction
+                        area.actionMap.get(action).actionPerformed(java.awt.event.ActionEvent(area, 0, action))
+                        val nextX = area.ui.modelToView2D(area, caret.dot, caret.dotBias).x.toFloat()
+                        if (previous == caret.dot to nextX) break
+                    }
+                    assertEquals(coordinates.keys, visited, "Every shaped caret must be reachable for $text right=$right")
                 }
             }
         }
