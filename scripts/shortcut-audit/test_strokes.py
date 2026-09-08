@@ -1,12 +1,15 @@
 """Synthetic complete-inventory integrity and prefix-comparison tests; no real IDE verdict."""
 
 import json
+import os
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from evidence import COMMAND_IDS, PREFIX, parse_export
 from strokes import DEFAULT_KEYS, PUNCTUATION_KEYS, compare_prefixes, parse_inventory, sha256
-from lineage import load_policy, select_modifier
+from lineage import MAX_SOURCE_BYTES, load_policy, select_modifier
 import test_audit
 from test_audit import encode_rows, keyboard
 
@@ -14,6 +17,78 @@ POLICY_SOURCE = Path(__file__).with_name("fixtures") / "CopySelectionShortcuts.k
 
 
 class ProductModifierPolicyTest(unittest.TestCase):
+    def test_hash_and_policy_use_one_bounded_descriptor_read_without_path_rereads(self):
+        injected = POLICY_SOURCE.read_text().replace('"Mac OS X",', '"Injected Mac Family",')
+        with mock.patch("lineage.os.read", wraps=os.read) as read, \
+                mock.patch.object(Path, "read_bytes", side_effect=AssertionError("second path read")), \
+                mock.patch.object(Path, "read_text", return_value=injected) as read_text, \
+                mock.patch.object(Path, "resolve", side_effect=AssertionError("post-read resolve")):
+            policy = load_policy(POLICY_SOURCE)
+        read.assert_called_once()
+        self.assertEqual(read.call_args.args[1], MAX_SOURCE_BYTES + 1)
+        read_text.assert_not_called()
+        self.assertIn("Mac OS X", policy["macKeymapIds"])
+        self.assertNotIn("Injected Mac Family", policy["macKeymapIds"])
+        self.assertEqual(policy["sourceIdentity"]["inode"], POLICY_SOURCE.stat().st_ino)
+
+    def test_policy_rejects_empty_and_oversized_sources_before_read(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.kt"
+            for data in [b"", b"x" * (MAX_SOURCE_BYTES + 1)]:
+                source.write_bytes(data)
+                with self.subTest(size=len(data)), mock.patch("lineage.os.read") as read:
+                    with self.assertRaisesRegex(ValueError, "size limit or is empty"):
+                        load_policy(source)
+                    read.assert_not_called()
+
+    def test_policy_rejects_final_symlink_directory_and_fifo_before_open(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source.kt"
+            source.write_bytes(POLICY_SOURCE.read_bytes())
+            link = root / "link.kt"
+            link.symlink_to(source)
+            fifo = root / "fifo.kt"
+            os.mkfifo(fifo)
+            for path in [link, root, fifo]:
+                with self.subTest(path=path), mock.patch("lineage.os.open") as open_file:
+                    with self.assertRaisesRegex(ValueError, "regular file"):
+                        load_policy(path)
+                    open_file.assert_not_called()
+
+    def test_policy_rejects_post_stat_oversize_and_mutation_during_read(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.kt"
+            source.write_bytes(POLICY_SOURCE.read_bytes())
+            with mock.patch("lineage.os.read", return_value=b"x" * (MAX_SOURCE_BYTES + 1)):
+                with self.assertRaisesRegex(ValueError, "snapshot exceeds size limit"):
+                    load_policy(source)
+            original_read = os.read
+
+            def mutate_after_read(descriptor, limit):
+                data = original_read(descriptor, limit)
+                with source.open("ab") as output:
+                    output.write(b"\n")
+                return data
+
+            with mock.patch("lineage.os.read", side_effect=mutate_after_read):
+                with self.assertRaisesRegex(ValueError, "changed during read"):
+                    load_policy(source)
+
+    def test_parent_alias_records_lookup_path_and_actual_opened_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            actual = root / "actual"
+            actual.mkdir()
+            source = actual / "source.kt"
+            source.write_bytes(POLICY_SOURCE.read_bytes())
+            alias = root / "alias"
+            alias.symlink_to(actual, target_is_directory=True)
+            policy = load_policy(alias / "source.kt")
+            self.assertEqual(policy["sourcePath"], str(alias / "source.kt"))
+            self.assertEqual(policy["sourceIdentity"]["inode"], source.stat().st_ino)
+            self.assertEqual(policy["sourceIdentity"]["device"], source.stat().st_dev)
+
     def test_exact_ancestor_rule_and_default_stop_precede_host_fallback(self):
         policy = load_policy(POLICY_SOURCE)
         examples = [

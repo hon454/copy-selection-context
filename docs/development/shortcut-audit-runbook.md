@@ -141,6 +141,17 @@ at commit `1909df4ec318fda5ebab33400ceca1e912fb7549` (the exact source hash is i
 until the rule and mirror are reviewed and the pin is updated. This intentionally
 includes unrelated changes; the tool must never guess compatibility.
 
+The policy source is one bounded bytes snapshot, capped at 16 KiB before and
+after reading. The same bytes supply both SHA-256 and UTF-8 policy parsing.
+Only regular files are accepted: final-entry symlinks, directories and special
+files are rejected before reading, with no-follow/nonblocking open flags guarding
+replacement races. The opened file's identity and size are checked again, and
+changes to size/timestamps during the read fail validation. Parent directory
+aliases are allowed; provenance labels the absolute lookup path and records
+the opened descriptor's device/inode and snapshot size, without resolving the
+path or rereading it after validation. Hosts lacking the required open flags
+are rejected. Use a preserved commit snapshot when a live worktree can change.
+
 The mirror walks the recorded keymap chain from self to ancestors. The first
 exact member of the source's `macKeymapIds` chooses Meta; the first `$default`
 chooses Ctrl. If neither occurs, it uses the recorded host OS, rejecting unknown
