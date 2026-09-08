@@ -64,7 +64,7 @@ internal class GitConfigIncludeResolver(
                     currentSection.type == REMOTE_SECTION && key == URL_KEY ->
                         remotes.putIfAbsent(currentSection.name, value)
                     currentSection.type == BRANCH_SECTION && key == REMOTE_KEY ->
-                        branchRemotes.putIfAbsent(currentSection.name, value)
+                        branchRemotes[currentSection.name] = value
                 }
             }
         } finally {
