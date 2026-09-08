@@ -2,6 +2,7 @@ package com.github.hon454.copyselectioncontext
 
 import com.intellij.openapi.components.RoamingType
 import com.intellij.openapi.components.State
+import com.intellij.openapi.util.JDOMUtil
 import com.intellij.util.xmlb.XmlSerializer
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -107,14 +108,8 @@ class CopySelectionAnalyticsTest {
 
     @Test
     fun `existing serialized analytics counters load without data loss`() {
-        val existingState = CopySelectionAnalytics.State(
-            totalCopyCount = 3,
-            formatUsage = mutableMapOf("claude" to 2, "pathline" to 1),
-            languageUsage = mutableMapOf("kotlin" to 3),
-        )
-        val serialized = XmlSerializer.serialize(existingState)
         val restoredState = CopySelectionAnalytics.State()
-        XmlSerializer.deserializeInto(restoredState, serialized)
+        XmlSerializer.deserializeInto(restoredState, JDOMUtil.load(LEGACY_ANALYTICS_STATE_XML))
         val analytics = CopySelectionAnalytics()
 
         analytics.loadState(restoredState)
@@ -130,13 +125,30 @@ class CopySelectionAnalyticsTest {
     }
 
     @Test
+    fun `legacy analytics XML fixture keeps the established state layout`() {
+        val currentState = CopySelectionAnalytics.State(
+            totalCopyCount = 3,
+            formatUsage = mutableMapOf("claude" to 2, "pathline" to 1),
+            languageUsage = mutableMapOf("kotlin" to 3),
+        )
+
+        assertEquals(
+            LEGACY_ANALYTICS_STATE_XML,
+            JDOMUtil.writeElement(XmlSerializer.serialize(currentState)),
+        )
+    }
+
+    @Test
     fun `reset state remains empty after persistence reload`() {
         val analytics = CopySelectionAnalytics()
         analytics.recordCopy("template", "typescript")
         analytics.reset()
+        val persistedState = XmlSerializer.serialize(analytics.state)
+        val restoredState = CopySelectionAnalytics.State()
+        XmlSerializer.deserializeInto(restoredState, persistedState)
 
         val reloaded = CopySelectionAnalytics()
-        reloaded.loadState(analytics.state)
+        reloaded.loadState(restoredState)
 
         assertEquals(CopySelectionAnalytics.Snapshot(0, emptyMap(), emptyMap()), reloaded.snapshot())
     }
@@ -161,5 +173,24 @@ class CopySelectionAnalyticsTest {
     fun `analyticsEnabled defaults to false in settings`() {
         val settings = CopySelectionSettings.State()
         assertFalse(settings.analyticsEnabled)
+    }
+
+    private companion object {
+        val LEGACY_ANALYTICS_STATE_XML = """
+            <State>
+              <option name="formatUsage">
+                <map>
+                  <entry key="claude" value="2" />
+                  <entry key="pathline" value="1" />
+                </map>
+              </option>
+              <option name="languageUsage">
+                <map>
+                  <entry key="kotlin" value="3" />
+                </map>
+              </option>
+              <option name="totalCopyCount" value="3" />
+            </State>
+        """.trimIndent()
     }
 }
