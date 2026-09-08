@@ -11,7 +11,9 @@ from pathlib import Path
 
 from evidence import COMMAND_IDS, PROBES, parse_export, require, shortcuts, unescape
 
-DEFAULT_KEYS = list(string.ascii_uppercase) + ["F" + str(number) for number in range(1, 25)]
+PUNCTUATION_KEYS = ["SEMICOLON", "COMMA", "PERIOD", "SLASH", "BACK_SLASH",
+                    "OPEN_BRACKET", "CLOSE_BRACKET", "MINUS", "EQUALS", "BACK_QUOTE", "QUOTE"]
+DEFAULT_KEYS = list(string.ascii_uppercase) + ["F" + str(number) for number in range(1, 25)] + PUNCTUATION_KEYS
 
 
 def sha256(path):
@@ -112,17 +114,22 @@ def parse_inventory(audit_path):
 
 def normalize_stroke(stroke):
     # Swing can print modifier tokens in a different order; pressed/released and
-    # typed remain distinct. Candidate keys are deliberately ASCII letters/F1-24.
+    # typed remain distinct. Candidates use explicit Swing KeyEvent key names;
+    # punctuation names describe key codes, not produced characters or IME text.
     return tuple(sorted("ctrl" if token == "control" else token for token in stroke.split()))
 
 
-def compare_prefixes(exports, keys=None):
+def compare_prefixes(exports, keys=None, defaults_source=None):
+    from lineage import decisions, load_policy
+
     keys = DEFAULT_KEYS if keys is None else keys
     require(bool(keys) and len(set(keys)) == len(keys) and set(keys) <= set(DEFAULT_KEYS),
-            "candidate keys must be unique A-Z or F1-F24")
+            "candidate keys must be unique A-Z, F1-F24 or supported Swing punctuation names")
     inventories = [parse_inventory(path) for path in exports]
     require(bool(inventories) and len({item["auditSha256"] for item in inventories}) == len(inventories),
             "missing or duplicate audit inputs")
+    policy = load_policy(defaults_source) if defaults_source is not None else None
+    selections = [decisions(item, policy) for item in inventories] if policy else None
     reports = []
     for key in keys:
         probes = {modifier + " alt shift " + key:
@@ -146,15 +153,31 @@ def compare_prefixes(exports, keys=None):
                                  "first": item["first"], "second": item["second"],
                                  "registered": row[4] == "true", "owner": row[5], "bundled": row[6],
                                  "allShortcuts": items, "occurrencesInApiList": items.count(item)}
+                        if selections is not None:
+                            match["selectedByProductRule"] = probe.split()[0] == selections[index][name]["modifier"]
                         (product if action in COMMAND_IDS else external).append(match)
         reports.append({"key": key, "probes": list(probes), "externalOccupancyCount": len(external),
                         "occupiedKeymaps": len({(row["input"], row["keymap"]) for row in external}),
                         "externalActionIds": sorted({row["action"] for row in external}),
                         "externalOccupancy": external, "productOccupancy": product,
                         "verdict": "OCCUPIED" if external else "NO_OCCUPANCY_IN_RECORDED_KEYMAPS"})
-    return {"schema": 1, "inputs": [{key: item[key] for key in
+        if selections is not None:
+            selected = [row for row in external if row["selectedByProductRule"]]
+            opposite = [row for row in external if not row["selectedByProductRule"]]
+            reports[-1]["productRuleComparison"] = {
+                "externalOccupancyCount": len(selected), "externalOccupancy": selected,
+                "oppositeModifierOccupancyCount": len(opposite), "oppositeModifierOccupancy": opposite,
+                "verdict": "OCCUPIED" if selected else "NO_OCCUPANCY_FOR_PRODUCT_RULE_IN_RECORDED_KEYMAPS"}
+    result = {"schema": 1, "inputs": [{key: item[key] for key in
             ["auditPath", "inventoryPath", "auditSha256", "inventorySha256"]} | {
                 "metadata": item["audit"]["metadata"], "keymaps": list(item["audit"]["keymaps"].values()),
                 "plugins": list(item["audit"]["plugins"].values())} for item in inventories],
             "candidates": reports,
             "note": "Only exact nine product IDs are excluded. Single strokes, other chords, dormant mappings and both Ctrl/Meta variants count. Zero is limited to these recorded IDEs/keymaps/plugins; no OS, IME, physical-key, candidate-product or unobserved-family verdict."}
+    if policy is not None:
+        result["productModifierPolicy"] = policy
+        for item, selection in zip(result["inputs"], selections):
+            item["productModifierDecisions"] = selection
+    result["comparisonSourceSha256"] = {path.name: sha256(path) for path in
+                                       [Path(__file__), Path(__file__).with_name("lineage.py")]}
+    return result

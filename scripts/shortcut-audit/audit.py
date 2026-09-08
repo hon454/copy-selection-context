@@ -559,9 +559,12 @@ def main():
     compare.add_argument("--export", dest="exports", action="append", required=True,
                          help="Schema-2 export with a matching complete inventory companion; repeat for IDEs")
     compare.add_argument("--key", dest="keys", action="append",
-                         help="Candidate A-Z or F1-F24; defaults to all 50 keys with Ctrl/Meta+Alt+Shift")
+                         help="A-Z, F1-F24 or Swing punctuation name (e.g. SEMICOLON); defaults to all 61 keys")
     compare.add_argument("--output", required=True)
-    compare.set_defaults(run=lambda args: write_json(Path(args.output), compare_prefixes(args.exports, args.keys)))
+    compare.add_argument("--defaults-source",
+                         help="Source-pinned CopySelectionShortcuts.kt; adds product-selected modifier analysis")
+    compare.set_defaults(run=lambda args: write_json(Path(args.output), compare_prefixes(
+        args.exports, args.keys, args.defaults_source)))
     accept = commands.add_parser("accept-baseline")
     for option in ["profile", "run-directory", "export", "observed-keymap", "performer", "notes"]:
         accept.add_argument("--" + option, required=True)

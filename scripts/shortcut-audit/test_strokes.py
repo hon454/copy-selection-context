@@ -2,11 +2,41 @@
 
 import json
 import unittest
+from pathlib import Path
 
 from evidence import COMMAND_IDS, PREFIX, parse_export
-from strokes import DEFAULT_KEYS, compare_prefixes, parse_inventory, sha256
+from strokes import DEFAULT_KEYS, PUNCTUATION_KEYS, compare_prefixes, parse_inventory, sha256
+from lineage import load_policy, select_modifier
 import test_audit
 from test_audit import encode_rows, keyboard
+
+POLICY_SOURCE = Path(__file__).with_name("fixtures") / "CopySelectionShortcuts.kt"
+
+
+class ProductModifierPolicyTest(unittest.TestCase):
+    def test_exact_ancestor_rule_and_default_stop_precede_host_fallback(self):
+        policy = load_policy(POLICY_SOURCE)
+        examples = [
+            (["Eclipse (Mac OS X)", "Mac OS X 10.5+", "$default"], "Linux", "meta", "Mac OS X 10.5+"),
+            (["Visual Studio 2022", "Visual Studio", "$default"], "Mac OS X", "control", "$default"),
+            (["My Mac OS X child", "$default", "Mac OS X"], "Mac OS X", "control", "$default"),
+            (["Custom", "ReSharper OSX", "$default"], "Windows 11", "meta", "ReSharper OSX"),
+            (["Custom", "Sublime Text (Mac OS X)", "$default"], "Linux", "meta", "Sublime Text (Mac OS X)"),
+        ]
+        for chain, host, modifier, ancestor in examples:
+            with self.subTest(chain=chain):
+                result = select_modifier(chain, host, policy)
+                self.assertEqual(result["modifier"], modifier)
+                self.assertEqual(result["decisiveAncestor"], ancestor)
+
+    def test_unknown_lineage_uses_recorded_host_and_unknown_host_fails(self):
+        policy = load_policy(POLICY_SOURCE)
+        for host, modifier in [("Mac OS X", "meta"), ("Windows 11", "control"), ("Linux", "control")]:
+            result = select_modifier(["Unlisted OSX"], host, policy)
+            self.assertEqual(result["modifier"], modifier)
+            self.assertEqual(result["reason"], "recorded-host-fallback")
+        with self.assertRaisesRegex(ValueError, "unknown host"):
+            select_modifier(["Unlisted"], "unknown", policy)
 
 
 def recount_inventory(rows):
@@ -73,6 +103,29 @@ class StrokeInventoryTest(unittest.TestCase):
     def write(self, rows):
         self.path.write_text(encode_rows(rows))
 
+    def test_changed_product_source_is_rejected_before_policy_claim(self):
+        changed = self.root / "CopySelectionShortcuts.kt"
+        changed.write_text(POLICY_SOURCE.read_text().replace("return false", "return true"))
+        with self.assertRaisesRegex(ValueError, "unsupported product defaults source"):
+            compare_prefixes([self.audit_path], ["J"], changed)
+
+    def test_product_rule_comparison_preserves_opposite_modifier_and_full_raw_view(self):
+        result = compare_prefixes([self.audit_path], ["J", "F13", "Q"], POLICY_SOURCE)
+        candidates = {row["key"]: row for row in result["candidates"]}
+        self.assertEqual(result["productModifierPolicy"]["sourceSha256"], sha256(POLICY_SOURCE))
+        decision = result["inputs"][0]["productModifierDecisions"]["$default"]
+        self.assertEqual(decision["modifier"], "control")  # Exported host is Mac; $default still wins.
+        self.assertEqual(candidates["J"]["productRuleComparison"]["externalOccupancyCount"], 2)
+        f13 = candidates["F13"]
+        self.assertEqual(f13["externalOccupancyCount"], 1)
+        self.assertEqual(f13["verdict"], "OCCUPIED")
+        self.assertEqual(f13["productRuleComparison"]["externalOccupancyCount"], 0)
+        self.assertEqual(f13["productRuleComparison"]["oppositeModifierOccupancy"], f13["externalOccupancy"])
+        self.assertFalse(f13["externalOccupancy"][0]["selectedByProductRule"])
+        self.assertEqual(candidates["Q"]["productRuleComparison"]["externalOccupancyCount"], 1)
+        self.assertTrue(candidates["Q"]["productOccupancy"][0]["selectedByProductRule"])
+        self.assertEqual(set(result["comparisonSourceSha256"]), {"strokes.py", "lineage.py"})
+
     def test_complete_inventory_keeps_single_chord_dormant_and_exact_product_exclusion(self):
         result = compare_prefixes([self.audit_path], ["J", "F13", "Q", "Z"])
         candidates = {row["key"]: row for row in result["candidates"]}
@@ -87,8 +140,23 @@ class StrokeInventoryTest(unittest.TestCase):
     def test_default_candidates_cover_all_letters_and_f1_through_f24(self):
         result = compare_prefixes([self.audit_path])
         self.assertEqual([row["key"] for row in result["candidates"]], DEFAULT_KEYS)
-        self.assertEqual(len(DEFAULT_KEYS), 50)
+        self.assertEqual(len(DEFAULT_KEYS), 61)
         self.assertEqual(len(result["candidates"][0]["probes"]), 2)
+
+    def test_punctuation_matches_key_codes_and_any_second_stroke_without_typed_aliases(self):
+        rows = [row.copy() for row in self.rows]
+        next(row for row in rows if row[:3] == ["ACTION", "$default", "ExternalSingle"])[3] = json.dumps([
+            keyboard("shift ctrl alt pressed SEMICOLON"), keyboard("shift meta alt pressed OPEN_BRACKET", "pressed A"),
+            keyboard("ctrl alt shift typed ,")])
+        self.write(recount_inventory(rows))
+        result = compare_prefixes([self.audit_path], PUNCTUATION_KEYS)
+        candidates = {row["key"]: row for row in result["candidates"]}
+        self.assertEqual(candidates["SEMICOLON"]["externalOccupancyCount"], 1)
+        self.assertEqual(candidates["OPEN_BRACKET"]["externalOccupancy"][0]["second"], "pressed A")
+        self.assertEqual(candidates["COMMA"]["externalOccupancyCount"], 0)
+        for literal in [";", ",", ".", "/", "[", "]"]:
+            with self.subTest(literal=literal), self.assertRaises(ValueError):
+                compare_prefixes([self.audit_path], [literal])
 
     def test_platform_duplicate_shortcuts_are_preserved_without_double_counting_occupancy(self):
         rows = [row.copy() for row in self.rows]

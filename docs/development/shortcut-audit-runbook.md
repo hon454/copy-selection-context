@@ -100,8 +100,13 @@ python3 scripts/shortcut-audit/audit.py compare-prefixes \
   --output NEW_PREFIX_COMPARISON.json
 ```
 
-The default comparison covers A–Z and F1–F24 with both Ctrl+Alt+Shift and
-Meta+Alt+Shift. Repeated `--key J --key F13` narrows it explicitly. Every first
+The default comparison covers A–Z, F1–F24 and eleven punctuation key codes with
+both Ctrl+Alt+Shift and Meta+Alt+Shift. Repeated `--key J --key SEMICOLON` narrows
+it explicitly. Punctuation uses Swing names: `SEMICOLON`, `COMMA`, `PERIOD`,
+`SLASH`, `BACK_SLASH`, `OPEN_BRACKET`, `CLOSE_BRACKET`, `MINUS`, `EQUALS`,
+`BACK_QUOTE` and `QUOTE`. These identify pressed key codes with modifiers, not
+the characters a layout/IME produces. Literal punctuation is rejected to avoid
+confusing typed and pressed strokes. Every first
 stroke match counts, regardless of its second key or whether the action is
 currently registered. Only the exact nine product IDs are excluded from
 external conflicts; their occupancies remain separately listed. Results retain
@@ -114,6 +119,26 @@ candidate's availability on physical keyboards, Fn/media handling, macOS or
 desktop interception, input layout and Korean IME remain separate real-input
 requirements. F13–F24 may be unoccupied yet unavailable on ordinary keyboards.
 No candidate is selected or applied to the product by this tool.
+
+To additionally compare the modifier the product chooses for each keymap, pass
+`--defaults-source PATH_TO_CopySelectionShortcuts.kt`. This is an explicit,
+source-pinned policy: the currently supported source is the #128 implementation
+at commit `1909df4ec318fda5ebab33400ceca1e912fb7549` (the exact source hash is in
+`lineage.py`; a test fixture preserves that file). Any source change is rejected
+until the rule and mirror are reviewed and the pin is updated. This intentionally
+includes unrelated changes; the tool must never guess compatibility.
+
+The mirror walks the recorded keymap chain from self to ancestors. The first
+exact member of the source's `macKeymapIds` chooses Meta; the first `$default`
+chooses Ctrl. If neither occurs, it uses the recorded host OS, rejecting unknown
+hosts. It does not infer a family from substrings such as `Mac` or `OSX`, or use
+an old action's shortcut as a proxy. Each decision retains the chain, decisive
+ancestor or host fallback, while the report records product and comparator
+source hashes. The existing both-modifier result remains intact; the additional
+`productRuleComparison` separates selected and opposite modifier occupancies.
+A zero there means only that the selected modifier has no external first-stroke
+match in those recorded maps. It is not a product execution or physical-input
+verdict, and opposite-modifier entries are never discarded.
 
 Preserve old harness directories, exports and accepted profiles unchanged.
 Use their pinned exporter revision for revalidation: a newer exporter correctly
