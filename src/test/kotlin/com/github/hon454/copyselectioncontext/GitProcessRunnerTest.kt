@@ -13,6 +13,7 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -21,7 +22,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** Failure injection at the process seam. These are not claims of a real OS failure. */
+/** Process seam injection plus explicitly named real helper-process checks; neither is a real OS malfunction. */
 class GitProcessRunnerTest {
     @TempDir lateinit var root: Path
 
@@ -156,6 +157,55 @@ class GitProcessRunnerTest {
         val exe = Files.write(bin.resolve("git.exe"), byteArrayOf(1))
         assertTrue(exe.toFile().setExecutable(true) || Files.isExecutable(exe))
         assertEquals(exe, SystemGitExecutable.find(mapOf("Path" to "\"$bin\""), windows = true))
+    }
+
+    @Test fun `real helper process fills stderr without deadlock and leaves no owned process or drain thread`() {
+        val child = AtomicReference<Process>()
+        val runner = runner(limits = GitProcessLimits(timeoutMillis = 15_000, stderrBytes = 256 * 1024), start = {
+            helperProcess("pipes").also(child::set)
+        })
+        assertEquals("complete", assertIs<GitProcessResult.Success>(run(runner)).stdout.toString(Charsets.UTF_8))
+        assertFalse(child.get().isAlive)
+        assertNoDrainThreads()
+    }
+
+    @Test fun `real helper process is terminated on timeout and cancellation`() {
+        for (cancel in listOf(false, true)) {
+            val child = AtomicReference<Process>()
+            val runner = runner(limits = GitProcessLimits(timeoutMillis = if (cancel) 5_000 else 0), start = {
+                helperProcess("wait").also(child::set)
+            })
+            if (cancel) {
+                var checks = 0
+                assertFailsWith<ProcessCanceledException> {
+                    runner.run(root, listOf("cat-file", "blob", SHA)) { if (++checks > 1) throw ProcessCanceledException() }
+                }
+            } else {
+                assertEquals(GitPermalinkFailureReason.GIT_TIMEOUT, failure(runner).reason)
+            }
+            assertFalse(child.get().isAlive)
+            assertNoDrainThreads()
+        }
+    }
+
+    private fun helperProcess(mode: String): Process {
+        val source = root.resolve("RunnerProbe.java")
+        Files.writeString(source, """
+            class RunnerProbe {
+                public static void main(String[] args) throws Exception {
+                    if (args[0].equals("wait")) { Thread.sleep(60000); return; }
+                    System.err.write(new byte[131072]);
+                    System.err.flush();
+                    System.out.print("complete");
+                }
+            }
+        """.trimIndent())
+        val java = Path.of(System.getProperty("java.home"), "bin", if (SystemGitExecutable.isWindows) "java.exe" else "java")
+        return ProcessBuilder(java.toString(), "-Xmx128m", source.toString(), mode).start()
+    }
+
+    private fun assertNoDrainThreads() {
+        assertTrue(Thread.getAllStackTraces().keys.none { it.isAlive && it.name == "copy-selection-git-output" })
     }
 
     private fun runner(process: FakeProcess = FakeProcess(), limits: GitProcessLimits = GitProcessLimits(), start: (() -> Process)? = null) =

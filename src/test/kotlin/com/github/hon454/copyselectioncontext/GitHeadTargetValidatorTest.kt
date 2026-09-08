@@ -77,7 +77,7 @@ class GitHeadTargetValidatorTest {
         repo.command("worktree", "add", "-b", "feature", linked.toString(), sha)
         repo.command("config", "branch.feature.remote", "upstream")
         val worktree = LocalGitRepository(linked, initialize = false)
-        assertTrue(success(worktree.input("source.txt", "text\n")).content.startsWith("https://gitlab.com/group/repo/-/blob/$sha/"))
+        assertEquals("https://gitlab.com/group/repo/blob/$sha/source.txt#L1", success(worktree.input("source.txt", "text\n")).content)
         worktree.command("checkout", "--detach", sha)
         assertEquals(GitHeadContentState.CLEAN, success(worktree.input("source.txt", "text\n")).state)
     }
@@ -202,6 +202,14 @@ class GitHeadTargetValidatorTest {
         assertFailsWith<CancellationException> { validator.prepare(repo.input("source.txt", "text\n")) { throw CancellationException() } }
         assertFailsWith<ProcessCanceledException> { GitRepositoryMetadataResolver.resolve(repo.root) { throw ProcessCanceledException() } }
         assertFailsWith<CancellationException> { GitRepositoryMetadataResolver.resolve(repo.root) { throw CancellationException() } }
+    }
+
+    @Test fun `malformed UTF8 metadata preserves strict reader failure instead of replacing bytes`() {
+        val repo = repository()
+        repo.commit("source.txt", "text\n")
+        val config = repo.root.resolve(".git/config")
+        Files.write(config, Files.readAllBytes(config) + byteArrayOf(0xC3.toByte(), 0x28))
+        failure(repo.input("source.txt", "text\n"), GitPermalinkFailureReason.IO_FAILURE)
     }
 
     private fun repository(name: String = "repository") = LocalGitRepository(tempDir.resolve(name))

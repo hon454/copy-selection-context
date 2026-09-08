@@ -12,6 +12,7 @@ import com.intellij.openapi.editor.ex.DocumentEx
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.progress.ProcessCanceledException
+import com.intellij.openapi.progress.EmptyProgressIndicator
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
@@ -277,6 +278,18 @@ class GitPermalinkFixtureTest : BasePlatformTestCase() {
             assertTrue(action.logs.isEmpty())
             assertUntouched()
         }
+    }
+
+    fun testProgressCancellationWhileUiIsQueuedPreventsPublication() {
+        val action = harness()
+        action.start(); action.background()
+        val indicator = EmptyProgressIndicator()
+        action.lifetime!!.observeCancellation(indicator)
+        indicator.cancel()
+        action.ui()
+        assertTrue(action.failures.isEmpty())
+        assertTrue(action.logs.isEmpty())
+        assertUntouched()
     }
 
     fun testEditorReleaseInsideConfirmationStopsFollowupAndPublication() {
