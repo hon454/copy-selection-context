@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Show current code inclusion and trimming choices in the custom-template preview before applying settings (#138)
 - Distinguish Git versions that reject required safe permalink options from missing Git and repository-object failures, with localized upgrade and IDE executable guidance (#139)
 
 ## [1.6.0] - 2026-09-08
