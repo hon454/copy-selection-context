@@ -5,7 +5,9 @@ import com.intellij.ui.components.ActionLink
 import java.awt.Component
 import java.awt.Container
 import javax.swing.JButton
+import javax.swing.JCheckBox
 import javax.swing.JComboBox
+import javax.swing.JLabel
 import javax.swing.JTextArea
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -16,7 +18,7 @@ import kotlin.test.assertTrue
 
 class CopySelectionConfigurableTest {
     @Test
-    fun `multiline preset populates editor and preview without flattening line breaks`() = onEdt {
+    fun `code block preset previews default copy with code excluded`() = onEdt {
         val fixture = createFixture()
 
         fixture.outputFormat.selectedItem = OutputFormatOption.TEMPLATE
@@ -24,8 +26,83 @@ class CopySelectionConfigurableTest {
 
         assertEquals(TemplateFormatter.PRESET_WITH_CODE_BLOCK, fixture.editor.text)
         assertEquals(
-            "src/main/kotlin/Example.kt:42-53\n```kotlin\nfun hello() = println(\"world\")\n```",
+            "src/main/kotlin/Example.kt:42-53\n```kotlin\n\n```",
             fixture.preview.text
+        )
+        assertTrue(fixture.codeExcluded.isVisible)
+        assertFalse(fixture.includeCode.isSelected)
+        assertFalse(fixture.settings.state.includeCodeContent)
+    }
+
+    @Test
+    fun `unapplied code options refresh preview and show trimming difference`() = onEdt {
+        val fixture = createFixture()
+        fixture.outputFormat.selectedItem = OutputFormatOption.TEMPLATE
+        fixture.preset.selectedItem = TemplatePreset.WITH_CODE_BLOCK
+
+        fixture.codeTrimming.doClick()
+        assertEquals("src/main/kotlin/Example.kt:42-53\n```kotlin\n\n```", fixture.preview.text)
+        assertTrue(fixture.codeExcluded.isVisible)
+
+        fixture.includeCode.doClick()
+        assertEquals(
+            "src/main/kotlin/Example.kt:42-53\n```kotlin\nfun hello() = println(\"world\")\n```",
+            fixture.preview.text,
+        )
+        assertFalse(fixture.codeExcluded.isVisible)
+
+        fixture.codeTrimming.doClick()
+        assertEquals(
+            "src/main/kotlin/Example.kt:42-53\n```kotlin\n\n    fun hello() = println(\"world\")\n\n```",
+            fixture.preview.text,
+        )
+        assertFalse(fixture.settings.state.includeCodeContent)
+        assertFalse(fixture.settings.state.codeTrimming)
+        assertEquals(TemplateFormatter.PRESET_WITH_CODE_BLOCK, fixture.editor.text)
+    }
+
+    @Test
+    fun `cancel reset and apply preserve only committed code options`() = onEdt {
+        val settings = CopySelectionSettings()
+        val canceled = createFixture(settings = settings)
+        canceled.outputFormat.selectedItem = OutputFormatOption.TEMPLATE
+        canceled.preset.selectedItem = TemplatePreset.WITH_CODE_BLOCK
+        canceled.includeCode.doClick()
+        canceled.codeTrimming.doClick()
+        canceled.configurable.disposeUIResources()
+
+        assertFalse(settings.state.includeCodeContent)
+        assertFalse(settings.state.codeTrimming)
+        assertEquals("", settings.state.customFormatTemplate)
+
+        val fixture = createFixture(settings = settings)
+        fixture.outputFormat.selectedItem = OutputFormatOption.TEMPLATE
+        fixture.preset.selectedItem = TemplatePreset.WITH_CODE_BLOCK
+        fixture.includeCode.doClick()
+        fixture.codeTrimming.doClick()
+        fixture.configurable.reset()
+        assertFalse(fixture.includeCode.isSelected)
+        assertFalse(fixture.codeTrimming.isSelected)
+        assertEquals("", fixture.editor.text)
+
+        fixture.outputFormat.selectedItem = OutputFormatOption.TEMPLATE
+        fixture.preset.selectedItem = TemplatePreset.WITH_CODE_BLOCK
+        fixture.includeCode.doClick()
+        fixture.codeTrimming.doClick()
+        fixture.configurable.apply()
+        assertTrue(settings.state.includeCodeContent)
+        assertTrue(settings.state.codeTrimming)
+        assertEquals(TemplateFormatter.PRESET_WITH_CODE_BLOCK, settings.state.customFormatTemplate)
+
+        fixture.includeCode.doClick()
+        fixture.codeTrimming.doClick()
+        fixture.configurable.disposeUIResources()
+        val reopened = createFixture(settings = settings)
+        assertTrue(reopened.includeCode.isSelected)
+        assertTrue(reopened.codeTrimming.isSelected)
+        assertEquals(
+            CopySelectionConfigurable.renderTemplatePreview(TemplateFormatter.PRESET_WITH_CODE_BLOCK, true, true),
+            reopened.preview.text,
         )
     }
 
@@ -159,11 +236,11 @@ class CopySelectionConfigurableTest {
     }
 
     private fun createFixture(
+        settings: CopySelectionSettings = CopySelectionSettings(),
         analytics: CopySelectionAnalytics = CopySelectionAnalytics(),
         openMarketplaceReviewPage: () -> Unit = {},
         confirmAnalyticsReset: () -> Boolean = { false },
     ): Fixture {
-        val settings = CopySelectionSettings()
         val configurable = CopySelectionConfigurable(
             settings = settings,
             trimOpenProjectHistory = {},
@@ -175,6 +252,8 @@ class CopySelectionConfigurableTest {
         val comboBoxes = descendantsOfType<JComboBox<*>>(component)
         val textAreas = descendantsOfType<JTextArea>(component)
         val buttons = descendantsOfType<JButton>(component)
+        val checkBoxes = descendantsOfType<JCheckBox>(component)
+        val labels = descendantsOfType<JLabel>(component)
         val reviewLinks = descendantsOfType<ActionLink>(component)
 
         val outputFormat = comboBoxes.firstOrNull { combo -> combo.items().contains(OutputFormatOption.TEMPLATE) }
@@ -192,6 +271,15 @@ class CopySelectionConfigurableTest {
         val reviewLink = reviewLinks.firstOrNull {
             it.text == CopySelectionBundle.message("settings.review.marketplace")
         }
+        val includeCode = checkBoxes.firstOrNull {
+            it.text == CopySelectionBundle.message("settings.include.code")
+        }
+        val codeTrimming = checkBoxes.firstOrNull {
+            it.text == CopySelectionBundle.message("settings.trimming.enable")
+        }
+        val codeExcluded = labels.firstOrNull {
+            it.text == CopySelectionBundle.message("settings.template.preview.code.excluded")
+        }
 
         return Fixture(
             configurable = configurable,
@@ -200,6 +288,9 @@ class CopySelectionConfigurableTest {
             preset = assertNotNull(preset),
             editor = assertNotNull(editor),
             preview = assertNotNull(preview),
+            includeCode = assertNotNull(includeCode),
+            codeTrimming = assertNotNull(codeTrimming),
+            codeExcluded = assertNotNull(codeExcluded),
             analyticsSummary = assertNotNull(analyticsSummary),
             analyticsReset = assertNotNull(analyticsReset),
             reviewLink = assertNotNull(reviewLink),
@@ -236,6 +327,9 @@ class CopySelectionConfigurableTest {
         val preset: JComboBox<*>,
         val editor: JTextArea,
         val preview: JTextArea,
+        val includeCode: JCheckBox,
+        val codeTrimming: JCheckBox,
+        val codeExcluded: JLabel,
         val analyticsSummary: JTextArea,
         val analyticsReset: JButton,
         val reviewLink: ActionLink,
