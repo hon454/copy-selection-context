@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Distinguish Git versions that reject required safe permalink options from missing Git and repository-object failures, with localized upgrade and IDE executable guidance (#139)
+
 ## [1.6.0] - 2026-09-08
 
 ### Fixed

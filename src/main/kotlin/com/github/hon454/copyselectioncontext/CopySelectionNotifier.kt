@@ -54,6 +54,7 @@ object CopySelectionNotifier {
             GitPermalinkFailureReason.UNSUPPORTED_REMOTE_HOST -> "notification.permalink.failed.remote.host"
             GitPermalinkFailureReason.OUT_OF_ROOT_FILE -> "notification.permalink.failed.out.of.root"
             GitPermalinkFailureReason.SYSTEM_GIT_UNAVAILABLE -> "notification.permalink.failed.git.unavailable"
+            GitPermalinkFailureReason.GIT_UNSUPPORTED_CAPABILITY -> "notification.permalink.failed.git.unsupported"
             GitPermalinkFailureReason.GIT_EXECUTION_FAILED -> "notification.permalink.failed.git.execution"
             GitPermalinkFailureReason.GIT_TIMEOUT -> "notification.permalink.failed.git.timeout"
             GitPermalinkFailureReason.GIT_OUTPUT_LIMIT -> "notification.permalink.failed.git.output.limit"
