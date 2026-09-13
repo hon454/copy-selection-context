@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-09-13
+
 ### Fixed
 
 - Show current code inclusion and trimming choices in the custom-template preview before applying settings (#138)
@@ -211,7 +213,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Toast notifications
 - IntelliJ Platform 2024.3+ compatibility
 
-[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/hon454/copy-selection-context/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/hon454/copy-selection-context/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/hon454/copy-selection-context/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/hon454/copy-selection-context/compare/v1.4.1...v1.5.0
