@@ -133,7 +133,7 @@ fun calculateTotal(items: List<Item>): Double {
 ```
 ````
 
-单独的 **Copy GitHub/GitLab Permalink** 操作会在后台使用系统 Git 验证普通仓库或 linked worktree 中的原始 HEAD 文件。**只有永久链接需要 Git。** 如果 Git 未安装或无法运行，此操作会显示本地化错误；标准、集合、历史和状态栏复制仍可使用。插件不会安装 Git，也不会修改 PATH 或 Git 设置。
+单独的 **Copy GitHub/GitLab Permalink** 操作会在后台使用系统 Git 验证普通仓库或 linked worktree 中的原始 HEAD 文件。**只有永久链接需要 Git。** 此操作需要上游 Git 2.45 或更新版本提供的功能，尤其是 `--no-lazy-fetch` 和 `check-attr --source`；实际可执行文件必须支持所需选项。Git 缺失、无法启动或拒绝所需选项时，会分别显示本地化错误。若功能不受支持，请升级 Git 并确认 IDE 使用升级后的可执行文件。标准、集合、历史和状态栏复制仍可使用。插件不会安装 Git，也不会修改 PATH 或 Git 设置。
 
 HEAD 中不存在的路径，包括新文件或重命名后的目标路径，无法复制为永久链接。如果当前编辑器文档与 HEAD 相同，则无需额外确认。若未保存、已保存或已暂存的编辑使内容不同，只会确认一次，说明当前行号在 HEAD 中可能对应不同代码。**默认选项为取消。** 选择**复制永久链接**后，将使用捕获的 HEAD SHA 和当前 caret 行范围，不会自动映射行号。验证或确认期间检测到的变化会使该请求失效。
 

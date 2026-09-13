@@ -54,6 +54,27 @@ class GitProcessRunnerTest {
         assertClosed(process)
     }
 
+    @Test fun `unsupported required Git options have a distinct failure without exposing stderr`() {
+        val diagnostics = listOf(
+            "unknown option: --no-lazy-fetch\nusage: git ...\n",
+            "error: unknown option `source=0123456789abcdef'\nusage: git check-attr ...\n",
+        )
+        diagnostics.forEach { diagnostic ->
+            val process = FakeProcess(error = TrackingInput(diagnostic.toByteArray()), code = 129)
+            val result = failure(runner(process))
+            assertEquals(GitPermalinkFailureReason.GIT_UNSUPPORTED_CAPABILITY, result.reason)
+            assertFalse(result.toString().contains("source="))
+            assertClosed(process)
+        }
+    }
+
+    @Test fun `object errors remain execution failures even when their message mentions an option`() {
+        val process = FakeProcess(error = TrackingInput(
+            "fatal: object missing for --no-lazy-fetch in this repository\n".toByteArray()), code = 128)
+        assertEquals(GitPermalinkFailureReason.GIT_EXECUTION_FAILED, failure(runner(process)).reason)
+        assertClosed(process)
+    }
+
     @Test fun `timeout terminates the owned process and closes every stream`() {
         val process = FakeProcess(alive = true)
         assertEquals(GitPermalinkFailureReason.GIT_TIMEOUT,
@@ -129,6 +150,7 @@ class GitProcessRunnerTest {
                 actual = argv
                 assertEquals(repository, workingDirectory)
                 assertEquals("", env["GIT_ALLOW_PROTOCOL"])
+                assertEquals("C", env["LC_ALL"])
                 FakeProcess()
             })
         assertIs<GitProcessResult.Success>(runner.run(repository, args) {})

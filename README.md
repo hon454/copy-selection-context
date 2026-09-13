@@ -133,7 +133,7 @@ fun calculateTotal(items: List<Item>): Double {
 ```
 ````
 
-The separate **Copy GitHub/GitLab Permalink** action uses system Git on a background thread to verify the original HEAD file in a normal repository or linked worktree. **Only permalinks require Git.** If Git is missing or cannot run, this action reports a localized error; standard, collection, history and status-bar copies continue to work. The plugin does not install Git or change PATH or Git settings.
+The separate **Copy GitHub/GitLab Permalink** action uses system Git on a background thread to verify the original HEAD file in a normal repository or linked worktree. **Only permalinks require Git.** It needs Git features available in upstream Git 2.45 or newer, especially `--no-lazy-fetch` and `check-attr --source`; the actual executable must support the required options. If Git is missing, cannot run, or rejects a required option, this action reports a distinct localized error. For unsupported Git, upgrade it and confirm the IDE uses the upgraded executable. Standard, collection, history and status-bar copies continue to work. The plugin does not install Git or change PATH or Git settings.
 
 A path absent from HEAD, including a new file or a renamed destination, cannot be copied as a permalink. If the current editor document matches HEAD, copying needs no extra confirmation. If it differs, including unsaved, saved or staged edits, one confirmation explains that HEAD may contain different code at the current line numbers. **Cancel is the default.** Choosing **Copy Permalink** uses the captured HEAD SHA and current caret ranges, with no automatic line mapping. Changes detected during verification or confirmation invalidate that request.
 

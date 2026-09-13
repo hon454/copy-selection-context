@@ -60,7 +60,7 @@ internal class GitProcessRunner(
             process.outputStream.close()
             rememberDescendants(process, descendants)
             stdout = GitOutputDrain(process.inputStream, limits.stdoutBytes, retain = true)
-            stderr = GitOutputDrain(process.errorStream, limits.stderrBytes, retain = false)
+            stderr = GitOutputDrain(process.errorStream, limits.stderrBytes, retain = true)
             stdout.start()
             stderr.start()
             while (true) {
@@ -79,7 +79,8 @@ internal class GitProcessRunner(
                     }
                     checkCanceled()
                     return if (process.exitValue() == 0) GitProcessResult.Success(stdout.bytes())
-                    else failed(GitPermalinkFailureReason.GIT_EXECUTION_FAILED)
+                    else failed(if (stderr.isUnsupportedOption()) GitPermalinkFailureReason.GIT_UNSUPPORTED_CAPABILITY
+                    else GitPermalinkFailureReason.GIT_EXECUTION_FAILED)
                 }
                 if (System.nanoTime() >= deadline) return failed(GitPermalinkFailureReason.GIT_TIMEOUT)
                 // Both pipes are drained concurrently; waiting never depends on either pipe reaching EOF.
@@ -149,6 +150,8 @@ internal class GitProcessRunner(
             put("GIT_ALLOW_PROTOCOL", "")
             put("GIT_TERMINAL_PROMPT", "0")
             put("GIT_OPTIONAL_LOCKS", "0")
+            // Keep Git's option diagnostics predictable without displaying its stderr to users.
+            put("LC_ALL", "C")
         }
 
     private fun failed(reason: GitPermalinkFailureReason) = GitProcessResult.Failure(reason)
@@ -185,6 +188,10 @@ private class GitOutputDrain(private val stream: InputStream, private val limit:
     fun start() = thread.start()
     fun await(millis: Long) = thread.join(millis)
     fun bytes(): ByteArray = output?.toByteArray() ?: byteArrayOf()
+
+    fun isUnsupportedOption(): Boolean = bytes().toString(Charsets.UTF_8).lineSequence().any { line ->
+        line.startsWith("unknown option: ") || line.startsWith("error: unknown option ")
+    }
 
     private fun drain() {
         try {
