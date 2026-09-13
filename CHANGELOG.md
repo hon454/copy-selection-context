@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Show current code inclusion and trimming choices in the custom-template preview before applying settings (#138)
+
 ## [1.6.0] - 2026-09-08
 
 ### Fixed

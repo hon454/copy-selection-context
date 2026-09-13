@@ -6,7 +6,9 @@ import com.intellij.openapi.ui.DialogPanel
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.dsl.builder.*
 import javax.swing.JComponent
+import javax.swing.JCheckBox
 import javax.swing.JComboBox
+import javax.swing.JLabel
 import javax.swing.JTextArea
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
@@ -32,6 +34,9 @@ class CopySelectionConfigurable internal constructor(
     private var presetCombo: JComboBox<TemplatePreset>? = null
     private var templateTextArea: JTextArea? = null
     private var previewTextArea: JTextArea? = null
+    private var includeCodeCheckBox: JCheckBox? = null
+    private var codeTrimmingCheckBox: JCheckBox? = null
+    private var codeExcludedLabel: JLabel? = null
     private var analyticsTextArea: JTextArea? = null
     private var updatingPresetSelection = false
 
@@ -55,7 +60,10 @@ class CopySelectionConfigurable internal constructor(
                         )
                         .comment(CopySelectionBundle.message("settings.format.output.comment"))
                         .also { cell -> outputFormatCombo = cell.component }
-                        .onChanged { updateTemplateControls() }
+                        .onChanged {
+                            updateTemplateControls()
+                            updatePreview()
+                        }
                 }
                 row(CopySelectionBundle.message("settings.template.preset.label")) {
                     comboBox(TemplatePreset.entries)
@@ -116,12 +124,24 @@ class CopySelectionConfigurable internal constructor(
                         }
                 }.resizableRow()
                 row {
+                    label(CopySelectionBundle.message("settings.template.preview.code.excluded"))
+                        .also { cell -> codeExcludedLabel = cell.component }
+                }
+                row {
                     checkBox(CopySelectionBundle.message("settings.include.code"))
                         .bindSelected(state::includeCodeContent)
+                        .also { cell ->
+                            includeCodeCheckBox = cell.component
+                            cell.component.addActionListener { updatePreview() }
+                        }
                 }
                 row {
                     checkBox(CopySelectionBundle.message("settings.trimming.enable"))
                         .bindSelected(state::codeTrimming)
+                        .also { cell ->
+                            codeTrimmingCheckBox = cell.component
+                            cell.component.addActionListener { updatePreview() }
+                        }
                 }
             }
             group(CopySelectionBundle.message("settings.group.behavior")) {
@@ -212,6 +232,9 @@ class CopySelectionConfigurable internal constructor(
         presetCombo = null
         templateTextArea = null
         previewTextArea = null
+        includeCodeCheckBox = null
+        codeTrimmingCheckBox = null
+        codeExcludedLabel = null
         analyticsTextArea = null
         updatingPresetSelection = false
     }
@@ -249,8 +272,11 @@ class CopySelectionConfigurable internal constructor(
 
     private fun updatePreview() {
         val template = templateTextArea?.text ?: settings.state.customFormatTemplate
-        previewTextArea?.text = renderTemplatePreview(template)
+        val includeCode = includeCodeCheckBox?.isSelected ?: settings.state.includeCodeContent
+        val codeTrimming = codeTrimmingCheckBox?.isSelected ?: settings.state.codeTrimming
+        previewTextArea?.text = renderTemplatePreview(template, includeCode, codeTrimming)
         previewTextArea?.caretPosition = 0
+        codeExcludedLabel?.isVisible = isTemplateFormatSelected() && !includeCode && "{code}" in template
         updatePresetSelection()
     }
 
@@ -272,13 +298,23 @@ class CopySelectionConfigurable internal constructor(
             path = "src/main/kotlin/Example.kt",
             startLine = 42,
             endLine = 53,
-            code = "fun hello() = println(\"world\")",
+            code = "\n    fun hello() = println(\"world\")\n",
             language = "kotlin",
             filename = "Example.kt"
         )
 
-        internal fun renderTemplatePreview(template: String): String =
-            OutputFormatterFactory.getTemplateFormatter(template).format(SAMPLE_CONTEXT)
+        internal fun renderTemplatePreview(
+            template: String,
+            includeCodeContent: Boolean = false,
+            codeTrimming: Boolean = false,
+        ): String {
+            val code = if (includeCodeContent) {
+                if (codeTrimming) SAMPLE_CONTEXT.code?.trim() else SAMPLE_CONTEXT.code
+            } else {
+                null
+            }
+            return OutputFormatterFactory.getTemplateFormatter(template).format(SAMPLE_CONTEXT.copy(code = code))
+        }
 
         internal fun renderAnalyticsSummary(snapshot: CopySelectionAnalytics.Snapshot): String = buildString {
             appendLine(
