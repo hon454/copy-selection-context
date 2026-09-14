@@ -3,10 +3,17 @@ package com.github.hon454.copyselectioncontext
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.util.concurrent.FutureTask
+import java.awt.event.ActionEvent
+import java.awt.event.MouseEvent
+import javax.swing.JComponent
+import javax.swing.KeyStroke
 
 class ContextCollectionPanelFixtureTest : BasePlatformTestCase() {
     private lateinit var collection: ContextCollectionService
@@ -40,8 +47,99 @@ class ContextCollectionPanelFixtureTest : BasePlatformTestCase() {
         myFixture.editor.selectionModel.setSelection(0, code.length)
         collection.capture(myFixture.editor, myFixture.file.virtualFile, PathType.RELATIVE)
     }
-    private fun panel(confirm: (Int) -> Boolean = { false }, report: (String) -> Unit = {}, copy: () -> Unit = {}) =
-        ContextCollectionPanel(project, collection, output, copy, confirm, report).also { Disposer.register(testRootDisposable, it) }
+    private fun panel(
+        confirm: (Int) -> Boolean = { false },
+        report: (String) -> Unit = {},
+        copy: () -> Unit = {},
+        openSource: (VirtualFile, Int) -> Unit = { _, _ -> },
+    ) = ContextCollectionPanel(project, collection, output, copy, confirm, report,
+        sourceNavigator = openSource).also { Disposer.register(testRootDisposable, it) }
+
+    private fun enter(panel: ContextCollectionPanel) {
+        val key = panel.itemList.getInputMap(JComponent.WHEN_FOCUSED).get(KeyStroke.getKeyStroke("ENTER"))
+        assertNotNull(key)
+        panel.itemList.actionMap.get(key).actionPerformed(ActionEvent(panel.itemList, ActionEvent.ACTION_PERFORMED, "ENTER"))
+    }
+
+    private fun doubleClick(panel: ContextCollectionPanel, y: Int) {
+        val list = panel.itemList
+        val event = MouseEvent(list, MouseEvent.MOUSE_CLICKED, 0, 0, 8, y, 2, false, MouseEvent.BUTTON1)
+        list.mouseListeners.forEach { it.mouseClicked(event) }
+    }
+
+    fun testNavigationInputsUseRetainedCurrentFileAndClampWithoutMutatingCollectionOrOutput() {
+        val file = myFixture.addFileToProject("original/parent/source.txt", "one\ntwo\nthree\nfour").virtualFile
+        myFixture.configureFromExistingVirtualFile(file)
+        myFixture.editor.caretModel.moveToOffset(myFixture.editor.document.getLineStartOffset(3))
+        collection.capture(myFixture.editor, file, PathType.RELATIVE)
+        val captured = collection.snapshot()
+        val calls = mutableListOf<Pair<VirtualFile, Int>>()
+        var copies = 0
+        val panel = panel(copy = { copies++ }, openSource = { source, line -> calls += source to line })
+        compute()
+        val ready = output.snapshot()
+        assertFalse(panel.openSourceButton.isEnabled)
+        enter(panel)
+        assertTrue(calls.isEmpty())
+        panel.itemList.selectedIndex = 0
+        assertTrue(panel.openSourceButton.isEnabled)
+        panel.openSourceButton.doClick()
+        assertEquals(listOf(file to 3), calls)
+        calls.clear()
+
+        // The source editor may close; navigation still resolves the retained VirtualFile.
+        myFixture.configureByText("other.txt", "other")
+        WriteCommandAction.runWriteCommandAction(project) {
+            com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file)?.setText("short")
+        }
+        panel.openSourceButton.doClick()
+        enter(panel)
+        panel.itemList.setSize(300, 120)
+        val bounds = requireNotNull(panel.itemList.getCellBounds(0, 0))
+        doubleClick(panel, bounds.y + bounds.height / 2)
+        doubleClick(panel, bounds.y + bounds.height + 40)
+        assertEquals(listOf(file to 0, file to 0, file to 0), calls)
+
+        val destination = myFixture.tempDirFixture.findOrCreateDir("destination")
+        WriteCommandAction.runWriteCommandAction(project) { file.rename(this, "renamed.txt") }
+        WriteCommandAction.runWriteCommandAction(project) { file.parent.move(this, destination) }
+        enter(panel)
+        assertSame(file, calls.last().first)
+        assertEquals(0, calls.last().second)
+        assertEquals(captured.items.single().absolutePath, collection.snapshot().items.single().absolutePath)
+        assertSame(captured, collection.snapshot())
+        assertSame(ready, output.snapshot())
+        assertEquals(0, copies)
+
+        val navigations = calls.size
+        WriteCommandAction.runWriteCommandAction(project) { file.delete(this) }
+        myFixture.addFileToProject("original/parent/source.txt", "replacement")
+        assertFalse(panel.openSourceButton.isEnabled)
+        panel.openSelectedSource()
+        enter(panel)
+        assertEquals(navigations, calls.size)
+        assertSame(captured, collection.snapshot())
+        assertSame(ready, output.snapshot())
+        Disposer.dispose(panel)
+        panel.openSelectedSource()
+        enter(panel)
+        assertEquals(navigations, calls.size)
+    }
+
+    fun testDefaultNavigationOpensClosedSourceAtCapturedLine() {
+        val file = myFixture.addFileToProject("navigate.txt", "first\nsecond\nthird").virtualFile
+        myFixture.configureFromExistingVirtualFile(file)
+        myFixture.editor.caretModel.moveToOffset(myFixture.editor.document.getLineStartOffset(1))
+        collection.capture(myFixture.editor, file, PathType.RELATIVE)
+        assertEquals(2, collection.snapshot().items.single().startLine)
+        myFixture.configureByText("different.txt", "other")
+        val panel = ContextCollectionPanel(project, collection, output).also { Disposer.register(testRootDisposable, it) }
+        panel.itemList.selectedIndex = 0
+        panel.openSelectedSource()
+        com.intellij.testFramework.PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val editor = requireNotNull(FileEditorManager.getInstance(project).selectedTextEditor)
+        assertSame(file, FileDocumentManager.getInstance().getFile(editor.document))
+    }
 
     fun testNativeIconsRemainAccessibleAndNarrowLongPathKeepsPreviewUsable() {
         capture("LongProjectComponentName".repeat(6) + ".kt", "original code")

@@ -1,12 +1,15 @@
 package com.github.hon454.copyselectioncontext
 
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.openapi.vfs.VirtualFile
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
@@ -18,6 +21,8 @@ import javax.swing.Icon
 import java.awt.event.ActionEvent
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import javax.swing.AbstractAction
 import javax.swing.BoxLayout
 import javax.swing.DefaultListCellRenderer
@@ -31,6 +36,7 @@ import javax.swing.JPanel
 import javax.swing.JTextArea
 import javax.swing.KeyStroke
 import javax.swing.ListSelectionModel
+import javax.swing.SwingUtilities
 
 /** Content-owned UI. All mutations, output policy and copying remain in the shared services. */
 internal class ContextCollectionPanel(
@@ -44,6 +50,9 @@ internal class ContextCollectionPanel(
     },
     private val report: (String) -> Unit = { Messages.showWarningDialog(project, it, msg("clear")) },
     viewerFactory: (Project, String) -> ContextCollectionTextViewer = ::ContextCollectionTextViewer,
+    private val sourceNavigator: (VirtualFile, Int) -> Unit = { file, line ->
+        OpenFileDescriptor(project, file, line).navigate(true)
+    },
 ) : JPanel(BorderLayout(0, 6)), Disposable {
     private val model = DefaultListModel<ContextCollectionItem>()
     val itemList = JBList(model)
@@ -56,6 +65,7 @@ internal class ContextCollectionPanel(
     internal val includeCode = JCheckBox(msg("include"))
     internal val copyButton = button("copy", copy)
     internal val removeButton = iconButton("remove", AllIcons.General.Remove, ::removeSelected)
+    internal val openSourceButton = button("open.source", ::openSelectedSource)
     internal val upButton = iconButton("up", AllIcons.Actions.MoveUp) { selected()?.let { collection.moveUp(it.id) } }
     internal val downButton = iconButton("down", AllIcons.Actions.MoveDown) { selected()?.let { collection.moveDown(it.id) } }
     internal val clearButton = iconButton("clear", AllIcons.Actions.GC, ::clearAll)
@@ -83,6 +93,7 @@ internal class ContextCollectionPanel(
                 toolTipText = msg("capacity")
                 accessibleContext.accessibleDescription = msg("capacity")
             })
+            add(JPanel(FlowLayout(FlowLayout.LEADING, 2, 0)).apply { add(openSourceButton) })
             add(JPanel(BorderLayout(6, 0)).apply {
                 add(JPanel(FlowLayout(FlowLayout.LEADING, 2, 0)).apply {
                     add(removeButton); add(upButton); add(downButton); add(clearButton)
@@ -100,6 +111,8 @@ internal class ContextCollectionPanel(
         itemList.emptyText.text = msg("empty.title")
         itemList.emptyText.appendLine(msg("empty.hint"))
         itemList.accessibleContext.accessibleName = msg("list")
+        openSourceButton.toolTipText = msg("open.source.hint")
+        openSourceButton.accessibleContext.accessibleDescription = msg("open.source.hint")
         itemList.cellRenderer = object : DefaultListCellRenderer() {
             override fun getListCellRendererComponent(list: JList<*>?, value: Any?, index: Int, selected: Boolean, focus: Boolean): java.awt.Component {
                 val label = super.getListCellRendererComponent(list, value, index, selected, focus) as JLabel
@@ -120,6 +133,18 @@ internal class ContextCollectionPanel(
         itemList.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("DELETE"), "removeCapture")
         itemList.actionMap.put("removeCapture", object : AbstractAction() {
             override fun actionPerformed(e: ActionEvent?) = removeSelected()
+        })
+        itemList.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("ENTER"), "openCaptureSource")
+        itemList.actionMap.put("openCaptureSource", object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent?) = openSelectedSource()
+        })
+        itemList.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(event: MouseEvent) {
+                if (event.clickCount != 2 || !SwingUtilities.isLeftMouseButton(event) || disposed) return
+                val index = itemList.locationToIndex(event.point)
+                if (index < 0 || itemList.getCellBounds(index, index)?.contains(event.point) != true) return
+                openSource(model.getElementAt(index))
+            }
         })
         val captured = JPanel(BorderLayout(0, 8)).apply {
             border = JBUI.Borders.empty(10, 0, 8, 0)
@@ -153,7 +178,7 @@ internal class ContextCollectionPanel(
         Disposer.register(this, Disposable { workspace.dispose(); viewers.dispose() })
         add(workspace)
         collection.subscribe(this) { if (!disposed) refreshCollection(it) }
-        collection.sourceTracker.subscribe(this) { if (!disposed) { itemList.repaint(); refreshMetadata() } }
+        collection.sourceTracker.subscribe(this) { if (!disposed) { itemList.repaint(); refreshMetadata(); refreshSourceAvailability() } }
         output.subscribe(this) { if (!disposed) refreshOutput(it) }
         refreshCollection(collection.snapshot())
         refreshOutput(output.refresh())
@@ -177,6 +202,7 @@ internal class ContextCollectionPanel(
 
     private fun refreshSelection() {
         val item = selected()
+        refreshSourceAvailability()
         removeButton.isEnabled = item != null
         upButton.isEnabled = item != null && itemList.selectedIndex > 0
         downButton.isEnabled = item != null && itemList.selectedIndex < model.size - 1
@@ -191,6 +217,24 @@ internal class ContextCollectionPanel(
     private fun refreshMetadata() {
         metadata.text = selected()?.let { ContextCollectionPresentation.details(it, collection.sourceTracker.snapshot().statuses[it.id]) }
             ?: msg("select")
+    }
+
+    private fun refreshSourceAvailability() {
+        openSourceButton.isEnabled = !disposed && !project.isDisposed &&
+            selected()?.let { collection.sourceTracker.currentSource(it) } != null
+    }
+
+    internal fun openSelectedSource() {
+        selected()?.let(::openSource)
+    }
+
+    private fun openSource(item: ContextCollectionItem) {
+        if (disposed || project.isDisposed) return
+        val file = collection.sourceTracker.currentSource(item) ?: return
+        val document = FileDocumentManager.getInstance().getDocument(file) ?: return
+        if (disposed || project.isDisposed || collection.sourceTracker.currentSource(item) !== file) return
+        val line = (item.startLine - 1).coerceIn(0, (document.lineCount - 1).coerceAtLeast(0))
+        sourceNavigator(file, line)
     }
 
     internal fun refreshOutput(state: ContextCollectionOutputState) {
