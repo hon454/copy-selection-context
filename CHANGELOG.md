@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Open a retained context collection capture's current source from its list row or Go to Source button, clamping the captured starting line without changing the snapshot or output (#140)
+
 ## [1.7.0] - 2026-09-13
 
 ### Fixed
