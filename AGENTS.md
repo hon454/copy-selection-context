@@ -67,6 +67,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `OutputFormatter.kt` / `TemplateFormatter.kt` | Built-in Claude Code and Path:Line formats plus custom templates |
 | `ContextCollectionService.kt` / `ContextCollectionStore.kt` / `ContextCollectionItem.kt` | Session-only immutable captures, bounded atomic additions, revisions and mutations |
 | `ContextCollectionSourceTracker.kt` / `ContextCollectionSubscriptions.kt` | Independent source-state revision, immutable live-file reverse index, document fast path and conservative structural VFS checks without retaining editors/documents |
+| `ContextCollectionPanel.kt` / `ContextCollectionSourceTracker.kt` | Collection Go to Source resolves retained live-file identity for Enter, row double-click, and the explicit button; captured paths remain frozen and unavailable sources never fall back to path lookup |
 | `ContextCollectionFormatter.kt` / `ContextCollectionOutputService.kt` | Bounded pure formatting and shared keyed background output state |
 | `ContextCollectionToolWindowFactory.kt` / `ToolWindowFactoryAdapter.java` / `ContextCollectionPanel.kt` / `ContextCollectionPresentation.kt` / `ContextCollectionTextViewer.kt` | Lazy content-owned collection UI, keyboard organization and full read-only previews |
 | `ContextCollectionTextLayout.kt` / `ContextCollectionTextView.kt` / `ContextCollectionTextRaster.kt` | Worker-prepared paragraph geometry, indexed viewport painting and oversized shaping-cluster masks; native text documents and selection/copy remain intact |

@@ -67,6 +67,15 @@ class ContextCollectionSourceTracker internal constructor(
 
     fun snapshot(): ContextCollectionSourceSnapshot = current
 
+    /** Resolve only a still-retained capture to its original live file, never by captured path or URL. */
+    internal fun currentSource(item: ContextCollectionItem): VirtualFile? {
+        ApplicationManager.getApplication().assertIsDispatchThread()
+        if (disposed || items.none { it.id == item.id && it.sourceLocation == item.sourceLocation } ||
+            current.statuses[item.id]?.unavailable != false
+        ) return null
+        return retainedSources[item.sourceLocation.sourceToken]?.takeIf { it.isValid }
+    }
+
     fun subscribe(parent: Disposable, listener: (ContextCollectionSourceSnapshot) -> Unit) {
         ApplicationManager.getApplication().assertIsDispatchThread()
         check(!disposed)
