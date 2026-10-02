@@ -95,6 +95,22 @@ class CiWorkflowTest {
     }
 
     @Test
+    fun `build cancels superseded pull request runs without serializing main`() {
+        val concurrency = readWorkflowMapping("build.yml").mappingForKey("concurrency")
+
+        assertEquals(
+            "build-${'$'}{{ github.workflow }}-pr-${'$'}{{ github.event.pull_request.number || github.run_id }}",
+            concurrency.scalarForKey("group"),
+            "Build groups must isolate pull requests while using a unique main-push fallback",
+        )
+        assertEquals(
+            "${'$'}{{ github.event_name == 'pull_request' }}",
+            concurrency.scalarForKey("cancel-in-progress"),
+            "Only newer pull request runs may cancel an in-progress Build",
+        )
+    }
+
+    @Test
     fun `release publication requires the complete reusable validation gate`() {
         val workflow = readWorkflowMapping("release.yml")
         val validationWorkflow = readWorkflowMapping("release-validation.yml")
