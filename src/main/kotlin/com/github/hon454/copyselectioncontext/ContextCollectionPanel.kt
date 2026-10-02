@@ -51,7 +51,7 @@ internal class ContextCollectionPanel(
     private val report: (String) -> Unit = { Messages.showWarningDialog(project, it, msg("clear")) },
     viewerFactory: (Project, String) -> ContextCollectionTextViewer = ::ContextCollectionTextViewer,
     private val sourceNavigator: (VirtualFile, Int) -> Unit = { file, line ->
-        OpenFileDescriptor(project, file, line).navigate(true)
+        OpenFileDescriptor(project, file, line, 0).navigate(true)
     },
 ) : JPanel(BorderLayout(0, 6)), Disposable {
     private val model = DefaultListModel<ContextCollectionItem>()
