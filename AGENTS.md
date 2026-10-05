@@ -15,13 +15,15 @@ JetBrains IDE plugin for copying code context (file path, line numbers, optional
 
 | Component | Version |
 |-----------|---------|
-| Kotlin | 2.4.20 |
-| Gradle | 9.8.0 |
-| IntelliJ Platform Plugin | 2.19.0 |
-| Detekt | 2.0.0-alpha.6 |
-| Kover | 0.9.11 |
+| Kotlin | `build.gradle.kts` |
+| Gradle | `gradle/wrapper/gradle-wrapper.properties` |
+| IntelliJ Platform Plugin | `build.gradle.kts` |
+| Detekt | `build.gradle.kts` |
+| Kover | `build.gradle.kts` |
 | JVM Toolchain | 21 |
 | Min IDE Version | 2024.3 |
+
+Dependabot updates dependency versions, so this table names the file that pins each one instead of copying the number.
 
 ## Build Commands
 

@@ -127,47 +127,72 @@ class DocumentationSyncTest {
             Files.newBufferedReader(repositoryRoot.resolve("gradle.properties")).use { load(it) }
         }
 
-        val kotlinVersion = capture(buildScript, "id\\(\"org\\.jetbrains\\.kotlin\\.jvm\"\\)\\s+version\\s+\"([^\"]+)\"")
-        val intellijPluginVersion = capture(buildScript, "id\\(\"org\\.jetbrains\\.intellij\\.platform\"\\)\\s+version\\s+\"([^\"]+)\"")
         val intellijPlatformVersion = capture(buildScript, "minimumSupportedIdeVersion\\s*=\\s*\"([^\"]+)\"")
-        val koverVersion = capture(buildScript, "id\\(\"org\\.jetbrains\\.kotlinx\\.kover\"\\)\\s+version\\s+\"([^\"]+)\"")
         val jvmVersion = capture(buildScript, "jvmToolchain\\((\\d+)\\)")
         val minimumBuild = capture(buildScript, "sinceBuild\\.set\\(\"([^\"]+)\"\\)")
-        val junitVersion = capture(buildScript, "junit-jupiter-api:([^\"]+)\"")
-        val mockkVersion = capture(buildScript, "io\\.mockk:mockk:([^\"]+)\"")
-        val gradleVersion = capture(wrapperProperties, "gradle-([0-9.]+)-bin\\.zip")
-        val distributionChecksum = capture(wrapperProperties, "distributionSha256Sum=([0-9a-f]{64})")
         val useBundledKotlinStdlib = gradleProperties.getProperty("kotlin.stdlib.default.dependency")
             ?: error("gradle.properties must declare kotlin.stdlib.default.dependency")
 
-        assertEquals(
-            "bafd5ce9cfaea0fbccfdc8439a1ac42fbd4cd9c89dc9a988228d8a2639a58e6c",
-            distributionChecksum,
-            "Gradle 9.8.0 bin distribution must use the official SHA-256 checksum",
-        )
-
         val knowledgeBase = repositoryRoot.resolve("AGENTS.md").readText()
-        assertTableValue(knowledgeBase, "Kover", koverVersion)
-        assertTableValue(knowledgeBase, "Kotlin", kotlinVersion)
-        assertTableValue(knowledgeBase, "Gradle", gradleVersion)
-        assertTableValue(knowledgeBase, "IntelliJ Platform Plugin", intellijPluginVersion)
         assertTableValue(knowledgeBase, "JVM Toolchain", jvmVersion)
         assertTableValue(knowledgeBase, "Min IDE Version", intellijPlatformVersion)
 
         val architecture = repositoryRoot.resolve(".agents/architecture.md").readText()
-        assertTableValue(architecture, "Kover", koverVersion)
-        assertTableValue(architecture, "Kotlin", kotlinVersion)
-        assertTableValue(architecture, "Gradle wrapper", gradleVersion)
-        assertTableValue(architecture, "IntelliJ Platform Gradle Plugin", intellijPluginVersion)
         assertTableValue(architecture, "IntelliJ IDEA Community test platform", intellijPlatformVersion)
         assertTableValue(architecture, "JVM toolchain and target", jvmVersion)
         assertTableValue(architecture, "Minimum IDE build", "$minimumBuild ($intellijPlatformVersion)")
-        assertTableValue(architecture, "JUnit Jupiter", junitVersion)
-        assertTableValue(architecture, "MockK", mockkVersion)
         assertTrue(
             architecture.contains("`kotlin.stdlib.default.dependency=$useBundledKotlinStdlib`"),
             "architecture must document the Kotlin stdlib dependency setting from gradle.properties",
         )
+    }
+
+    @Test
+    fun `docs point at pinning files for Dependabot-managed versions`() {
+        val buildScript = repositoryRoot.resolve("build.gradle.kts").readText()
+        val wrapperProperties = repositoryRoot.resolve("gradle/wrapper/gradle-wrapper.properties").readText()
+        val buildScriptSource = "`build.gradle.kts`"
+        val wrapperSource = "`gradle/wrapper/gradle-wrapper.properties`"
+
+        val managedVersions = listOf(
+            capture(buildScript, "id\\(\"org\\.jetbrains\\.kotlin\\.jvm\"\\)\\s+version\\s+\"([^\"]+)\""),
+            capture(buildScript, "id\\(\"org\\.jetbrains\\.intellij\\.platform\"\\)\\s+version\\s+\"([^\"]+)\""),
+            capture(buildScript, "id\\(\"dev\\.detekt\"\\)\\s+version\\s+\"([^\"]+)\""),
+            capture(buildScript, "id\\(\"org\\.jetbrains\\.kotlinx\\.kover\"\\)\\s+version\\s+\"([^\"]+)\""),
+            capture(buildScript, "junit-jupiter-api:([^\"]+)\""),
+            capture(buildScript, "io\\.mockk:mockk:([^\"]+)\""),
+            capture(wrapperProperties, "gradle-([0-9.]+)-bin\\.zip"),
+        )
+
+        val knowledgeBase = repositoryRoot.resolve("AGENTS.md").readText()
+        listOf("Kotlin", "IntelliJ Platform Plugin", "Detekt", "Kover")
+            .forEach { assertTableValue(knowledgeBase, it, buildScriptSource) }
+        assertTableValue(knowledgeBase, "Gradle", wrapperSource)
+
+        val architecture = repositoryRoot.resolve(".agents/architecture.md").readText()
+        listOf("Kotlin", "IntelliJ Platform Gradle Plugin", "Detekt", "Kover", "JUnit Jupiter", "MockK")
+            .forEach { assertTableValue(architecture, it, buildScriptSource) }
+        assertTableValue(architecture, "Gradle wrapper", wrapperSource)
+
+        mapOf("AGENTS.md" to knowledgeBase, ".agents/architecture.md" to architecture).forEach { (path, content) ->
+            managedVersions.forEach { version ->
+                assertFalse(
+                    content.contains(version),
+                    "$path must not copy Dependabot-managed version $version; point at its pinning file instead",
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `gradle wrapper pins an official distribution checksum`() {
+        val wrapperProperties = repositoryRoot.resolve("gradle/wrapper/gradle-wrapper.properties").readText()
+
+        capture(
+            wrapperProperties,
+            "distributionUrl=(https\\\\://services\\.gradle\\.org/distributions/gradle-[0-9.]+-bin\\.zip)",
+        )
+        capture(wrapperProperties, "distributionSha256Sum=([0-9a-f]{64})")
     }
 
     @Test
