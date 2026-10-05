@@ -9,7 +9,7 @@ plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "2.4.20"
     id("dev.detekt") version "2.0.0-alpha.6"
-    id("org.jetbrains.kotlinx.kover") version "0.9.9"
+    id("org.jetbrains.kotlinx.kover") version "0.9.11"
     id("org.jetbrains.intellij.platform") version "2.19.0"
     id("org.jetbrains.changelog") version "2.5.0"
 }
