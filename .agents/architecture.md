@@ -4,19 +4,19 @@
 
 | Component | Version |
 |-----------|---------|
-| Kotlin | 2.4.20 |
-| Gradle wrapper | 9.8.0 |
-| IntelliJ Platform Gradle Plugin | 2.19.0 |
-| Detekt | 2.0.0-alpha.6 |
-| Kover | 0.9.11 |
+| Kotlin | `build.gradle.kts` |
+| Gradle wrapper | `gradle/wrapper/gradle-wrapper.properties` |
+| IntelliJ Platform Gradle Plugin | `build.gradle.kts` |
+| Detekt | `build.gradle.kts` |
+| Kover | `build.gradle.kts` |
 | IntelliJ IDEA Community test platform | 2024.3 |
 | Plugin Verifier targets | IC 2024.3, IU 2026.2.2, RD 2026.2.1 |
 | JVM toolchain and target | 21 |
 | Minimum IDE build | 243 (2024.3) |
-| JUnit Jupiter | 6.1.3 |
-| MockK | 1.14.11 |
+| JUnit Jupiter | `build.gradle.kts` |
+| MockK | `build.gradle.kts` |
 
-`build.gradle.kts` is the source of truth for plugin and test dependencies, while `gradle/wrapper/gradle-wrapper.properties` pins Gradle. `gradle.properties` keeps `kotlin.stdlib.default.dependency=false` so the plugin uses the IDE-bundled Kotlin standard library. Kotlin `apiVersion` is pinned to 2.0, the stdlib bundled with the minimum supported IDE (2024.3 ships 2.0.21), so plugin and test bytecode only references stdlib APIs and emits coroutine debug metadata that the 2.0 stdlib understands. The plugin intentionally omits `untilBuild` for forward compatibility.
+`build.gradle.kts` is the source of truth for plugin and test dependencies, while `gradle/wrapper/gradle-wrapper.properties` pins Gradle. Dependabot updates those versions, so the table points at the pinning file instead of copying numbers that would drift. `gradle.properties` keeps `kotlin.stdlib.default.dependency=false` so the plugin uses the IDE-bundled Kotlin standard library. Kotlin `apiVersion` is pinned to 2.0, the stdlib bundled with the minimum supported IDE (2024.3 ships 2.0.21), so plugin and test bytecode only references stdlib APIs and emits coroutine debug metadata that the 2.0 stdlib understands. The plugin intentionally omits `untilBuild` for forward compatibility.
 
 ## Standard Copy Flow
 
