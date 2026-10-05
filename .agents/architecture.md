@@ -4,9 +4,9 @@
 
 | Component | Version |
 |-----------|---------|
-| Kotlin | 2.4.10 |
-| Gradle wrapper | 9.7.1 |
-| IntelliJ Platform Gradle Plugin | 2.18.1 |
+| Kotlin | 2.4.20 |
+| Gradle wrapper | 9.8.0 |
+| IntelliJ Platform Gradle Plugin | 2.19.0 |
 | Detekt | 2.0.0-alpha.6 |
 | Kover | 0.9.9 |
 | IntelliJ IDEA Community test platform | 2024.3 |
@@ -16,7 +16,7 @@
 | JUnit Jupiter | 6.1.3 |
 | MockK | 1.14.11 |
 
-`build.gradle.kts` is the source of truth for plugin and test dependencies, while `gradle/wrapper/gradle-wrapper.properties` pins Gradle. `gradle.properties` keeps `kotlin.stdlib.default.dependency=false` so the plugin uses the IDE-bundled Kotlin standard library. The plugin intentionally omits `untilBuild` for forward compatibility.
+`build.gradle.kts` is the source of truth for plugin and test dependencies, while `gradle/wrapper/gradle-wrapper.properties` pins Gradle. `gradle.properties` keeps `kotlin.stdlib.default.dependency=false` so the plugin uses the IDE-bundled Kotlin standard library. Kotlin `apiVersion` is pinned to 2.0, the stdlib bundled with the minimum supported IDE (2024.3 ships 2.0.21), so plugin and test bytecode only references stdlib APIs and emits coroutine debug metadata that the 2.0 stdlib understands. The plugin intentionally omits `untilBuild` for forward compatibility.
 
 ## Standard Copy Flow
 
