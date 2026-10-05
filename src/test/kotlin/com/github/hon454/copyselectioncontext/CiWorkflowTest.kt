@@ -410,9 +410,10 @@ class CiWorkflowTest {
         )
         assertTrue(
             buildScript.contains("named<PublishPluginTask>(\"publishPlugin\")") &&
-                buildScript.contains("archiveFile.set(layout.projectDirectory.file(canonicalArchive))") &&
+                buildScript.contains("archiveFiles.setFrom(canonicalFile)") &&
+                buildScript.contains("check(files == setOf(canonicalFile) && canonicalFile.isFile)") &&
                 buildScript.contains("setDependsOn(emptyList<Any>())"),
-            "the explicit canonical archive input must prevent publishPlugin from rebuilding or re-signing",
+            "the canonical archive must replace publishPlugin's default archives and prevent rebuilding or re-signing",
         )
     }
 

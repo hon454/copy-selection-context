@@ -3,13 +3,14 @@ import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.PublishPluginTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "2.4.10"
+    id("org.jetbrains.kotlin.jvm") version "2.4.20"
     id("dev.detekt") version "2.0.0-alpha.6"
     id("org.jetbrains.kotlinx.kover") version "0.9.9"
-    id("org.jetbrains.intellij.platform") version "2.18.1"
+    id("org.jetbrains.intellij.platform") version "2.19.0"
     id("org.jetbrains.changelog") version "2.5.0"
 }
 
@@ -74,6 +75,9 @@ kotlin {
     jvmToolchain(21)
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_21)
+        // Match the Kotlin stdlib bundled with the minimum supported IDE (2024.3 ships 2.0.21).
+        // Kotlin 2.4 deprecates API 2.0; raise minimumSupportedIdeVersion before a Kotlin release drops it.
+        apiVersion.set(KotlinVersion.KOTLIN_2_0)
     }
 }
 
@@ -196,10 +200,18 @@ tasks {
 
     named<PublishPluginTask>("publishPlugin") {
         providers.gradleProperty("canonicalPluginArchive").orNull?.let { canonicalArchive ->
-            archiveFile.set(layout.projectDirectory.file(canonicalArchive))
+            val canonicalFile = layout.projectDirectory.file(canonicalArchive).asFile
+            archiveFiles.setFrom(canonicalFile)
             // The release workflow already built, signed, verified, checksummed, and
-            // attested this exact file. Do not rebuild or re-sign it before upload.
+            // attested this exact file. setFrom replaces the default build/sign outputs
+            // so no second ZIP is uploaded and nothing is rebuilt or re-signed.
             setDependsOn(emptyList<Any>())
+            doFirst {
+                val files = archiveFiles.files
+                check(files == setOf(canonicalFile) && canonicalFile.isFile) {
+                    "publishPlugin must upload exactly the canonical archive: $files"
+                }
+            }
         }
     }
 }

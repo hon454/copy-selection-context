@@ -141,9 +141,9 @@ class DocumentationSyncTest {
             ?: error("gradle.properties must declare kotlin.stdlib.default.dependency")
 
         assertEquals(
-            "acd53f1edaf02f1a8ff99879f8a34b302661a057d9b063ae9e35b552f804d20a",
+            "bafd5ce9cfaea0fbccfdc8439a1ac42fbd4cd9c89dc9a988228d8a2639a58e6c",
             distributionChecksum,
-            "Gradle 9.7.1 bin distribution must use the official SHA-256 checksum",
+            "Gradle 9.8.0 bin distribution must use the official SHA-256 checksum",
         )
 
         val knowledgeBase = repositoryRoot.resolve("AGENTS.md").readText()

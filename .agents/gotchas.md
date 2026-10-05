@@ -5,7 +5,7 @@
 | # | Issue | Detail |
 |---|-------|--------|
 | 1 | **untilBuild** | Must NOT be set. Forward compatibility requirement. Setting it breaks plugin on future IDE versions. |
-| 2 | **Kotlin stdlib** | `kotlin.stdlib.default.dependency=false` in gradle.properties. IDE provides its own; bundling causes classloader conflicts. |
+| 2 | **Kotlin stdlib** | `kotlin.stdlib.default.dependency=false` in gradle.properties. IDE provides its own; bundling causes classloader conflicts. Kotlin `apiVersion` stays at the minimum IDE's bundled stdlib (2.0); IntelliJ Platform Gradle Plugin 2.19+ no longer copies the project stdlib into test sandboxes, so newer-API bytecode fails at runtime in platform tests (e.g. coroutine `Debug metadata version mismatch` hangs); production never bundled the stdlib. Kotlin 2.4 deprecates API 2.0, so raise the minimum IDE before a Kotlin release drops it. |
 | 3 | **SVG only** | Icons must be SVG (40x40px, <3KB). PNG not supported in modern IntelliJ Platform. |
 | 4 | **Notification group** | Must register in plugin.xml before use: `<notificationGroup id="CopySelectionContext" displayType="BALLOON"/>`. ID is PascalCase, no spaces. |
 | 5 | **Plugin naming** | Name cannot contain "Plugin" or "IntelliJ" (JetBrains Marketplace requirement). |
