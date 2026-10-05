@@ -8,7 +8,7 @@
 | Gradle wrapper | 9.8.0 |
 | IntelliJ Platform Gradle Plugin | 2.19.0 |
 | Detekt | 2.0.0-alpha.6 |
-| Kover | 0.9.9 |
+| Kover | 0.9.11 |
 | IntelliJ IDEA Community test platform | 2024.3 |
 | Plugin Verifier targets | IC 2024.3, IU 2026.2.2, RD 2026.2.1 |
 | JVM toolchain and target | 21 |

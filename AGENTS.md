@@ -19,7 +19,7 @@ JetBrains IDE plugin for copying code context (file path, line numbers, optional
 | Gradle | 9.8.0 |
 | IntelliJ Platform Plugin | 2.19.0 |
 | Detekt | 2.0.0-alpha.6 |
-| Kover | 0.9.9 |
+| Kover | 0.9.11 |
 | JVM Toolchain | 21 |
 | Min IDE Version | 2024.3 |
 
