@@ -1,8 +1,11 @@
 package com.github.hon454.copyselectioncontext
 
 import com.intellij.ide.DataManager
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.options.ex.Settings
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.openapi.ui.Messages
@@ -297,11 +300,17 @@ class CopySelectionConfigurable internal constructor(
         outputFormatCombo?.selectedItem == OutputFormatOption.TEMPLATE
 
     private fun openKeymapSettings(source: Component?) {
-        val settingsDialog = source
-            ?.let { Settings.KEY.getData(DataManager.getInstance().getDataContext(it)) }
-            ?: return
+        val component = source ?: return
+        val settingsDialog = Settings.KEY.getData(DataManager.getInstance().getDataContext(component)) ?: return
         val keymap = settingsDialog.find(KEYMAP_CONFIGURABLE_ID) ?: return
-        settingsDialog.select(keymap, KEYMAP_FILTER)
+        // Settings.select(configurable, option) applies the filter before the page is shown, and showing the
+        // page then resets it, so apply the filter on the next EDT turn instead.
+        settingsDialog.select(keymap).doWhenDone {
+            ApplicationManager.getApplication().invokeLater(
+                { (keymap as? SearchableConfigurable)?.enableSearch(KEYMAP_FILTER)?.run() },
+                ModalityState.stateForComponent(component),
+            )
+        }
     }
 
     companion object {
