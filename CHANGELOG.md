@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Copy Selection Context's default shortcut is now `Ctrl+Alt+Shift+Z` (`Cmd+Alt+Shift+Z` on macOS); shortcuts you assigned yourself in Keymap are kept
+
+### Fixed
+
+- The v1.9.0 default `Ctrl+Alt+Shift+X` / `Cmd+Alt+Shift+X` conflicted with Deployment's Upload to… in IntelliJ IDEA Ultimate and Rider; it was free only in IntelliJ IDEA Community
+
 ## [1.9.0] - 2026-10-15
 
 ### Added

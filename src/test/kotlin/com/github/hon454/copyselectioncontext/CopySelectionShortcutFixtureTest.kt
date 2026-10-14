@@ -9,9 +9,9 @@ class CopySelectionShortcutFixtureTest : BasePlatformTestCase() {
     fun testMainCopyActionOwnsTheOnlyDefaultShortcutWithoutConflicts() {
         val manager = KeymapManager.getInstance()
         val expected = mapOf(
-            "\$default" to "control alt shift X",
-            "Mac OS X 10.5+" to "meta alt shift X",
-            "macOS System Shortcuts" to "meta alt shift X",
+            "\$default" to "control alt shift Z",
+            "Mac OS X 10.5+" to "meta alt shift Z",
+            "macOS System Shortcuts" to "meta alt shift Z",
         )
 
         expected.forEach { (keymapId, keystroke) ->

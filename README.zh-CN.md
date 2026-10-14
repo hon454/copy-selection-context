@@ -16,7 +16,7 @@
 
 ## 功能
 
-- **快捷键复制** — 按下 `Ctrl+Alt+Shift+X`，立即复制文件路径和行号
+- **快捷键复制** — 按下 `Ctrl+Alt+Shift+Z`，立即复制文件路径和行号
 - **相对或绝对路径** — 可选择项目相对路径或绝对路径
 - **灵活的输出格式** — 支持 Claude Code 引用、Path:Line 输出或自定义模板
 - **包含代码内容** — 可选择将所选代码以 Markdown 代码块形式包含在内
@@ -83,7 +83,7 @@ gh attestation verify copy-selection-context-1.2.0-signed.zip \
 
 | 操作 | Windows/Linux | macOS |
 |------|---------------|-------|
-| Copy Selection Context | `Ctrl+Alt+Shift+X` | `Cmd+Alt+Shift+X` |
+| Copy Selection Context | `Ctrl+Alt+Shift+Z` | `Cmd+Alt+Shift+Z` |
 
 > 只有主复制操作有默认快捷键。可在 `Settings` → `Keymap` 中，或通过插件设置中的 **Configure shortcuts in Keymap…** 为其他操作分配快捷键。
 

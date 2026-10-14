@@ -10,14 +10,15 @@ Automated tests exist: `./gradlew test` (unit) and `./gradlew platformTest` (Int
 
 Manual QA: run `./gradlew runIde` to launch the IDE with the plugin.
 
-1. Select code → `Ctrl+Alt+Shift+X` (`Cmd+Alt+Shift+X` on macOS) → verify absolute path copied
+1. Select code → `Ctrl+Alt+Shift+Z` (`Cmd+Alt+Shift+Z` on macOS) → verify absolute path copied
 2. Settings: enable "Include code content" → shortcut → verify markdown code block
 3. Settings: switch to Relative path → shortcut → verify relative path
 4. No selection → shortcut → verify current line number
 5. Right-click → "Copy Selection Context" copies directly; "Copy Selection Context Tools ▸" lists the other eight actions
 6. Verify toast notification on copy
 7. Settings → Tools → Copy Selection Context → verify radio buttons + checkbox; "Configure shortcuts in Keymap…" opens Keymap filtered to the plugin actions
-8. Settings → Keymap → no conflict warning on `Ctrl/Cmd+Alt+Shift+X`
+8. Settings → Keymap → no conflict warning on `Ctrl/Cmd+Alt+Shift+Z`
+9. Before changing the default shortcut, run `python3 -I scripts/check-shortcut-conflicts.py <ide-dir>...` against IntelliJ IDEA Community, IntelliJ IDEA (Ultimate) and Rider distributions; bundled plugins such as Deployment declare shortcuts the Community build lacks
 
 ## Must NOT Do
 

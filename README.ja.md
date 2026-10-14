@@ -16,7 +16,7 @@ ClaudeやChatGPTなどのAIコーディングアシスタントにコードの�
 
 ## 機能
 
-- **ショートカットでコピー** — `Ctrl+Alt+Shift+X`でファイルパスと行番号をすぐにコピー
+- **ショートカットでコピー** — `Ctrl+Alt+Shift+Z`でファイルパスと行番号をすぐにコピー
 - **相対パスまたは絶対パス** — プロジェクト相対パスと絶対パスから選択可能
 - **柔軟な出力形式** — Claude Code参照、Path:Line出力、カスタムテンプレートに対応
 - **コード内容を含める** — 選択したコードをMarkdownコードブロックとして追加可能
@@ -83,7 +83,7 @@ gh attestation verify copy-selection-context-1.2.0-signed.zip \
 
 | アクション | Windows/Linux | macOS |
 |------------|---------------|-------|
-| Copy Selection Context | `Ctrl+Alt+Shift+X` | `Cmd+Alt+Shift+X` |
+| Copy Selection Context | `Ctrl+Alt+Shift+Z` | `Cmd+Alt+Shift+Z` |
 
 > 既定のショートカットはメインのコピーのみです。その他のアクションには`Settings` → `Keymap`、またはプラグイン設定の **Configure shortcuts in Keymap…** からショートカットを割り当てられます。
 

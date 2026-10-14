@@ -105,17 +105,21 @@ class PluginDescriptorLocalizationTest {
         val declared = shortcutsByAction.getValue(COPY_ACTION_ID).associateBy { it.getAttribute("keymap") }
         assertEquals(MAC_KEYMAP_IDS + "\$default", declared.keys)
         val default = declared.getValue("\$default")
-        assertEquals("control alt shift X", default.getAttribute("first-keystroke"))
+        assertEquals("control alt shift Z", default.getAttribute("first-keystroke"))
         assertEquals("", default.getAttribute("replace-all"))
         MAC_KEYMAP_IDS.forEach { keymapId ->
             val mac = declared.getValue(keymapId)
-            assertEquals("meta alt shift X", mac.getAttribute("first-keystroke"), keymapId)
+            assertEquals("meta alt shift Z", mac.getAttribute("first-keystroke"), keymapId)
             assertEquals("true", mac.getAttribute("replace-all"), keymapId)
         }
 
         val allShortcuts = shortcutsByAction.values.flatten()
         assertTrue(allShortcuts.all { it.getAttribute("second-keystroke").isEmpty() }, "two-stroke defaults are not allowed")
-        val conflicting = setOf("control alt C", "meta alt C", "control alt shift C", "meta alt shift C", "control alt H")
+        val conflicting = setOf(
+            "control alt C", "meta alt C", "control alt shift C", "meta alt shift C", "control alt H",
+            // Deployment "Upload to..." in IntelliJ IDEA Ultimate and Rider
+            "control alt shift X", "meta alt shift X",
+        )
         assertFalse(allShortcuts.any { it.getAttribute("first-keystroke") in conflicting })
     }
 

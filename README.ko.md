@@ -16,7 +16,7 @@ AI 코딩 어시스턴트(Claude, ChatGPT 등)에게 코드 컨텍스트를 전�
 
 ## 기능
 
-- **원클릭 복사** — `Ctrl+Alt+Shift+X` 하나로 파일 경로 + 라인 번호 복사
+- **원클릭 복사** — `Ctrl+Alt+Shift+Z` 하나로 파일 경로 + 라인 번호 복사
 - **상대/절대 경로** — 프로젝트 상대 경로 또는 절대 경로 선택
 - **유연한 출력 형식** — Claude Code 참조, Path:Line 출력, 사용자 정의 템플릿 지원
 - **코드 내용 포함** — 마크다운 코드 블록으로 선택한 코드까지 포함 가능
@@ -83,7 +83,7 @@ gh attestation verify copy-selection-context-1.2.0-signed.zip \
 
 | 액션 | Windows/Linux | macOS |
 |------|---------------|-------|
-| Copy Selection Context | `Ctrl+Alt+Shift+X` | `Cmd+Alt+Shift+X` |
+| Copy Selection Context | `Ctrl+Alt+Shift+Z` | `Cmd+Alt+Shift+Z` |
 
 > 기본 단축키는 메인 복사에만 있습니다. 다른 액션의 단축키는 `Settings` → `Keymap`에서 지정하거나, 플러그인 설정의 **Configure shortcuts in Keymap…** 링크를 이용하세요.
 

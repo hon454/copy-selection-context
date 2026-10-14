@@ -16,7 +16,7 @@ Tired of manually typing file paths and line numbers when sharing code context w
 
 ## Features
 
-- **One-shortcut copy** — `Ctrl+Alt+Shift+X` copies file path + line numbers instantly
+- **One-shortcut copy** — `Ctrl+Alt+Shift+Z` copies file path + line numbers instantly
 - **Relative or absolute paths** — Choose between project-relative or absolute paths
 - **Flexible output formats** — Use Claude Code references, Path:Line output, or a custom template
 - **Code content included** — Optionally include selected code as a markdown code block
@@ -83,7 +83,7 @@ gh attestation verify copy-selection-context-1.2.0-signed.zip \
 
 | Action | Windows/Linux | macOS |
 |--------|---------------|-------|
-| Copy Selection Context | `Ctrl+Alt+Shift+X` | `Cmd+Alt+Shift+X` |
+| Copy Selection Context | `Ctrl+Alt+Shift+Z` | `Cmd+Alt+Shift+Z` |
 
 > Only the main copy has a default shortcut. Assign shortcuts to any other action in `Settings` → `Keymap`, or click **Configure shortcuts in Keymap…** in the plugin settings.
 
