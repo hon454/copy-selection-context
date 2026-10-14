@@ -7,22 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-10-15
+
 ### Added
 
-- Open Keymap filtered to the plugin's actions from **Configure shortcuts in Keymap…** in Settings → Tools → Copy Selection Context
+- Open Keymap filtered to the plugin's actions from **Configure shortcuts in Keymap…** in Settings → Tools → Copy Selection Context (#159)
 
 ### Changed
 
-- Copy Selection Context now has the single-stroke default `Ctrl+Alt+Shift+X` (`Cmd+Alt+Shift+X` on macOS), free in every bundled keymap
-- Show Copy Selection Context directly in the editor context menu and rename the submenu for the remaining actions to Copy Selection Context Tools
+- Copy Selection Context now has the single-stroke default `Ctrl+Alt+Shift+X` (`Cmd+Alt+Shift+X` on macOS), free in every bundled keymap (#159)
+- Show Copy Selection Context directly in the editor context menu and rename the submenu for the remaining actions to Copy Selection Context Tools (#159)
 
 ### Removed
 
-- The `Ctrl+Alt+Shift+G` / `Cmd+Alt+Shift+G` two-stroke defaults for all actions; shortcuts you assigned yourself in Keymap are kept
+- The `Ctrl+Alt+Shift+G` / `Cmd+Alt+Shift+G` two-stroke defaults for all actions; shortcuts you assigned yourself in Keymap are kept (#159)
 
 ### Fixed
 
-- Documentation and the Marketplace description advertised `Ctrl+Alt+C` and `Ctrl+Alt+H`, which v1.7.0 had already replaced
+- Documentation and the Marketplace description advertised `Ctrl+Alt+C` and `Ctrl+Alt+H`, which v1.7.0 had already replaced (#159)
 
 ## [1.8.1] - 2026-10-05
 
@@ -242,7 +244,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Toast notifications
 - IntelliJ Platform 2024.3+ compatibility
 
-[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.8.1...HEAD
+[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/hon454/copy-selection-context/compare/v1.8.1...v1.9.0
 [1.8.1]: https://github.com/hon454/copy-selection-context/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/hon454/copy-selection-context/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/hon454/copy-selection-context/compare/v1.6.0...v1.7.0

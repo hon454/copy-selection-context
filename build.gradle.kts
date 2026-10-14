@@ -15,7 +15,7 @@ plugins {
 }
 
 group = "com.github.hon454"
-version = "1.8.1"
+version = "1.9.0"
 
 data class PluginVerificationTarget(
     val label: String,
