@@ -179,7 +179,7 @@ Configure path type, output and templates, code handling, notifications, review 
 
 ### Session context collection (available since 1.5.0)
 
-Use **Add to Context Collection** in the editor's Copy Selection Context submenu or Find Action to collect selections from several files. Every caret captures its selection or current line, including unsaved text, without changing the clipboard or moving editor focus. The action has no default shortcut and can be assigned in Keymap.
+Use **Add to Context Collection** in the editor's Copy Selection Context submenu or Find Action to collect selections from several files. Every caret captures its selection or current line, including unsaved text, without changing the clipboard or moving editor focus. Its default shortcut is `Alt+Shift+K, A`; change it in Keymap if desired.
 
 Captures freeze the original code, path, filename, language, range, capture number and time. Unchanged recaptures are skipped; changed code creates a separate snapshot. Switching relative/absolute path preferences alone remains a duplicate and preserves the original display path. Rename/delete status is tracked separately from captured content.
 
@@ -187,7 +187,7 @@ The project session retains at most 100 items, 256 KiB of raw UTF-8 code per ite
 
 ### [Collection workflow and previews](https://github.com/hon454/copy-selection-context/issues/74)
 
-After adding, use **Open Context Collection** from the submenu or Find Action to open the right tool window even without an editor. Adding keeps editor focus and does not open the window automatically. The open action has no default shortcut; assign it in Keymap if desired. The existing one-shot shortcut remains separate.
+After adding, use **Open Context Collection** from the submenu or Find Action to open the right tool window even without an editor. Adding keeps editor focus and does not open the window automatically. The open action's default shortcut is `Alt+Shift+K, O`. The existing one-shot shortcut remains separate.
 
 Review the ordered captures by their fixed number, capture time, path and range. Arrow keys select; Move Up/Down preserves the selected capture; Delete removes only when the list has focus. Clear All defaults to Cancel and requires a fresh confirmation if the collection changes. Both read-only viewers support focus, selection and normal text copying.
 
@@ -195,7 +195,7 @@ Toggle **Include code** independently of one-shot settings. **Format Settings…
 
 Capture-time code stays available after source changes or deletion; source labels describe observed changes, not proof of equality. Copying and hiding the window retain the collection. Project/plugin close discards it. Collections never enter persistent copy history; OS and external clipboard history are separate.
 
-When the captures are ready, use **Copy All Context Collection** from the submenu or Find Action without an active editor; it has no default shortcut. The current format, template and trimming settings apply to captured paths and code. Built-in formats label snapshots of the same location with fixed capture numbers and UTC times; custom templates keep their original substitutions. Blank item output blocks copying. Output above 256 KiB requires confirmation and above 4 MiB is blocked; snapshot/reference and size warnings share one confirmation. Copy retains the collection, never adds history or gutter markers, and follows notification preferences, opt-in analytics and independent review eligibility. The newest managed plugin copy wins across projects, including history/status re-copy; native Copy and external clipboard history remain outside this ordering. See the [output contract](docs/development/context-collection-output-contract.md) implemented in [#75](https://github.com/hon454/copy-selection-context/issues/75) and [sample selections](docs/samples/context-collection/README.md).
+When the captures are ready, use **Copy All Context Collection** from the submenu or Find Action without an active editor; its default shortcut is `Alt+Shift+K, F`. The current format, template and trimming settings apply to captured paths and code. Built-in formats label snapshots of the same location with fixed capture numbers and UTC times; custom templates keep their original substitutions. Blank item output blocks copying. Output above 256 KiB requires confirmation and above 4 MiB is blocked; snapshot/reference and size warnings share one confirmation. Copy retains the collection, never adds history or gutter markers, and follows notification preferences, opt-in analytics and independent review eligibility. The newest managed plugin copy wins across projects, including history/status re-copy; native Copy and external clipboard history remain outside this ordering. See the [output contract](docs/development/context-collection-output-contract.md) implemented in [#75](https://github.com/hon454/copy-selection-context/issues/75) and [sample selections](docs/samples/context-collection/README.md).
 
 ![Context Collection beside the editor with multiple captured files and byte counts](docs/images/context-collection-overview.png)
 

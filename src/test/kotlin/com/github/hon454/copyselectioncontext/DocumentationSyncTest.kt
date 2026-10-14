@@ -80,6 +80,16 @@ class DocumentationSyncTest {
         )
 
         val retiredShortcuts = listOf("Ctrl+Alt+C", "Cmd+Alt+C", "Ctrl+Alt+H", "Shift+G")
+        // Every command ships a default chord, so no README may claim an action has none.
+        val noDefaultShortcutClaims = listOf(
+            "no default shortcut",
+            "기본 단축키는 없",
+            "기본 단축키가 없",
+            "既定のショートカットはな",
+            "既定のショートカットもあ",
+            "没有默认快捷键",
+            "沒有預設快捷鍵",
+        )
         readmePaths.forEach { path ->
             val content = repositoryRoot.resolve(path).readText()
             requiredContent.forEach { required ->
@@ -88,7 +98,12 @@ class DocumentationSyncTest {
             retiredShortcuts.forEach { retired ->
                 assertFalse(content.contains(retired), "$path must not advertise retired shortcut $retired")
             }
+            noDefaultShortcutClaims.forEach { claim ->
+                assertFalse(content.contains(claim), "$path must not claim an action has no default shortcut ($claim)")
+            }
         }
+        val agentsDoc = repositoryRoot.resolve("AGENTS.md").readText()
+        assertFalse(agentsDoc.contains("without a default shortcut"), "AGENTS.md must not claim an action has no default shortcut")
     }
 
     @Test
