@@ -34,6 +34,22 @@ class CopySelectionShortcutFixtureTest : BasePlatformTestCase() {
         }
     }
 
+    fun testPrefixKeystrokeIsBoundOnlyToPluginCommandsInEveryBundledKeymap() {
+        val keymaps = KeymapManagerEx.getInstanceEx().allKeymaps
+        assertTrue("fixture must expose bundled keymaps", keymaps.size >= 5)
+        val expected = CopySelectionShortcuts.commands.keys.toSortedSet()
+
+        keymaps.forEach { keymap ->
+            val prefix = CopySelectionShortcuts.defaultShortcuts(keymap, macHost = false)
+                .values
+                .map { it.firstKeyStroke }
+                .distinct()
+                .single()
+            val bound = keymap.getActionIds(prefix).toSortedSet()
+            assertEquals("${keymap.name} binds the prefix $prefix", expected, bound)
+        }
+    }
+
     fun testKnownKeymapParentsResolveToTheirDeclaredFamilies() {
         val manager = KeymapManager.getInstance()
         val expectedParents = mapOf(
@@ -54,6 +70,8 @@ class CopySelectionShortcutFixtureTest : BasePlatformTestCase() {
     }
 
     fun testActiveKeymapLineageWinsOverTheHostOperatingSystem() {
+        // Both lineages currently share one prefix; diverging them again must be a deliberate decision.
+        assertEquals(CopySelectionShortcuts.defaultShortcuts(mac = true), CopySelectionShortcuts.defaultShortcuts(mac = false))
         val manager = KeymapManagerEx.getInstanceEx()
         val original = manager.activeKeymap
         val windowsKeymap = requireNotNull(manager.getKeymap("\$default"))
@@ -90,7 +108,10 @@ class CopySelectionShortcutFixtureTest : BasePlatformTestCase() {
 
     fun testPersistedUserChoicesSurviveDefaultUpgradeAcrossAllCommands() {
         val oldParent = keymap(PARENT_NAME)
-        val oldCopy = keyboard("control alt C")
+        val oldCopy = KeyboardShortcut(
+            KeyStroke.getKeyStroke("control alt shift G"),
+            KeyStroke.getKeyStroke("C"),
+        )
         val oldHistory = keyboard("control alt H")
         val removedIdeShortcut = keyboard("control alt I")
         oldParent.addShortcut(COPY, oldCopy)
@@ -165,7 +186,10 @@ class CopySelectionShortcutFixtureTest : BasePlatformTestCase() {
             shortcuts.forEach { shortcut ->
                 addContent(
                     Element("keyboard-shortcut")
-                        .setAttribute("first-keystroke", shortcut.firstKeyStroke.toString()),
+                        .setAttribute("first-keystroke", shortcut.firstKeyStroke.toString())
+                        .apply {
+                            shortcut.secondKeyStroke?.let { setAttribute("second-keystroke", it.toString()) }
+                        },
                 )
             }
         })
