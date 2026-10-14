@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Move every default shortcut to the shared `Alt+Shift+K` prefix followed by a command letter (`Alt+Shift+K, C` copies, `Alt+Shift+K, H` opens history), identical on Windows, Linux and macOS. Version 1.7.0 had replaced `Ctrl+Alt+C` / `Ctrl+Alt+H` with `Ctrl+Alt+Shift+G, <letter>` without documenting it, and that prefix is taken by Navigate → Related Files on Rider's ReSharper keymaps and by Copy DDL in Database Tools, so the commands did not respond there. `Alt+Shift+K` is unbound in every bundled keymap of IntelliJ IDEA 2024.3 and 2026.2 and Rider 2026.2. Shortcuts you assigned yourself in Settings → Keymap are preserved (#157)
+
 ## [1.8.1] - 2026-10-05
 
 ### Changed
