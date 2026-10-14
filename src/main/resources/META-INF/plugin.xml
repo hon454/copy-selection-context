@@ -7,18 +7,18 @@
 Copy file paths, line numbers, and code to clipboard for AI assistant workflows.
 <br/>
 <br/>
-One shortcut (<code>Ctrl+Alt+C</code> / <code>Cmd+Alt+C</code>) copies your current selection — or the current line when nothing is selected — in a format ready to paste into Claude, ChatGPT, or any AI coding assistant.
+One shortcut family (<code>Alt+Shift+K</code>, then a command letter — <code>Alt+Shift+K, C</code> to copy) copies your current selection — or the current line when nothing is selected — in a format ready to paste into Claude, ChatGPT, or any AI coding assistant. The prefix is identical on Windows, Linux and macOS and does not collide with the bundled IntelliJ IDEA or Rider keymaps.
 <br/>
 <br/>
 <h3>Features</h3>
 <ul>
-    <li><strong>One-shortcut copy</strong> — <code>Ctrl+Alt+C</code> (Windows/Linux) / <code>Cmd+Alt+C</code> (macOS) copies path + line numbers based on your settings</li>
+    <li><strong>One-shortcut copy</strong> — <code>Alt+Shift+K, C</code> copies path + line numbers based on your settings; release the prefix before pressing the letter</li>
     <li><strong>Relative or absolute paths</strong> — choose project-relative or full absolute paths per your workflow</li>
     <li><strong>Code content as markdown</strong> — include the selected code as a fenced markdown code block with language tag</li>
-    <li><strong>Session context collection</strong> — Add selections from several files, open the Context Collection tool window, review frozen code and final output, reorder or remove captures, then Copy All. Collection actions are assignable in Keymap without new default shortcuts.</li>
+    <li><strong>Session context collection</strong> — Add selections from several files, open the Context Collection tool window, review frozen code and final output, reorder or remove captures, then Copy All. Collection actions share the prefix: <code>Alt+Shift+K, A</code> adds, <code>Alt+Shift+K, O</code> opens, <code>Alt+Shift+K, F</code> copies all.</li>
     <li><strong>Captured snapshots</strong> — Source edits, renames and deletion do not rewrite captured code. Built-in output labels multiple versions of the same range; custom templates keep their substitutions and may need confirmation.</li>
     <li><strong>Session privacy and fixed limits</strong> — Collections stay in project memory until project/plugin close, survive tool-window hiding and copying, and never enter persistent copy history. Clear All requires confirmation. Limits: 100 items, 256 KiB raw UTF-8 code per item, 2 MiB raw total; final output above 256 KiB needs confirmation and above 4 MiB is blocked. No truncation. OS and external clipboard history are separate.</li>
-    <li><strong>Private copy history</strong> — <code>Ctrl+Alt+H</code> opens locally stored history with clear-all and disable controls</li>
+    <li><strong>Private copy history</strong> — <code>Alt+Shift+K, H</code> opens locally stored history with clear-all and disable controls</li>
     <li><strong>GitHub/GitLab permalink</strong> — generate a permanent link to the exact lines in your remote repository</li>
     <li><strong>Template-based output formatting</strong> — choose from built-in presets (Claude Code, Path:Line, Custom) or define your own template with variable placeholders</li>
     <li><strong>Live template preview</strong> — settings UI shows a real-time preview and validates template variables before you save</li>

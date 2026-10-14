@@ -20,7 +20,7 @@
 
 ## Standard Copy Flow
 
-1. The user invokes `CopySelectionContextAction` with `Ctrl+Alt+C` / `Cmd+Alt+C`, or chooses an explicit path/code action from the editor context menu.
+1. The user invokes `CopySelectionContextAction` with `Alt+Shift+K, C`, or chooses an explicit path/code action from the editor context menu.
 2. The dumb-aware `CopySelectionBaseAction` evaluates project/editor/file availability on the background action update thread, then resolves those same inputs on EDT when invoked. It snapshots settings and fixes the action's code-capture policy before visiting carets. `CopySelectionUtils` captures path, file, filename, 1-based inclusive line range and Markdown language tag for every caret, but reads the selected/current-line payload exactly once only when that policy includes code. The immutable `SelectionContext` carries an empty code value for path-only formatting and never retains an editor, document, caret or lazy reader. This flow uses editor, document, VFS and settings state without an index-backed query.
 3. A non-empty selection uses `selectionEnd - 1` as its last included offset, so a selection ending at the next line's start does not include that line. With multiple carets, each captured context is formatted independently and the blocks are joined with a blank line; formatting and post-copy highlighting never re-read mutable editor selection state.
 4. `OutputFormatterFactory` selects the configured Claude Code, Path:Line, or custom template formatter using the same settings snapshot and include-code decision used for capture. `CopySelectionContextAction` includes code only when enabled; `CopyWithCodeContentAction` always includes it; explicit relative/absolute path actions never acquire code payloads. A custom template's `{code}` continues to follow the main include-code setting.
@@ -101,7 +101,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `ContextCollectionTextNavigation.kt` | Cached line-boundary actions that avoid native per-character Home/End and line-selection scans |
 | `ContextCollectionPanel.kt` | Keyboard-accessible collection management consuming shared snapshots/output/copy |
 | `ContextCollectionToolWindowFactory.kt` / `ToolWindowFactoryAdapter.java` | Lazy right tool window with one non-closeable content and its disposable; public Java adapter avoids Kotlin bridges to internal platform defaults |
-| `ShowContextCollectionAction.kt` | No-editor, assignable localized open action using the shared G-prefix default |
+| `ShowContextCollectionAction.kt` | No-editor, assignable localized open action using the shared Alt+Shift+K prefix default |
 | `ContextCollectionItem.kt` | Immutable captures, source locations, snapshots and typed add results |
 | `ContextCollectionStore.kt` | Pure bounded capture transaction and session mutation engine |
 | `ContextCollectionService.kt` | Project-only session service and editor capture adapter |
@@ -122,7 +122,7 @@ The implementation uses the flat package `com.github.hon454.copyselectioncontext
 | `CopySelectionBundle.kt` | Localized message lookup through the public class-aware `DynamicBundle` constructor |
 | `CopySelectionConfigurable.kt` | Tools settings UI, multiline template editor, preview, validation, and local analytics controls |
 | `CopySelectionContextAction.kt` | Settings-driven primary action |
-| `CopySelectionShortcuts.kt` | Shared nine-command G-prefix defaults and active-keymap lineage selection |
+| `CopySelectionShortcuts.kt` | Shared nine-command Alt+Shift+K prefix defaults and active-keymap lineage selection |
 | `CopySelectionGutterIconRenderer.kt` | Gutter icon and safe tooltip preview |
 | `CopySelectionHighlighter.kt` | Editor-scoped multi-range gutter marker lifecycle |
 | `CopySelectionNotifier.kt` | Settings-aware success, guarded clipboard-failure and localized permalink-failure balloons |

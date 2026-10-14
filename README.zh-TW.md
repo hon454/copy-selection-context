@@ -16,11 +16,11 @@
 
 ## 功能
 
-- **快速鍵複製** — 按下 `Ctrl+Alt+C`，立即複製檔案路徑和行號
+- **快速鍵複製** — 按下 `Alt+Shift+K, C`，立即複製檔案路徑和行號
 - **相對或絕對路徑** — 可選擇專案相對路徑或絕對路徑
 - **彈性的輸出格式** — 支援 Claude Code 參照、Path:Line 輸出或自訂範本
 - **包含程式碼內容** — 可選擇將所選程式碼以 Markdown 程式碼區塊形式包含在內
-- **複製歷史記錄** — 按下 `Ctrl+Alt+H` 瀏覽最近的複製歷史記錄
+- **複製歷史記錄** — 按下 `Alt+Shift+K, H` 瀏覽最近的複製歷史記錄
 - **工作階段上下文集合** — 加入多個檔案的選取內容，開啟集合以檢查和整理固定擷取，然後複製完整輸出
 - **GitHub/GitLab 永久連結** — 複製所選行的 Git 永久連結，並提供與標準結果相同的本機歷史記錄與複製回饋
 - **複製回饋** — 標示已複製的行、顯示可選通知，並在狀態列保留最近一次複製內容
@@ -83,10 +83,17 @@ gh attestation verify copy-selection-context-1.2.0-signed.zip \
 
 | 操作 | Windows/Linux | macOS |
 |------|---------------|-------|
-| Copy Selection Context | `Ctrl+Alt+C` | `Cmd+Alt+C` |
-| Show Copy History | `Ctrl+Alt+H` | `Ctrl+Alt+H` |
+| Copy Selection Context | `Alt+Shift+K, C` | `Alt+Shift+K, C` |
+| Show Copy History | `Alt+Shift+K, H` | `Alt+Shift+K, H` |
+| Add to Context Collection | `Alt+Shift+K, A` | `Alt+Shift+K, A` |
+| Show Context Collection | `Alt+Shift+K, O` | `Alt+Shift+K, O` |
+| Copy All from Collection | `Alt+Shift+K, F` | `Alt+Shift+K, F` |
+| Copy Relative Path | `Alt+Shift+K, R` | `Alt+Shift+K, R` |
+| Copy Absolute Path | `Alt+Shift+K, P` | `Alt+Shift+K, P` |
+| Copy with Code Content | `Alt+Shift+K, B` | `Alt+Shift+K, B` |
+| Copy Git Permalink | `Alt+Shift+K, L` | `Alt+Shift+K, L` |
 
-> 可在 `Settings` → `Keymap` 中自訂快速鍵。
+> 所有命令共用 `Alt+Shift+K` 前綴（macOS 上為 `⌥⇧K`）：先按下並放開 `Alt+Shift+K`，再按命令字母。可在 `Settings` → `Keymap` 中自訂快速鍵。
 
 ### 內容選單
 
@@ -141,7 +148,7 @@ HEAD 中不存在的路徑，包括新檔案或重新命名後的目標路徑，
 
 ### 歷史記錄、通知與狀態
 
-- 成功的標準路徑/程式碼複製與 Git 永久連結複製都會將項目加入專案專屬歷史記錄。按下 `Ctrl+Alt+H` 可開啟已儲存項目，選取後會再次複製完整內容。
+- 成功的標準路徑/程式碼複製與 Git 永久連結複製都會將項目加入專案專屬歷史記錄。按下 `Alt+Shift+K, H` 可開啟已儲存項目，選取後會再次複製完整內容。
 - 複製通知預設啟用，也可以關閉。標準路徑/程式碼複製與 Git 永久連結成功後會顯示通知。
 - 只有在已啟用通知且受支援的 UI 環境中執行的標準複製才會增加評論計數器；通知關閉、測試、headless 與不受支援的環境都不會變更計數器或提示狀態。在一個 IDE 工作階段中的第 10 次有效複製可為目前外掛版本顯示一次非模態的誠實評論請求。**Review on Marketplace** 會開啟官方 [Marketplace 評論頁面](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews)，**Later** 會略過目前版本後續請求，**Don't ask again** 會永久停用提示。通知關閉時，只提供設定中的被動連結。
 - 精確的工作階段次數不會持久化。僅在本機非漫遊的 `copySelectionReview.xml` 中儲存 `lastPromptedVersion`、永久停用選擇及是否開啟過 Marketplace 頁面；不涉及複製內容、檔案資料、分析、評論結果、遙測或自動網路請求。

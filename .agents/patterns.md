@@ -20,7 +20,7 @@ Five registered actions bypass the standard copy pipeline. `CopyGitPermalinkActi
 - `CopyGitPermalinkAction` captures VCS root/editor state on EDT, resolves repository metadata with NIO on a pooled thread, and publishes with `GIT_PERMALINK` only when its application request token is still current. Any later managed plugin copy invalidates the token across projects; current resolution failure reports an error and leaves the clipboard unchanged.
 - `CopyAllContextCollectionAction` invokes the shared `ContextCollectionCopyCommand` without requiring an editor and implements `DumbAware`. The command consumes `ContextCollectionOutputService` state and confirms all warnings together.
 - `AddToContextCollectionAction` captures a bounded atomic batch through `ContextCollectionService`, implements `DumbAware`, and never invokes the publisher.
-- `ShowContextCollectionAction` opens the lazy right tool window without requiring an editor or assigning a default shortcut.
+- `ShowContextCollectionAction` opens the lazy right tool window without requiring an editor; its default is the shared Alt+Shift+K prefix plus O.
 - `ShowCopyHistoryAction` reads only project availability during update and opens the project history popup on EDT.
 
 The specialized actions override `actionPerformed(AnActionEvent)` themselves, while shared-pipeline actions inherit that implementation from `CopySelectionBaseAction`.

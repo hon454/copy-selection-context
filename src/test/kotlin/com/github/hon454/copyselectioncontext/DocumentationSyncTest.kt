@@ -64,7 +64,9 @@ class DocumentationSyncTest {
             "**Review on Marketplace**",
             "**Copy history size**",
             "**Local usage analytics**",
-            "Ctrl+Alt+H",
+            "`Alt+Shift+K, C`",
+            "`Alt+Shift+K, H`",
+            "`Alt+Shift+K`",
             "40",
             "256 KiB",
             "2 MiB",
@@ -77,10 +79,14 @@ class DocumentationSyncTest {
             "gh attestation verify",
         )
 
+        val retiredShortcuts = listOf("Ctrl+Alt+C", "Cmd+Alt+C", "Ctrl+Alt+H", "Shift+G")
         readmePaths.forEach { path ->
             val content = repositoryRoot.resolve(path).readText()
             requiredContent.forEach { required ->
                 assertTrue(content.contains(required), "$path must document $required")
+            }
+            retiredShortcuts.forEach { retired ->
+                assertFalse(content.contains(retired), "$path must not advertise retired shortcut $retired")
             }
         }
     }

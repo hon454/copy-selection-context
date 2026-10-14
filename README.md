@@ -16,11 +16,11 @@ Tired of manually typing file paths and line numbers when sharing code context w
 
 ## Features
 
-- **One-shortcut copy** — `Ctrl+Alt+C` copies file path + line numbers instantly
+- **One-shortcut copy** — `Alt+Shift+K, C` copies file path + line numbers instantly
 - **Relative or absolute paths** — Choose between project-relative or absolute paths
 - **Flexible output formats** — Use Claude Code references, Path:Line output, or a custom template
 - **Code content included** — Optionally include selected code as a markdown code block
-- **Copy history** — `Ctrl+Alt+H` to browse recent copy history
+- **Copy history** — `Alt+Shift+K, H` to browse recent copy history
 - **Session context collection** — Add selections from several files, open the collection to review and organize frozen captures, then copy the complete output
 - **GitHub/GitLab permalink** — Copy a Git permalink with the same local history and copy feedback as standard results
 - **Copy feedback** — Mark the copied lines, show an optional notification, and retain the last copy in the status bar
@@ -83,10 +83,17 @@ gh attestation verify copy-selection-context-1.2.0-signed.zip \
 
 | Action | Windows/Linux | macOS |
 |--------|---------------|-------|
-| Copy Selection Context | `Ctrl+Alt+C` | `Cmd+Alt+C` |
-| Show Copy History | `Ctrl+Alt+H` | `Ctrl+Alt+H` |
+| Copy Selection Context | `Alt+Shift+K, C` | `Alt+Shift+K, C` |
+| Show Copy History | `Alt+Shift+K, H` | `Alt+Shift+K, H` |
+| Add to Context Collection | `Alt+Shift+K, A` | `Alt+Shift+K, A` |
+| Show Context Collection | `Alt+Shift+K, O` | `Alt+Shift+K, O` |
+| Copy All from Collection | `Alt+Shift+K, F` | `Alt+Shift+K, F` |
+| Copy Relative Path | `Alt+Shift+K, R` | `Alt+Shift+K, R` |
+| Copy Absolute Path | `Alt+Shift+K, P` | `Alt+Shift+K, P` |
+| Copy with Code Content | `Alt+Shift+K, B` | `Alt+Shift+K, B` |
+| Copy Git Permalink | `Alt+Shift+K, L` | `Alt+Shift+K, L` |
 
-> Shortcuts can be customized in `Settings` → `Keymap`.
+> Every command shares the `Alt+Shift+K` prefix (`⌥⇧K` on macOS): press `Alt+Shift+K`, release it, then press the command letter. Shortcuts can be customized in `Settings` → `Keymap`.
 
 ### Context Menu
 
@@ -141,7 +148,7 @@ Only the latest managed copy request across projects can publish. Git queries re
 
 ### History, Notifications, and Status
 
-- Successful standard path/code and Git permalink copies prepend entries to project-specific history. `Ctrl+Alt+H` opens the stored entries, and choosing one copies its full content again.
+- Successful standard path/code and Git permalink copies prepend entries to project-specific history. `Alt+Shift+K, H` opens the stored entries, and choosing one copies its full content again.
 - Copy notifications are enabled by default and can be disabled. They are shown after standard path/code copies and Git permalink copies.
 - Only standard copies made while notifications are enabled in a supported UI context advance the review counter; disabled, test, headless, and unsupported contexts leave both counter and prompt state unchanged. The tenth eligible copy in one IDE session may show one non-modal honest-review request for that plugin version. **Review on Marketplace** opens the official [Marketplace review page](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews), **Later** skips the rest of the current version, and **Don't ask again** permanently suppresses prompts. When notifications are disabled, only the passive settings link is available.
 - The exact session count is never persisted. Only `lastPromptedVersion`, permanent suppression choices, and whether the Marketplace page was opened are kept in local, non-roaming `copySelectionReview.xml`; no copied content, file data, analytics, review outcome, telemetry, or automatic network request is involved.

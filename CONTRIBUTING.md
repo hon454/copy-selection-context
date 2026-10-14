@@ -154,7 +154,7 @@ real desktop clipboard interaction ran in CI.
 
 ```
 src/main/kotlin/com/github/hon454/copyselectioncontext/
-├── CopySelectionContextAction.kt    # Main unified action (Ctrl+Alt+C)
+├── CopySelectionContextAction.kt    # Main unified action (Alt+Shift+K, C)
 ├── CopySelectionBaseAction.kt       # Abstract base (clipboard logic)
 ├── CopyRelativePathAction.kt        # Relative path (context menu)
 ├── CopyAbsolutePathAction.kt        # Absolute path (context menu)

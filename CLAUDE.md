@@ -8,11 +8,11 @@
 
 No automated tests. Run `./gradlew runIde` to launch IDE with plugin.
 
-1. Select code → `Ctrl+Alt+C` → verify absolute path copied
-2. Settings: enable "Include code content" → `Ctrl+Alt+C` → verify markdown code block
-3. Settings: switch to Relative path → `Ctrl+Alt+C` → verify relative path
-4. No selection → `Ctrl+Alt+C` → verify current line number
-5. Right-click → context menu → verify all 4 actions visible
+1. Select code → `Alt+Shift+K, C` → verify absolute path copied
+2. Settings: enable "Include code content" → `Alt+Shift+K, C` → verify markdown code block
+3. Settings: switch to Relative path → `Alt+Shift+K, C` → verify relative path
+4. No selection → `Alt+Shift+K, C` → verify current line number
+5. Right-click → context menu → verify all nine actions visible with `Alt+Shift+K, <letter>` shortcuts
 6. Verify toast notification on copy
 7. Settings → Tools → Copy Selection Context → verify radio buttons + checkbox
 

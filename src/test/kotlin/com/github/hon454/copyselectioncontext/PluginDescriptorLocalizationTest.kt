@@ -149,6 +149,17 @@ class PluginDescriptorLocalizationTest {
         assertTrue(shortcutXml.none { it.getAttribute("first-keystroke").contains("ctrl") })
     }
 
+    @Test
+    fun `descriptor description advertises the shared k prefix defaults`() {
+        val description = descriptor.getElementsByTagName("description").item(0).textContent
+        listOf("Alt+Shift+K", "Alt+Shift+K, C", "Alt+Shift+K, H").forEach {
+            assertTrue(description.contains(it), "description must mention $it")
+        }
+        listOf("Ctrl+Alt+C", "Cmd+Alt+C", "Ctrl+Alt+H", "Shift+G").forEach {
+            assertFalse(description.contains(it), "description must not advertise retired shortcut $it")
+        }
+    }
+
     private fun descriptorPresentationKeys(properties: Properties): Set<String> =
         properties.stringPropertyNames().filterTo(mutableSetOf()) { key ->
             (key.startsWith("action.") || key.startsWith("group.")) &&

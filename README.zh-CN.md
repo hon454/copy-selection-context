@@ -16,11 +16,11 @@
 
 ## 功能
 
-- **快捷键复制** — 按下 `Ctrl+Alt+C`，立即复制文件路径和行号
+- **快捷键复制** — 按下 `Alt+Shift+K, C`，立即复制文件路径和行号
 - **相对或绝对路径** — 可选择项目相对路径或绝对路径
 - **灵活的输出格式** — 支持 Claude Code 引用、Path:Line 输出或自定义模板
 - **包含代码内容** — 可选择将所选代码以 Markdown 代码块形式包含在内
-- **复制历史** — 按下 `Ctrl+Alt+H` 浏览最近的复制历史
+- **复制历史** — 按下 `Alt+Shift+K, H` 浏览最近的复制历史
 - **会话上下文集合** — 添加多个文件的选择内容，打开集合以检查和整理固定捕获，然后复制完整输出
 - **GitHub/GitLab 永久链接** — 复制所选行的 Git 永久链接，并获得与标准结果相同的本地历史和复制反馈
 - **复制反馈** — 标记已复制的行、显示可选通知，并在状态栏保留最后一次复制内容
@@ -83,10 +83,17 @@ gh attestation verify copy-selection-context-1.2.0-signed.zip \
 
 | 操作 | Windows/Linux | macOS |
 |------|---------------|-------|
-| Copy Selection Context | `Ctrl+Alt+C` | `Cmd+Alt+C` |
-| Show Copy History | `Ctrl+Alt+H` | `Ctrl+Alt+H` |
+| Copy Selection Context | `Alt+Shift+K, C` | `Alt+Shift+K, C` |
+| Show Copy History | `Alt+Shift+K, H` | `Alt+Shift+K, H` |
+| Add to Context Collection | `Alt+Shift+K, A` | `Alt+Shift+K, A` |
+| Show Context Collection | `Alt+Shift+K, O` | `Alt+Shift+K, O` |
+| Copy All from Collection | `Alt+Shift+K, F` | `Alt+Shift+K, F` |
+| Copy Relative Path | `Alt+Shift+K, R` | `Alt+Shift+K, R` |
+| Copy Absolute Path | `Alt+Shift+K, P` | `Alt+Shift+K, P` |
+| Copy with Code Content | `Alt+Shift+K, B` | `Alt+Shift+K, B` |
+| Copy Git Permalink | `Alt+Shift+K, L` | `Alt+Shift+K, L` |
 
-> 可在 `Settings` → `Keymap` 中自定义快捷键。
+> 所有命令共用 `Alt+Shift+K` 前缀（macOS 上为 `⌥⇧K`）：先按下并松开 `Alt+Shift+K`，再按命令字母。可在 `Settings` → `Keymap` 中自定义快捷键。
 
 ### 上下文菜单
 
@@ -141,7 +148,7 @@ HEAD 中不存在的路径，包括新文件或重命名后的目标路径，无
 
 ### 历史、通知与状态
 
-- 成功的标准路径/代码复制和 Git 永久链接复制都会将条目添加到项目专属历史的开头。按下 `Ctrl+Alt+H` 可打开已存储的条目，选择条目会再次复制其完整内容。
+- 成功的标准路径/代码复制和 Git 永久链接复制都会将条目添加到项目专属历史的开头。按下 `Alt+Shift+K, H` 可打开已存储的条目，选择条目会再次复制其完整内容。
 - 复制通知默认启用，也可以关闭。标准路径/代码复制和 Git 永久链接复制后会显示通知。
 - 只有在已启用通知且受支持的 UI 环境中执行的标准复制才会增加评价计数器；通知关闭、测试、headless 和不受支持的环境都不会改变计数器或提示状态。在一个 IDE 会话中的第 10 次有效复制可为当前插件版本显示一次非模态的诚实评价请求。**Review on Marketplace** 会打开官方 [Marketplace 评价页面](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews)，**Later** 会跳过当前版本后续请求，**Don't ask again** 会永久禁止提示。通知关闭时，只提供设置中的被动链接。
 - 精确的会话次数不会持久化。仅在本地非漫游的 `copySelectionReview.xml` 中保存 `lastPromptedVersion`、永久禁止选择及是否打开过 Marketplace 页面；不会涉及复制内容、文件数据、分析、评价结果、遥测或自动网络请求。

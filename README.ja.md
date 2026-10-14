@@ -16,11 +16,11 @@ ClaudeやChatGPTなどのAIコーディングアシスタントにコードの�
 
 ## 機能
 
-- **ショートカットでコピー** — `Ctrl+Alt+C`でファイルパスと行番号をすぐにコピー
+- **ショートカットでコピー** — `Alt+Shift+K, C`でファイルパスと行番号をすぐにコピー
 - **相対パスまたは絶対パス** — プロジェクト相対パスと絶対パスから選択可能
 - **柔軟な出力形式** — Claude Code参照、Path:Line出力、カスタムテンプレートに対応
 - **コード内容を含める** — 選択したコードをMarkdownコードブロックとして追加可能
-- **コピー履歴** — `Ctrl+Alt+H`で最近のコピー履歴を表示
+- **コピー履歴** — `Alt+Shift+K, H`で最近のコピー履歴を表示
 - **セッションコンテキストコレクション** — 複数ファイルを追加し、コレクションを開いて固定されたキャプチャを確認・整理してから全体をコピー
 - **GitHub/GitLabパーマリンク** — 標準結果と同じローカル履歴とコピーフィードバック付きで、選択した行のGitパーマリンクをコピー
 - **コピーのフィードバック** — コピーした行のマーク、任意の通知、ステータスバーへの最新コピー内容の保持
@@ -83,10 +83,17 @@ gh attestation verify copy-selection-context-1.2.0-signed.zip \
 
 | アクション | Windows/Linux | macOS |
 |------------|---------------|-------|
-| Copy Selection Context | `Ctrl+Alt+C` | `Cmd+Alt+C` |
-| Show Copy History | `Ctrl+Alt+H` | `Ctrl+Alt+H` |
+| Copy Selection Context | `Alt+Shift+K, C` | `Alt+Shift+K, C` |
+| Show Copy History | `Alt+Shift+K, H` | `Alt+Shift+K, H` |
+| Add to Context Collection | `Alt+Shift+K, A` | `Alt+Shift+K, A` |
+| Show Context Collection | `Alt+Shift+K, O` | `Alt+Shift+K, O` |
+| Copy All from Collection | `Alt+Shift+K, F` | `Alt+Shift+K, F` |
+| Copy Relative Path | `Alt+Shift+K, R` | `Alt+Shift+K, R` |
+| Copy Absolute Path | `Alt+Shift+K, P` | `Alt+Shift+K, P` |
+| Copy with Code Content | `Alt+Shift+K, B` | `Alt+Shift+K, B` |
+| Copy Git Permalink | `Alt+Shift+K, L` | `Alt+Shift+K, L` |
 
-> ショートカットは`Settings` → `Keymap`で変更できます。
+> すべてのコマンドは`Alt+Shift+K`プレフィックス（macOSでは`⌥⇧K`）を共有します。`Alt+Shift+K`を押して離してから、コマンドの文字を押してください。ショートカットは`Settings` → `Keymap`で変更できます。
 
 ### コンテキストメニュー
 
@@ -141,7 +148,7 @@ fun calculateTotal(items: List<Item>): Double {
 
 ### 履歴、通知、ステータス
 
-- 成功した標準のパス/コードコピーとGitパーマリンクコピーは、プロジェクト別履歴の先頭に項目を追加します。`Ctrl+Alt+H`で保存済みの項目を開き、選択すると完全な内容を再度コピーします。
+- 成功した標準のパス/コードコピーとGitパーマリンクコピーは、プロジェクト別履歴の先頭に項目を追加します。`Alt+Shift+K, H`で保存済みの項目を開き、選択すると完全な内容を再度コピーします。
 - コピー通知はデフォルトで有効ですが、無効にできます。標準のパス/コードコピーとGitパーマリンクコピーの後に表示されます。
 - 通知が有効な対応UI環境で行われた標準コピーだけがレビュー用カウンターを増やし、通知無効・テスト・headless・非対応環境ではカウンターとプロンプト状態のどちらも変更しません。1つのIDEセッションで10回目の有効なコピーになると、そのプラグインバージョンで1回だけ非モーダルの正直なレビュー依頼を表示できます。**Review on Marketplace** は公式の [Marketplaceレビューページ](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews)を開き、**Later** は現在のバージョンで以後表示せず、**Don't ask again** は永久に表示を抑止します。通知を無効にした場合は、設定の受動的なリンクだけを利用できます。
 - 正確なセッション回数は永続化しません。ローカルで非ローミングの `copySelectionReview.xml` には `lastPromptedVersion`、永久抑止の選択、Marketplaceページを開いたかどうかだけを保存し、コピー内容、ファイルデータ、分析、レビュー結果、テレメトリ、自動ネットワークリクエストは一切関与しません。

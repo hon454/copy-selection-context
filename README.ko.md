@@ -16,11 +16,11 @@ AI 코딩 어시스턴트(Claude, ChatGPT 등)에게 코드 컨텍스트를 전�
 
 ## 기능
 
-- **원클릭 복사** — `Ctrl+Alt+C` 하나로 파일 경로 + 라인 번호 복사
+- **원클릭 복사** — `Alt+Shift+K, C` 하나로 파일 경로 + 라인 번호 복사
 - **상대/절대 경로** — 프로젝트 상대 경로 또는 절대 경로 선택
 - **유연한 출력 형식** — Claude Code 참조, Path:Line 출력, 사용자 정의 템플릿 지원
 - **코드 내용 포함** — 마크다운 코드 블록으로 선택한 코드까지 포함 가능
-- **복사 이력** — `Ctrl+Alt+H`로 최근 복사 이력 조회
+- **복사 이력** — `Alt+Shift+K, H`로 최근 복사 이력 조회
 - **세션 컨텍스트 컬렉션** — 여러 파일을 추가하고 컬렉션을 열어 고정된 캡처를 검토·정리한 뒤 전체 출력 복사
 - **GitHub/GitLab 퍼머링크** — 일반 결과와 동일한 로컬 이력 및 복사 피드백과 함께 선택 라인의 Git 퍼머링크 복사
 - **복사 피드백** — 복사한 라인 표시, 선택적 알림, 상태 표시줄의 마지막 복사 내용 제공
@@ -83,10 +83,17 @@ gh attestation verify copy-selection-context-1.2.0-signed.zip \
 
 | 액션 | Windows/Linux | macOS |
 |------|---------------|-------|
-| Copy Selection Context | `Ctrl+Alt+C` | `Cmd+Alt+C` |
-| 복사 이력 보기 | `Ctrl+Alt+H` | `Ctrl+Alt+H` |
+| Copy Selection Context | `Alt+Shift+K, C` | `Alt+Shift+K, C` |
+| 복사 이력 보기 | `Alt+Shift+K, H` | `Alt+Shift+K, H` |
+| 컨텍스트 컬렉션에 추가 | `Alt+Shift+K, A` | `Alt+Shift+K, A` |
+| 컨텍스트 컬렉션 열기 | `Alt+Shift+K, O` | `Alt+Shift+K, O` |
+| 컬렉션 전체 복사 | `Alt+Shift+K, F` | `Alt+Shift+K, F` |
+| 상대 경로 복사 | `Alt+Shift+K, R` | `Alt+Shift+K, R` |
+| 절대 경로 복사 | `Alt+Shift+K, P` | `Alt+Shift+K, P` |
+| 코드 포함 복사 | `Alt+Shift+K, B` | `Alt+Shift+K, B` |
+| Git 퍼머링크 복사 | `Alt+Shift+K, L` | `Alt+Shift+K, L` |
 
-> 단축키는 `Settings` → `Keymap`에서 변경할 수 있습니다.
+> 모든 명령은 `Alt+Shift+K` 접두키(macOS에서는 `⌥⇧K`)를 공유합니다. `Alt+Shift+K`를 누른 뒤 손을 떼고 명령 글자를 누르세요. 단축키는 `Settings` → `Keymap`에서 변경할 수 있습니다.
 
 ### 컨텍스트 메뉴
 
@@ -141,7 +148,7 @@ fun calculateTotal(items: List<Item>): Double {
 
 ### 이력, 알림 및 상태 표시
 
-- 성공한 일반 경로/코드 복사와 Git 퍼머링크 복사는 프로젝트별 이력 앞에 항목을 추가합니다. `Ctrl+Alt+H`를 누르면 저장된 항목을 볼 수 있고, 항목을 선택하면 전체 내용을 다시 복사합니다.
+- 성공한 일반 경로/코드 복사와 Git 퍼머링크 복사는 프로젝트별 이력 앞에 항목을 추가합니다. `Alt+Shift+K, H`를 누르면 저장된 항목을 볼 수 있고, 항목을 선택하면 전체 내용을 다시 복사합니다.
 - 복사 알림은 기본으로 켜져 있으며 끌 수 있습니다. 일반 경로/코드 복사와 Git 퍼머링크 복사 후에 표시됩니다.
 - 알림이 켜진 지원 UI 환경에서 실행한 일반 복사만 리뷰 카운터를 증가시키며, 알림 비활성·테스트·headless·미지원 환경에서는 카운터와 프롬프트 상태가 모두 변경되지 않습니다. 한 IDE 세션의 10번째 유효 복사에서 해당 플러그인 버전에 한 번만 비모달 솔직한 리뷰 요청을 표시할 수 있습니다. **Review on Marketplace**는 공식 [Marketplace 리뷰 페이지](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews)를 열고, **Later**는 현재 버전의 남은 요청을 건너뛰며, **Don't ask again**은 요청을 영구적으로 억제합니다. 알림을 끄면 설정의 수동 링크만 사용할 수 있습니다.
 - 정확한 세션 횟수는 저장하지 않습니다. 로컬 비로밍 `copySelectionReview.xml`에는 `lastPromptedVersion`, 영구 억제 선택, Marketplace 페이지를 열었는지만 보관하며 복사 내용, 파일 데이터, 분석, 리뷰 결과, 텔레메트리 또는 자동 네트워크 요청은 전혀 관여하지 않습니다.
