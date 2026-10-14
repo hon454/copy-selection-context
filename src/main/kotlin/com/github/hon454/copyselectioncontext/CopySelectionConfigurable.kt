@@ -1,8 +1,6 @@
 package com.github.hon454.copyselectioncontext
 
 import com.intellij.ide.DataManager
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.SearchableConfigurable
@@ -16,6 +14,8 @@ import javax.swing.JCheckBox
 import javax.swing.JComboBox
 import javax.swing.JLabel
 import javax.swing.JTextArea
+import javax.swing.SwingUtilities
+import javax.swing.Timer
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 
@@ -303,13 +303,15 @@ class CopySelectionConfigurable internal constructor(
         val component = source ?: return
         val settingsDialog = Settings.KEY.getData(DataManager.getInstance().getDataContext(component)) ?: return
         val keymap = settingsDialog.find(KEYMAP_CONFIGURABLE_ID) ?: return
-        // Settings.select(configurable, option) applies the filter before the page is shown, and showing the
-        // page then resets it, so apply the filter on the next EDT turn instead.
+        // Settings.select(configurable, option) applies the filter right away, but the Settings search
+        // highlighter then resets the newly shown page to the (empty) dialog search text about 200-300 ms
+        // later. Apply the filter once after that pass, and only while the Settings dialog is still open.
         settingsDialog.select(keymap).doWhenDone {
-            ApplicationManager.getApplication().invokeLater(
-                { (keymap as? SearchableConfigurable)?.enableSearch(KEYMAP_FILTER)?.run() },
-                ModalityState.stateForComponent(component),
-            )
+            Timer(KEYMAP_FILTER_DELAY_MS) {
+                if (SwingUtilities.getWindowAncestor(component)?.isDisplayable == true) {
+                    (keymap as? SearchableConfigurable)?.enableSearch(KEYMAP_FILTER)?.run()
+                }
+            }.apply { isRepeats = false }.start()
         }
     }
 
@@ -319,6 +321,7 @@ class CopySelectionConfigurable internal constructor(
         internal const val ANALYTICS_ROWS = 8
         private const val TEMPLATE_COLUMNS = 60
         private const val KEYMAP_CONFIGURABLE_ID = "preferences.keymap"
+        private const val KEYMAP_FILTER_DELAY_MS = 500
 
         // Keymap search also matches action IDs, so this lists every plugin action in any UI language.
         private const val KEYMAP_FILTER = "CopySelectionContext"
