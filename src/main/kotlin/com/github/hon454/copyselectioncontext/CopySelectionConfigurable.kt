@@ -1,10 +1,13 @@
 package com.github.hon454.copyselectioncontext
 
+import com.intellij.ide.DataManager
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.options.ex.Settings
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.dsl.builder.*
+import java.awt.Component
 import javax.swing.JComponent
 import javax.swing.JCheckBox
 import javax.swing.JComboBox
@@ -154,6 +157,11 @@ class CopySelectionConfigurable internal constructor(
                         openMarketplaceReviewPage()
                     }
                 }
+                row {
+                    link(CopySelectionBundle.message("settings.keymap.configure")) { event ->
+                        openKeymapSettings(event.source as? Component)
+                    }
+                }
             }
             group(CopySelectionBundle.message("settings.history.size")) {
                 row(CopySelectionBundle.message("settings.history.size.label")) {
@@ -288,11 +296,23 @@ class CopySelectionConfigurable internal constructor(
     private fun isTemplateFormatSelected() =
         outputFormatCombo?.selectedItem == OutputFormatOption.TEMPLATE
 
+    private fun openKeymapSettings(source: Component?) {
+        val settingsDialog = source
+            ?.let { Settings.KEY.getData(DataManager.getInstance().getDataContext(it)) }
+            ?: return
+        val keymap = settingsDialog.find(KEYMAP_CONFIGURABLE_ID) ?: return
+        settingsDialog.select(keymap, KEYMAP_FILTER)
+    }
+
     companion object {
         internal const val TEMPLATE_EDITOR_ROWS = 6
         internal const val PREVIEW_ROWS = 6
         internal const val ANALYTICS_ROWS = 8
         private const val TEMPLATE_COLUMNS = 60
+        private const val KEYMAP_CONFIGURABLE_ID = "preferences.keymap"
+
+        // Keymap search also matches action IDs, so this lists every plugin action in any UI language.
+        private const val KEYMAP_FILTER = "CopySelectionContext"
 
         private val SAMPLE_CONTEXT = FormatContext(
             path = "src/main/kotlin/Example.kt",
