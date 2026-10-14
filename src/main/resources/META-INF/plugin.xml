@@ -7,25 +7,26 @@
 Copy file paths, line numbers, and code to clipboard for AI assistant workflows.
 <br/>
 <br/>
-One shortcut (<code>Ctrl+Alt+C</code> / <code>Cmd+Alt+C</code>) copies your current selection — or the current line when nothing is selected — in a format ready to paste into Claude, ChatGPT, or any AI coding assistant.
+One shortcut (<code>Ctrl+Alt+Shift+X</code> / <code>Cmd+Alt+Shift+X</code>) copies your current selection — or the current line when nothing is selected — in a format ready to paste into Claude, ChatGPT, or any AI coding assistant.
 <br/>
 <br/>
 <h3>Features</h3>
 <ul>
-    <li><strong>One-shortcut copy</strong> — <code>Ctrl+Alt+C</code> (Windows/Linux) / <code>Cmd+Alt+C</code> (macOS) copies path + line numbers based on your settings</li>
+    <li><strong>One-shortcut copy</strong> — <code>Ctrl+Alt+Shift+X</code> (Windows/Linux) / <code>Cmd+Alt+Shift+X</code> (macOS) copies path + line numbers based on your settings</li>
     <li><strong>Relative or absolute paths</strong> — choose project-relative or full absolute paths per your workflow</li>
     <li><strong>Code content as markdown</strong> — include the selected code as a fenced markdown code block with language tag</li>
     <li><strong>Session context collection</strong> — Add selections from several files, open the Context Collection tool window, review frozen code and final output, reorder or remove captures, then Copy All. Collection actions are assignable in Keymap without new default shortcuts.</li>
     <li><strong>Captured snapshots</strong> — Source edits, renames and deletion do not rewrite captured code. Built-in output labels multiple versions of the same range; custom templates keep their substitutions and may need confirmation.</li>
     <li><strong>Session privacy and fixed limits</strong> — Collections stay in project memory until project/plugin close, survive tool-window hiding and copying, and never enter persistent copy history. Clear All requires confirmation. Limits: 100 items, 256 KiB raw UTF-8 code per item, 2 MiB raw total; final output above 256 KiB needs confirmation and above 4 MiB is blocked. No truncation. OS and external clipboard history are separate.</li>
-    <li><strong>Private copy history</strong> — <code>Ctrl+Alt+H</code> opens locally stored history with clear-all and disable controls</li>
+    <li><strong>Private copy history</strong> — Show Copy History opens locally stored history with clear-all and disable controls</li>
     <li><strong>GitHub/GitLab permalink</strong> — generate a permanent link to the exact lines in your remote repository</li>
     <li><strong>Template-based output formatting</strong> — choose from built-in presets (Claude Code, Path:Line, Custom) or define your own template with variable placeholders</li>
     <li><strong>Live template preview</strong> — settings UI shows a real-time preview and validates template variables before you save</li>
     <li><strong>Smart line handling</strong> — copies the current line number when no text is selected, so the shortcut always produces useful output</li>
     <li><strong>Status bar widget</strong> — displays the last copied text in the IDE status bar; click it to copy again</li>
     <li><strong>Configurable settings</strong> — path type, output format, code trimming, notification toggle, and local history size (set to 0 to disable) all adjustable at <em>Settings → Tools → Copy Selection Context</em></li>
-    <li><strong>Context menu integration</strong> — all actions available in the editor right-click menu under the Copy Selection Context submenu</li>
+    <li><strong>Context menu integration</strong> — Copy Selection Context runs directly from the editor right-click menu; every other action is in the Copy Selection Context Tools submenu</li>
+    <li><strong>Your own shortcuts</strong> — only the main copy has a default shortcut; assign others in <em>Settings → Keymap</em> or via <em>Configure shortcuts in Keymap…</em> in the plugin settings</li>
 </ul>
 <h3>Output Format</h3>
 Output follows the <code>@path#Lline</code> convention:
@@ -70,133 +71,52 @@ Source and issue tracker: <a href="https://github.com/hon454/copy-selection-cont
     </extensions>
     
     <actions>
-        <!-- Submenu group for all Copy Selection Context actions -->
+        <!-- Main Action: Copy Selection Context (settings-driven), shown directly in the editor popup -->
+        <action id="CopySelectionContext.Copy"
+                class="com.github.hon454.copyselectioncontext.CopySelectionContextAction"
+                icon="/icons/copyContext.svg">
+            <keyboard-shortcut keymap="$default" first-keystroke="control alt shift X"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift X" replace-all="true"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift X" replace-all="true"/>
+            <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift X" replace-all="true"/>
+            <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift X" replace-all="true"/>
+            <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift X" replace-all="true"/>
+            <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift X" replace-all="true"/>
+            <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift X" replace-all="true"/>
+            <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift X" replace-all="true"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="before" relative-to-action="CopySelectionContextGroup"/>
+        </action>
+
+        <!-- Copy Selection Context Tools submenu: no default shortcuts; users assign them in Keymap -->
         <group id="CopySelectionContextGroup"
                popup="true"
                icon="/icons/copyContext.svg">
 
-            <!-- Main Action: Copy Selection Context (settings-driven) -->
-            <action id="CopySelectionContext.Copy"
-                    class="com.github.hon454.copyselectioncontext.CopySelectionContextAction"
-                    icon="/icons/copyContext.svg">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="C"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="C" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="C" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="C" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="C" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="C" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="C" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="C" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="C" replace-all="true"/>
-            </action>
-
-            <separator/>
-
             <action id="CopySelectionContext.ShowHistory"
-                    class="com.github.hon454.copyselectioncontext.ShowCopyHistoryAction">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="H"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="H" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="H" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="H" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="H" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="H" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="H" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="H" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="H" replace-all="true"/>
-            </action>
+                    class="com.github.hon454.copyselectioncontext.ShowCopyHistoryAction"/>
 
             <action id="CopySelectionContext.ShowCollection"
-                    class="com.github.hon454.copyselectioncontext.ShowContextCollectionAction">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="O"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="O" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="O" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="O" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="O" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="O" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="O" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="O" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="O" replace-all="true"/>
-            </action>
+                    class="com.github.hon454.copyselectioncontext.ShowContextCollectionAction"/>
             <action id="CopySelectionContext.CopyAllCollection"
-                    class="com.github.hon454.copyselectioncontext.CopyAllContextCollectionAction">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="F"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="F" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="F" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="F" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="F" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="F" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="F" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="F" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="F" replace-all="true"/>
-            </action>
+                    class="com.github.hon454.copyselectioncontext.CopyAllContextCollectionAction"/>
             <action id="CopySelectionContext.AddToCollection"
-                    class="com.github.hon454.copyselectioncontext.AddToContextCollectionAction">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="A"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="A" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="A" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="A" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="A" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="A" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="A" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="A" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="A" replace-all="true"/>
-            </action>
+                    class="com.github.hon454.copyselectioncontext.AddToContextCollectionAction"/>
 
             <!-- Explicit copy actions -->
             <action id="CopySelectionContext.CopyRelativePath"
                     class="com.github.hon454.copyselectioncontext.CopyRelativePathAction"
-                    icon="/icons/copyRelative.svg">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="R"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="R" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="R" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="R" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="R" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="R" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="R" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="R" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="R" replace-all="true"/>
-            </action>
+                    icon="/icons/copyRelative.svg"/>
 
             <action id="CopySelectionContext.CopyAbsolutePath"
                     class="com.github.hon454.copyselectioncontext.CopyAbsolutePathAction"
-                    icon="/icons/copyAbsolute.svg">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="P"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="P" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="P" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="P" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="P" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="P" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="P" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="P" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="P" replace-all="true"/>
-            </action>
+                    icon="/icons/copyAbsolute.svg"/>
 
             <action id="CopySelectionContext.CopyWithCodeContent"
                     class="com.github.hon454.copyselectioncontext.CopyWithCodeContentAction"
-                    icon="/icons/copyWithCode.svg">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="B"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="B" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="B" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="B" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="B" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="B" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="B" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="B" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="B" replace-all="true"/>
-            </action>
+                    icon="/icons/copyWithCode.svg"/>
 
             <action id="CopySelectionContext.CopyGitPermalink"
-                    class="com.github.hon454.copyselectioncontext.CopyGitPermalinkAction">
-                <keyboard-shortcut keymap="$default" first-keystroke="control alt shift G" second-keystroke="L"/>
-                <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift G" second-keystroke="L" replace-all="true"/>
-                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift G" second-keystroke="L" replace-all="true"/>
-                <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift G" second-keystroke="L" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift G" second-keystroke="L" replace-all="true"/>
-                <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift G" second-keystroke="L" replace-all="true"/>
-                <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift G" second-keystroke="L" replace-all="true"/>
-                <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift G" second-keystroke="L" replace-all="true"/>
-                <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift G" second-keystroke="L" replace-all="true"/>
-            </action>
+                    class="com.github.hon454.copyselectioncontext.CopyGitPermalinkAction"/>
 
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </group>

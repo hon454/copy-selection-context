@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Open Keymap filtered to the plugin's actions from **Configure shortcuts in Keymap…** in Settings → Tools → Copy Selection Context
+
+### Changed
+
+- Copy Selection Context now has the single-stroke default `Ctrl+Alt+Shift+X` (`Cmd+Alt+Shift+X` on macOS), free in every bundled keymap
+- Show Copy Selection Context directly in the editor context menu and rename the submenu for the remaining actions to Copy Selection Context Tools
+
+### Removed
+
+- The `Ctrl+Alt+Shift+G` / `Cmd+Alt+Shift+G` two-stroke defaults for all actions; shortcuts you assigned yourself in Keymap are kept
+
+### Fixed
+
+- Documentation and the Marketplace description advertised `Ctrl+Alt+C` and `Ctrl+Alt+H`, which v1.7.0 had already replaced
+
 ## [1.8.1] - 2026-10-05
 
 ### Changed

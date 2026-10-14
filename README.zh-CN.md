@@ -16,11 +16,11 @@
 
 ## 功能
 
-- **快捷键复制** — 按下 `Ctrl+Alt+C`，立即复制文件路径和行号
+- **快捷键复制** — 按下 `Ctrl+Alt+Shift+X`，立即复制文件路径和行号
 - **相对或绝对路径** — 可选择项目相对路径或绝对路径
 - **灵活的输出格式** — 支持 Claude Code 引用、Path:Line 输出或自定义模板
 - **包含代码内容** — 可选择将所选代码以 Markdown 代码块形式包含在内
-- **复制历史** — 按下 `Ctrl+Alt+H` 浏览最近的复制历史
+- **复制历史** — 从 Copy Selection Context Tools 子菜单浏览最近的复制历史
 - **会话上下文集合** — 添加多个文件的选择内容，打开集合以检查和整理固定捕获，然后复制完整输出
 - **GitHub/GitLab 永久链接** — 复制所选行的 Git 永久链接，并获得与标准结果相同的本地历史和复制反馈
 - **复制反馈** — 标记已复制的行、显示可选通知，并在状态栏保留最后一次复制内容
@@ -29,7 +29,7 @@
 - **准确的选择结束位置** — 使用 IntelliJ 的 `selectionEnd - 1` 作为最后包含的 offset，避免多算尾随行
 - **本地化 IDE 界面** — 操作、设置、通知、历史、状态和格式标签支持英语、韩语、日语、简体中文和繁体中文
 - **智能行号处理** — 未选择文本时复制光标所在行的行号
-- **上下文菜单** — 可从编辑器右键菜单访问所有操作
+- **上下文菜单** — 从编辑器右键菜单直接运行主复制操作，其他操作位于 Copy Selection Context Tools 子菜单
 - **跨平台** — 支持 Windows、macOS 和 Linux
 
 ## 安装
@@ -83,18 +83,16 @@ gh attestation verify copy-selection-context-1.2.0-signed.zip \
 
 | 操作 | Windows/Linux | macOS |
 |------|---------------|-------|
-| Copy Selection Context | `Ctrl+Alt+C` | `Cmd+Alt+C` |
-| Show Copy History | `Ctrl+Alt+H` | `Ctrl+Alt+H` |
+| Copy Selection Context | `Ctrl+Alt+Shift+X` | `Cmd+Alt+Shift+X` |
 
-> 可在 `Settings` → `Keymap` 中自定义快捷键。
+> 只有主复制操作有默认快捷键。可在 `Settings` → `Keymap` 中，或通过插件设置中的 **Configure shortcuts in Keymap…** 为其他操作分配快捷键。
 
 ### 上下文菜单
 
-在编辑器中右键单击 → **Copy Selection Context** 子菜单：
+在编辑器中右键单击 → **Copy Selection Context** 会按设置立即复制。其他操作位于 **Copy Selection Context Tools** 子菜单：
 
 | 操作 | 说明 |
 |------|------|
-| Copy Selection Context | 根据设置复制路径和行号（主要操作） |
 | Copy Relative Path with Line Numbers | 使用项目相对路径复制 |
 | Copy Absolute Path with Line Numbers | 使用绝对路径复制 |
 | Copy with Code Content | 复制路径、行号和代码块 |
@@ -141,7 +139,7 @@ HEAD 中不存在的路径，包括新文件或重命名后的目标路径，无
 
 ### 历史、通知与状态
 
-- 成功的标准路径/代码复制和 Git 永久链接复制都会将条目添加到项目专属历史的开头。按下 `Ctrl+Alt+H` 可打开已存储的条目，选择条目会再次复制其完整内容。
+- 成功的标准路径/代码复制和 Git 永久链接复制都会将条目添加到项目专属历史的开头。执行 **Show Copy History** 可打开已存储的条目，选择条目会再次复制其完整内容。
 - 复制通知默认启用，也可以关闭。标准路径/代码复制和 Git 永久链接复制后会显示通知。
 - 只有在已启用通知且受支持的 UI 环境中执行的标准复制才会增加评价计数器；通知关闭、测试、headless 和不受支持的环境都不会改变计数器或提示状态。在一个 IDE 会话中的第 10 次有效复制可为当前插件版本显示一次非模态的诚实评价请求。**Review on Marketplace** 会打开官方 [Marketplace 评价页面](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews)，**Later** 会跳过当前版本后续请求，**Don't ask again** 会永久禁止提示。通知关闭时，只提供设置中的被动链接。
 - 精确的会话次数不会持久化。仅在本地非漫游的 `copySelectionReview.xml` 中保存 `lastPromptedVersion`、永久禁止选择及是否打开过 Marketplace 页面；不会涉及复制内容、文件数据、分析、评价结果、遥测或自动网络请求。
@@ -159,6 +157,7 @@ HEAD 中不存在的路径，包括新文件或重命名后的目标路径，无
 - **Trim code whitespace** — 删除所含代码首尾的空白（默认关闭）
 - **Show copy notifications** — 在支持的复制操作后显示气泡通知（默认开启）
 - **Review on Marketplace** — 手动打开官方评价页面，不会强制显示提示
+- **Configure shortcuts in Keymap…** — 打开仅显示本插件操作的 Keymap，以分配自己的快捷键
 - **Copy history size** — 每个项目保留 0–100 条记录（默认：10）；设为 `0` 会禁用并清空历史
 - **Local usage analytics** — 查看和重置仅存储在本机的可选总计、输出格式和语言计数器（默认关闭；绝不传输）
 
@@ -172,7 +171,7 @@ HEAD 中不存在的路径，包括新文件或重命名后的目标路径，无
 
 ### 会话上下文集合（1.5.0 起提供）
 
-在编辑器的 Copy Selection Context 子菜单或 Find Action 中运行 **添加到上下文集合**，即可收集多个文件的选择内容。每个光标捕获其选择范围或当前行，包括尚未保存的文本，且不改变剪贴板或编辑器焦点。此操作没有默认快捷键，可在 Keymap 中分配。
+在编辑器的 Copy Selection Context Tools 子菜单或 Find Action 中运行 **添加到上下文集合**，即可收集多个文件的选择内容。每个光标捕获其选择范围或当前行，包括尚未保存的文本，且不改变剪贴板或编辑器焦点。此操作没有默认快捷键，可在 Keymap 中分配。
 
 代码、路径、文件名、语言、行范围、捕获编号和时间均固定为捕获时的值。未更改的重复捕获会跳过；代码改变后会新增独立快照。仅切换相对或绝对路径设置仍视为重复，并保留原显示路径。重命名和删除状态与捕获内容分开跟踪。
 

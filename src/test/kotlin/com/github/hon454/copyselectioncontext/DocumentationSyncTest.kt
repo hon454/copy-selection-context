@@ -64,7 +64,9 @@ class DocumentationSyncTest {
             "**Review on Marketplace**",
             "**Copy history size**",
             "**Local usage analytics**",
-            "Ctrl+Alt+H",
+            "Ctrl+Alt+Shift+X",
+            "Cmd+Alt+Shift+X",
+            "**Configure shortcuts in Keymap…**",
             "40",
             "256 KiB",
             "2 MiB",
@@ -86,9 +88,28 @@ class DocumentationSyncTest {
     }
 
     @Test
+    fun `docs advertise only the current default shortcut`() {
+        val docs = readmePaths + listOf(
+            "AGENTS.md",
+            "CLAUDE.md",
+            "CONTRIBUTING.md",
+            ".agents/architecture.md",
+            ".agents/patterns.md",
+            "src/main/resources/META-INF/plugin.xml",
+        )
+        val obsolete = listOf("Ctrl+Alt+C", "Cmd+Alt+C", "Ctrl+Alt+H", "Shift+G")
+        docs.forEach { path ->
+            val content = repositoryRoot.resolve(path).readText()
+            obsolete.forEach { shortcut ->
+                assertFalse(content.contains(shortcut), "$path must not advertise obsolete shortcut $shortcut")
+            }
+        }
+    }
+
+    @Test
     fun `collection copy descriptor and documentation retain output ordering contracts`() {
         val descriptor = repositoryRoot.resolve("src/main/resources/META-INF/plugin.xml").readText()
-        val action = Regex("""<action id="CopySelectionContext.CopyAllCollection"\s+class="[^"]+">""")
+        val action = Regex("""<action id="CopySelectionContext.CopyAllCollection"\s+class="[^"]+"\s*/?>""")
         assertTrue(action.containsMatchIn(descriptor), "Copy All must remain localized and registered")
         val contract = repositoryRoot.resolve("docs/development/context-collection-output-contract.md").readText()
         listOf("Calculating", "BlankItem", "AboveHardLimit", "262144", "4194304", "Published(feedbackFailures)",

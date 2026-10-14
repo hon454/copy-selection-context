@@ -16,11 +16,11 @@ Tired of manually typing file paths and line numbers when sharing code context w
 
 ## Features
 
-- **One-shortcut copy** — `Ctrl+Alt+C` copies file path + line numbers instantly
+- **One-shortcut copy** — `Ctrl+Alt+Shift+X` copies file path + line numbers instantly
 - **Relative or absolute paths** — Choose between project-relative or absolute paths
 - **Flexible output formats** — Use Claude Code references, Path:Line output, or a custom template
 - **Code content included** — Optionally include selected code as a markdown code block
-- **Copy history** — `Ctrl+Alt+H` to browse recent copy history
+- **Copy history** — Browse recent copy history from the Copy Selection Context Tools submenu
 - **Session context collection** — Add selections from several files, open the collection to review and organize frozen captures, then copy the complete output
 - **GitHub/GitLab permalink** — Copy a Git permalink with the same local history and copy feedback as standard results
 - **Copy feedback** — Mark the copied lines, show an optional notification, and retain the last copy in the status bar
@@ -29,7 +29,7 @@ Tired of manually typing file paths and line numbers when sharing code context w
 - **Accurate selection ends** — Treat IntelliJ's `selectionEnd - 1` as the final included offset, avoiding an extra trailing line
 - **Localized IDE UI** — Use translated actions, settings, notifications, history, status, and formatting labels in English, Korean, Japanese, Simplified Chinese, and Traditional Chinese
 - **Smart line handling** — Copies current line number when no text is selected
-- **Context menu** — Access all actions from the editor right-click menu
+- **Context menu** — Run the main copy directly from the editor right-click menu; other actions live in the Copy Selection Context Tools submenu
 - **Cross-platform** — Works on Windows, macOS, and Linux
 
 ## Installation
@@ -83,18 +83,16 @@ gh attestation verify copy-selection-context-1.2.0-signed.zip \
 
 | Action | Windows/Linux | macOS |
 |--------|---------------|-------|
-| Copy Selection Context | `Ctrl+Alt+C` | `Cmd+Alt+C` |
-| Show Copy History | `Ctrl+Alt+H` | `Ctrl+Alt+H` |
+| Copy Selection Context | `Ctrl+Alt+Shift+X` | `Cmd+Alt+Shift+X` |
 
-> Shortcuts can be customized in `Settings` → `Keymap`.
+> Only the main copy has a default shortcut. Assign shortcuts to any other action in `Settings` → `Keymap`, or click **Configure shortcuts in Keymap…** in the plugin settings.
 
 ### Context Menu
 
-Right-click in the editor → **Copy Selection Context** submenu:
+Right-click in the editor → **Copy Selection Context** copies immediately using your settings. The **Copy Selection Context Tools** submenu holds the other actions:
 
 | Action | Description |
 |--------|-------------|
-| Copy Selection Context | Copy path + lines based on settings (main action) |
 | Copy Relative Path with Line Numbers | Copy with project-relative path |
 | Copy Absolute Path with Line Numbers | Copy with absolute path |
 | Copy with Code Content | Copy path + lines + code block |
@@ -141,7 +139,7 @@ Only the latest managed copy request across projects can publish. Git queries re
 
 ### History, Notifications, and Status
 
-- Successful standard path/code and Git permalink copies prepend entries to project-specific history. `Ctrl+Alt+H` opens the stored entries, and choosing one copies its full content again.
+- Successful standard path/code and Git permalink copies prepend entries to project-specific history. **Show Copy History** opens the stored entries, and choosing one copies its full content again.
 - Copy notifications are enabled by default and can be disabled. They are shown after standard path/code copies and Git permalink copies.
 - Only standard copies made while notifications are enabled in a supported UI context advance the review counter; disabled, test, headless, and unsupported contexts leave both counter and prompt state unchanged. The tenth eligible copy in one IDE session may show one non-modal honest-review request for that plugin version. **Review on Marketplace** opens the official [Marketplace review page](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews), **Later** skips the rest of the current version, and **Don't ask again** permanently suppresses prompts. When notifications are disabled, only the passive settings link is available.
 - The exact session count is never persisted. Only `lastPromptedVersion`, permanent suppression choices, and whether the Marketplace page was opened are kept in local, non-roaming `copySelectionReview.xml`; no copied content, file data, analytics, review outcome, telemetry, or automatic network request is involved.
@@ -159,6 +157,7 @@ Only the latest managed copy request across projects can publish. Git queries re
 - **Trim code whitespace** — Remove leading and trailing whitespace from included code (off by default)
 - **Show copy notifications** — Show a balloon after supported copy actions (on by default)
 - **Review on Marketplace** — Open the official review page manually without forcing a prompt
+- **Configure shortcuts in Keymap…** — Open Keymap filtered to this plugin's actions to assign your own shortcuts
 - **Copy history size** — Keep 0–100 entries per project (default: 10); set `0` to disable and clear history
 - **Local usage analytics** — Inspect and reset opt-in total, output-format, and language counters stored only on this machine (off by default; never transmitted)
 
@@ -172,7 +171,7 @@ Configure path type, output and templates, code handling, notifications, review 
 
 ### Session context collection (available since 1.5.0)
 
-Use **Add to Context Collection** in the editor's Copy Selection Context submenu or Find Action to collect selections from several files. Every caret captures its selection or current line, including unsaved text, without changing the clipboard or moving editor focus. The action has no default shortcut and can be assigned in Keymap.
+Use **Add to Context Collection** in the editor's Copy Selection Context Tools submenu or Find Action to collect selections from several files. Every caret captures its selection or current line, including unsaved text, without changing the clipboard or moving editor focus. The action has no default shortcut and can be assigned in Keymap.
 
 Captures freeze the original code, path, filename, language, range, capture number and time. Unchanged recaptures are skipped; changed code creates a separate snapshot. Switching relative/absolute path preferences alone remains a duplicate and preserves the original display path. Rename/delete status is tracked separately from captured content.
 
