@@ -64,7 +64,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 
 | File | Role |
 |------|------|
-| `CopySelectionContextAction.kt` | Main unified action (`Ctrl+Alt+C` shortcut) |
+| `CopySelectionContextAction.kt` | Main unified action (`Ctrl+Alt+Shift+X` / `Cmd+Alt+Shift+X`, the only default shortcut) |
 | `CopySelectionBaseAction.kt` / `CopyResultPublisher.kt` | Dumb-aware standard formatting that fixes the code-capture policy before reading caret payloads, with BGT presentation updates plus the project-scoped, policy-driven publisher for clipboard, analytics, highlighting, history, notifications, status, review accounting, and cross-action ordering |
 | `OutputFormatter.kt` / `TemplateFormatter.kt` | Built-in Claude Code and Path:Line formats plus custom templates |
 | `ContextCollectionService.kt` / `ContextCollectionStore.kt` / `ContextCollectionItem.kt` | Session-only immutable captures, bounded atomic additions, revisions and mutations |

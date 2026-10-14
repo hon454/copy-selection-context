@@ -16,11 +16,11 @@ AI 코딩 어시스턴트(Claude, ChatGPT 등)에게 코드 컨텍스트를 전�
 
 ## 기능
 
-- **원클릭 복사** — `Ctrl+Alt+C` 하나로 파일 경로 + 라인 번호 복사
+- **원클릭 복사** — `Ctrl+Alt+Shift+X` 하나로 파일 경로 + 라인 번호 복사
 - **상대/절대 경로** — 프로젝트 상대 경로 또는 절대 경로 선택
 - **유연한 출력 형식** — Claude Code 참조, Path:Line 출력, 사용자 정의 템플릿 지원
 - **코드 내용 포함** — 마크다운 코드 블록으로 선택한 코드까지 포함 가능
-- **복사 이력** — `Ctrl+Alt+H`로 최근 복사 이력 조회
+- **복사 이력** — Copy Selection Context Tools 서브메뉴에서 최근 복사 이력 조회
 - **세션 컨텍스트 컬렉션** — 여러 파일을 추가하고 컬렉션을 열어 고정된 캡처를 검토·정리한 뒤 전체 출력 복사
 - **GitHub/GitLab 퍼머링크** — 일반 결과와 동일한 로컬 이력 및 복사 피드백과 함께 선택 라인의 Git 퍼머링크 복사
 - **복사 피드백** — 복사한 라인 표시, 선택적 알림, 상태 표시줄의 마지막 복사 내용 제공
@@ -29,7 +29,7 @@ AI 코딩 어시스턴트(Claude, ChatGPT 등)에게 코드 컨텍스트를 전�
 - **정확한 선택 끝 처리** — IntelliJ의 `selectionEnd - 1`을 마지막 포함 offset으로 사용해 불필요한 다음 줄 제외
 - **로컬라이즈된 IDE UI** — 액션, 설정, 알림, 이력, 상태, 형식 이름을 영어, 한국어, 일본어, 중국어 간체 및 번체로 제공
 - **스마트 라인 처리** — 선택 없이 커서만 있으면 현재 줄 번호를 복사
-- **컨텍스트 메뉴** — 에디터 우클릭 메뉴에서 모든 액션 접근
+- **컨텍스트 메뉴** — 에디터 우클릭 메뉴에서 메인 복사를 바로 실행하고, 나머지 액션은 Copy Selection Context Tools 서브메뉴에서 사용
 - **크로스 플랫폼** — Windows, macOS, Linux 모두 지원
 
 ## 설치
@@ -83,18 +83,16 @@ gh attestation verify copy-selection-context-1.2.0-signed.zip \
 
 | 액션 | Windows/Linux | macOS |
 |------|---------------|-------|
-| Copy Selection Context | `Ctrl+Alt+C` | `Cmd+Alt+C` |
-| 복사 이력 보기 | `Ctrl+Alt+H` | `Ctrl+Alt+H` |
+| Copy Selection Context | `Ctrl+Alt+Shift+X` | `Cmd+Alt+Shift+X` |
 
-> 단축키는 `Settings` → `Keymap`에서 변경할 수 있습니다.
+> 기본 단축키는 메인 복사에만 있습니다. 다른 액션의 단축키는 `Settings` → `Keymap`에서 지정하거나, 플러그인 설정의 **Configure shortcuts in Keymap…** 링크를 이용하세요.
 
 ### 컨텍스트 메뉴
 
-에디터에서 우클릭 → **Copy Selection Context** 서브메뉴에서 개별 액션 선택:
+에디터에서 우클릭 → **Copy Selection Context**를 누르면 설정에 따라 바로 복사합니다. 나머지 액션은 **Copy Selection Context Tools** 서브메뉴에 있습니다:
 
 | 액션 | 설명 |
 |------|------|
-| Copy Selection Context | 설정에 따라 경로 + 라인 복사 (메인 액션) |
 | Copy Relative Path with Line Numbers | 프로젝트 상대 경로로 복사 |
 | Copy Absolute Path with Line Numbers | 절대 경로로 복사 |
 | Copy with Code Content | 경로 + 라인 + 코드 블록 복사 |
@@ -141,7 +139,7 @@ fun calculateTotal(items: List<Item>): Double {
 
 ### 이력, 알림 및 상태 표시
 
-- 성공한 일반 경로/코드 복사와 Git 퍼머링크 복사는 프로젝트별 이력 앞에 항목을 추가합니다. `Ctrl+Alt+H`를 누르면 저장된 항목을 볼 수 있고, 항목을 선택하면 전체 내용을 다시 복사합니다.
+- 성공한 일반 경로/코드 복사와 Git 퍼머링크 복사는 프로젝트별 이력 앞에 항목을 추가합니다. **Show Copy History**를 실행하면 저장된 항목을 볼 수 있고, 항목을 선택하면 전체 내용을 다시 복사합니다.
 - 복사 알림은 기본으로 켜져 있으며 끌 수 있습니다. 일반 경로/코드 복사와 Git 퍼머링크 복사 후에 표시됩니다.
 - 알림이 켜진 지원 UI 환경에서 실행한 일반 복사만 리뷰 카운터를 증가시키며, 알림 비활성·테스트·headless·미지원 환경에서는 카운터와 프롬프트 상태가 모두 변경되지 않습니다. 한 IDE 세션의 10번째 유효 복사에서 해당 플러그인 버전에 한 번만 비모달 솔직한 리뷰 요청을 표시할 수 있습니다. **Review on Marketplace**는 공식 [Marketplace 리뷰 페이지](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews)를 열고, **Later**는 현재 버전의 남은 요청을 건너뛰며, **Don't ask again**은 요청을 영구적으로 억제합니다. 알림을 끄면 설정의 수동 링크만 사용할 수 있습니다.
 - 정확한 세션 횟수는 저장하지 않습니다. 로컬 비로밍 `copySelectionReview.xml`에는 `lastPromptedVersion`, 영구 억제 선택, Marketplace 페이지를 열었는지만 보관하며 복사 내용, 파일 데이터, 분석, 리뷰 결과, 텔레메트리 또는 자동 네트워크 요청은 전혀 관여하지 않습니다.
@@ -159,6 +157,7 @@ fun calculateTotal(items: List<Item>): Double {
 - **Trim code whitespace** — 포함한 코드 앞뒤의 공백 제거 (기본: 끔)
 - **Show copy notifications** — 지원하는 복사 액션 후 풍선 알림 표시 (기본: 켬)
 - **Review on Marketplace** — 프롬프트를 강제로 표시하지 않고 공식 리뷰 페이지를 수동으로 열기
+- **Configure shortcuts in Keymap…** — 이 플러그인 액션만 걸러진 Keymap을 열어 원하는 단축키 지정
 - **Copy history size** — 프로젝트별 항목 0~100개 보관 (기본: 10), `0`이면 이력을 비활성화하고 삭제
 - **Local usage analytics** — 이 기기에만 저장되는 선택적 전체, 출력 형식 및 언어 카운터 확인·초기화 (기본: 끔, 절대 전송하지 않음)
 
@@ -172,7 +171,7 @@ fun calculateTotal(items: List<Item>): Double {
 
 ### 세션 컨텍스트 컬렉션 (1.5.0부터 제공)
 
-에디터의 Copy Selection Context 하위 메뉴 또는 Find Action에서 **컨텍스트 컬렉션에 추가**를 실행하면 여러 파일의 선택 영역을 수집할 수 있습니다. 각 커서의 선택 영역이나 현재 줄을 저장하지 않은 내용까지 캡처하며, 클립보드와 에디터 포커스는 그대로 유지합니다. 기본 단축키는 없으며 Keymap에서 지정할 수 있습니다.
+에디터의 Copy Selection Context Tools 하위 메뉴 또는 Find Action에서 **컨텍스트 컬렉션에 추가**를 실행하면 여러 파일의 선택 영역을 수집할 수 있습니다. 각 커서의 선택 영역이나 현재 줄을 저장하지 않은 내용까지 캡처하며, 클립보드와 에디터 포커스는 그대로 유지합니다. 기본 단축키는 없으며 Keymap에서 지정할 수 있습니다.
 
 원문, 경로, 파일명, 언어, 줄 범위, 캡처 번호와 시각은 수집 당시 값으로 고정됩니다. 변경 없는 재수집은 중복으로 건너뛰고 코드가 바뀌면 별도 스냅샷을 추가합니다. 상대·절대 경로 설정만 바꾼 재수집도 중복이며 기존 표시 경로를 유지합니다. 이름 변경·삭제 상태는 캡처 내용과 별도로 추적합니다.
 

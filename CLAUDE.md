@@ -4,17 +4,20 @@
 > **Deep reference**: `.agents/` directory — architecture details, code patterns, gotchas.
 > Do NOT duplicate information already in AGENTS.md. Refer there first.
 
-## Testing (Manual QA Only)
+## Testing
 
-No automated tests. Run `./gradlew runIde` to launch IDE with plugin.
+Automated tests exist: `./gradlew test` (unit) and `./gradlew platformTest` (IntelliJ fixture tests). Keep them pragmatic — add or change a test only where it guards a real regression risk (plugin.xml descriptor, output/contract rules, documentation sync). Verify UI and platform behavior with manual QA instead of new test suites.
 
-1. Select code → `Ctrl+Alt+C` → verify absolute path copied
-2. Settings: enable "Include code content" → `Ctrl+Alt+C` → verify markdown code block
-3. Settings: switch to Relative path → `Ctrl+Alt+C` → verify relative path
-4. No selection → `Ctrl+Alt+C` → verify current line number
-5. Right-click → context menu → verify all 4 actions visible
+Manual QA: run `./gradlew runIde` to launch the IDE with the plugin.
+
+1. Select code → `Ctrl+Alt+Shift+X` (`Cmd+Alt+Shift+X` on macOS) → verify absolute path copied
+2. Settings: enable "Include code content" → shortcut → verify markdown code block
+3. Settings: switch to Relative path → shortcut → verify relative path
+4. No selection → shortcut → verify current line number
+5. Right-click → "Copy Selection Context" copies directly; "Copy Selection Context Tools ▸" lists the other eight actions
 6. Verify toast notification on copy
-7. Settings → Tools → Copy Selection Context → verify radio buttons + checkbox
+7. Settings → Tools → Copy Selection Context → verify radio buttons + checkbox; "Configure shortcuts in Keymap…" opens Keymap filtered to the plugin actions
+8. Settings → Keymap → no conflict warning on `Ctrl/Cmd+Alt+Shift+X`
 
 ## Must NOT Do
 

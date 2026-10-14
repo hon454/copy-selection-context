@@ -16,11 +16,11 @@
 
 ## 功能
 
-- **快速鍵複製** — 按下 `Ctrl+Alt+C`，立即複製檔案路徑和行號
+- **快速鍵複製** — 按下 `Ctrl+Alt+Shift+X`，立即複製檔案路徑和行號
 - **相對或絕對路徑** — 可選擇專案相對路徑或絕對路徑
 - **彈性的輸出格式** — 支援 Claude Code 參照、Path:Line 輸出或自訂範本
 - **包含程式碼內容** — 可選擇將所選程式碼以 Markdown 程式碼區塊形式包含在內
-- **複製歷史記錄** — 按下 `Ctrl+Alt+H` 瀏覽最近的複製歷史記錄
+- **複製歷史記錄** — 從 Copy Selection Context Tools 子選單瀏覽最近的複製歷史記錄
 - **工作階段上下文集合** — 加入多個檔案的選取內容，開啟集合以檢查和整理固定擷取，然後複製完整輸出
 - **GitHub/GitLab 永久連結** — 複製所選行的 Git 永久連結，並提供與標準結果相同的本機歷史記錄與複製回饋
 - **複製回饋** — 標示已複製的行、顯示可選通知，並在狀態列保留最近一次複製內容
@@ -29,7 +29,7 @@
 - **準確的選取結束位置** — 使用 IntelliJ 的 `selectionEnd - 1` 作為最後納入的 offset，避免多算尾隨行
 - **本地化 IDE 介面** — 操作、設定、通知、歷史記錄、狀態和格式標籤支援英文、韓文、日文、簡體中文及繁體中文
 - **智慧行號處理** — 未選取文字時複製游標所在行的行號
-- **內容選單** — 可從編輯器右鍵選單存取所有操作
+- **內容選單** — 從編輯器右鍵選單直接執行主要複製操作，其他操作位於 Copy Selection Context Tools 子選單
 - **跨平台** — 支援 Windows、macOS 和 Linux
 
 ## 安裝
@@ -83,18 +83,16 @@ gh attestation verify copy-selection-context-1.2.0-signed.zip \
 
 | 操作 | Windows/Linux | macOS |
 |------|---------------|-------|
-| Copy Selection Context | `Ctrl+Alt+C` | `Cmd+Alt+C` |
-| Show Copy History | `Ctrl+Alt+H` | `Ctrl+Alt+H` |
+| Copy Selection Context | `Ctrl+Alt+Shift+X` | `Cmd+Alt+Shift+X` |
 
-> 可在 `Settings` → `Keymap` 中自訂快速鍵。
+> 只有主要複製操作有預設快速鍵。可在 `Settings` → `Keymap` 中，或透過外掛設定中的 **Configure shortcuts in Keymap…** 為其他操作指派快速鍵。
 
 ### 內容選單
 
-在編輯器中按一下滑鼠右鍵 → **Copy Selection Context** 子選單：
+在編輯器中按一下滑鼠右鍵 → **Copy Selection Context** 會依設定立即複製。其他操作位於 **Copy Selection Context Tools** 子選單：
 
 | 操作 | 說明 |
 |------|------|
-| Copy Selection Context | 根據設定複製路徑和行號（主要操作） |
 | Copy Relative Path with Line Numbers | 使用專案相對路徑複製 |
 | Copy Absolute Path with Line Numbers | 使用絕對路徑複製 |
 | Copy with Code Content | 複製路徑、行號和程式碼區塊 |
@@ -141,7 +139,7 @@ HEAD 中不存在的路徑，包括新檔案或重新命名後的目標路徑，
 
 ### 歷史記錄、通知與狀態
 
-- 成功的標準路徑/程式碼複製與 Git 永久連結複製都會將項目加入專案專屬歷史記錄。按下 `Ctrl+Alt+H` 可開啟已儲存項目，選取後會再次複製完整內容。
+- 成功的標準路徑/程式碼複製與 Git 永久連結複製都會將項目加入專案專屬歷史記錄。執行 **Show Copy History** 可開啟已儲存項目，選取後會再次複製完整內容。
 - 複製通知預設啟用，也可以關閉。標準路徑/程式碼複製與 Git 永久連結成功後會顯示通知。
 - 只有在已啟用通知且受支援的 UI 環境中執行的標準複製才會增加評論計數器；通知關閉、測試、headless 與不受支援的環境都不會變更計數器或提示狀態。在一個 IDE 工作階段中的第 10 次有效複製可為目前外掛版本顯示一次非模態的誠實評論請求。**Review on Marketplace** 會開啟官方 [Marketplace 評論頁面](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews)，**Later** 會略過目前版本後續請求，**Don't ask again** 會永久停用提示。通知關閉時，只提供設定中的被動連結。
 - 精確的工作階段次數不會持久化。僅在本機非漫遊的 `copySelectionReview.xml` 中儲存 `lastPromptedVersion`、永久停用選擇及是否開啟過 Marketplace 頁面；不涉及複製內容、檔案資料、分析、評論結果、遙測或自動網路請求。
@@ -159,6 +157,7 @@ HEAD 中不存在的路徑，包括新檔案或重新命名後的目標路徑，
 - **Trim code whitespace** — 移除所含程式碼首尾的空白（預設關閉）
 - **Show copy notifications** — 在支援的複製操作後顯示氣泡通知（預設開啟）
 - **Review on Marketplace** — 手動開啟官方評論頁面，不會強制顯示提示
+- **Configure shortcuts in Keymap…** — 開啟僅顯示本外掛操作的 Keymap，以指派自己的快速鍵
 - **Copy history size** — 每個專案保留 0–100 筆記錄（預設：10）；設為 `0` 會停用並清空歷史記錄
 - **Local usage analytics** — 查看並重設僅儲存在本機的選用總計、輸出格式與語言計數器（預設關閉；絕不傳輸）
 
@@ -172,7 +171,7 @@ HEAD 中不存在的路徑，包括新檔案或重新命名後的目標路徑，
 
 ### 工作階段上下文集合（自 1.5.0 提供）
 
-在編輯器的 Copy Selection Context 子選單或 Find Action 執行 **加入上下文集合**，即可收集多個檔案的選取內容。每個游標擷取其選取範圍或目前行，包含尚未儲存的文字，且不改變剪貼簿或編輯器焦點。此動作沒有預設快捷鍵，可在 Keymap 指派。
+在編輯器的 Copy Selection Context Tools 子選單或 Find Action 執行 **加入上下文集合**，即可收集多個檔案的選取內容。每個游標擷取其選取範圍或目前行，包含尚未儲存的文字，且不改變剪貼簿或編輯器焦點。此動作沒有預設快捷鍵，可在 Keymap 指派。
 
 程式碼、路徑、檔名、語言、行範圍、擷取編號與時間均固定為擷取時的值。未變更的重複擷取會略過；程式碼變更後會新增獨立快照。僅切換相對或絕對路徑設定仍視為重複，並保留原顯示路徑。重新命名和刪除狀態與擷取內容分開追蹤。
 
