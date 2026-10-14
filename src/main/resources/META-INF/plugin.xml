@@ -7,12 +7,12 @@
 Copy file paths, line numbers, and code to clipboard for AI assistant workflows.
 <br/>
 <br/>
-One shortcut (<code>Ctrl+Alt+Shift+X</code> / <code>Cmd+Alt+Shift+X</code>) copies your current selection — or the current line when nothing is selected — in a format ready to paste into Claude, ChatGPT, or any AI coding assistant.
+One shortcut (<code>Ctrl+Alt+Shift+Z</code> / <code>Cmd+Alt+Shift+Z</code>) copies your current selection — or the current line when nothing is selected — in a format ready to paste into Claude, ChatGPT, or any AI coding assistant.
 <br/>
 <br/>
 <h3>Features</h3>
 <ul>
-    <li><strong>One-shortcut copy</strong> — <code>Ctrl+Alt+Shift+X</code> (Windows/Linux) / <code>Cmd+Alt+Shift+X</code> (macOS) copies path + line numbers based on your settings</li>
+    <li><strong>One-shortcut copy</strong> — <code>Ctrl+Alt+Shift+Z</code> (Windows/Linux) / <code>Cmd+Alt+Shift+Z</code> (macOS) copies path + line numbers based on your settings</li>
     <li><strong>Relative or absolute paths</strong> — choose project-relative or full absolute paths per your workflow</li>
     <li><strong>Code content as markdown</strong> — include the selected code as a fenced markdown code block with language tag</li>
     <li><strong>Session context collection</strong> — Add selections from several files, open the Context Collection tool window, review frozen code and final output, reorder or remove captures, then Copy All. Collection actions are assignable in Keymap without new default shortcuts.</li>
@@ -75,15 +75,15 @@ Source and issue tracker: <a href="https://github.com/hon454/copy-selection-cont
         <action id="CopySelectionContext.Copy"
                 class="com.github.hon454.copyselectioncontext.CopySelectionContextAction"
                 icon="/icons/copyContext.svg">
-            <keyboard-shortcut keymap="$default" first-keystroke="control alt shift X"/>
-            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift X" replace-all="true"/>
-            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift X" replace-all="true"/>
-            <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift X" replace-all="true"/>
-            <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift X" replace-all="true"/>
-            <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift X" replace-all="true"/>
-            <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift X" replace-all="true"/>
-            <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift X" replace-all="true"/>
-            <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift X" replace-all="true"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="control alt shift Z"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt shift Z" replace-all="true"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt shift Z" replace-all="true"/>
+            <keyboard-shortcut keymap="macOS System Shortcuts" first-keystroke="meta alt shift Z" replace-all="true"/>
+            <keyboard-shortcut keymap="Visual Studio OSX" first-keystroke="meta alt shift Z" replace-all="true"/>
+            <keyboard-shortcut keymap="ReSharper OSX" first-keystroke="meta alt shift Z" replace-all="true"/>
+            <keyboard-shortcut keymap="VSCode OSX" first-keystroke="meta alt shift Z" replace-all="true"/>
+            <keyboard-shortcut keymap="Visual Assist OSX" first-keystroke="meta alt shift Z" replace-all="true"/>
+            <keyboard-shortcut keymap="Sublime Text (Mac OS X)" first-keystroke="meta alt shift Z" replace-all="true"/>
             <add-to-group group-id="EditorPopupMenu" anchor="before" relative-to-action="CopySelectionContextGroup"/>
         </action>
 

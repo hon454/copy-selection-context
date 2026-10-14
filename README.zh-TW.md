@@ -16,7 +16,7 @@
 
 ## 功能
 
-- **快速鍵複製** — 按下 `Ctrl+Alt+Shift+X`，立即複製檔案路徑和行號
+- **快速鍵複製** — 按下 `Ctrl+Alt+Shift+Z`，立即複製檔案路徑和行號
 - **相對或絕對路徑** — 可選擇專案相對路徑或絕對路徑
 - **彈性的輸出格式** — 支援 Claude Code 參照、Path:Line 輸出或自訂範本
 - **包含程式碼內容** — 可選擇將所選程式碼以 Markdown 程式碼區塊形式包含在內
@@ -83,7 +83,7 @@ gh attestation verify copy-selection-context-1.2.0-signed.zip \
 
 | 操作 | Windows/Linux | macOS |
 |------|---------------|-------|
-| Copy Selection Context | `Ctrl+Alt+Shift+X` | `Cmd+Alt+Shift+X` |
+| Copy Selection Context | `Ctrl+Alt+Shift+Z` | `Cmd+Alt+Shift+Z` |
 
 > 只有主要複製操作有預設快速鍵。可在 `Settings` → `Keymap` 中，或透過外掛設定中的 **Configure shortcuts in Keymap…** 為其他操作指派快速鍵。
 

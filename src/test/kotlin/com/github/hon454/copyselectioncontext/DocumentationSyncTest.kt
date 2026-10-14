@@ -64,8 +64,8 @@ class DocumentationSyncTest {
             "**Review on Marketplace**",
             "**Copy history size**",
             "**Local usage analytics**",
-            "Ctrl+Alt+Shift+X",
-            "Cmd+Alt+Shift+X",
+            "Ctrl+Alt+Shift+Z",
+            "Cmd+Alt+Shift+Z",
             "**Configure shortcuts in Keymap…**",
             "40",
             "256 KiB",
@@ -97,7 +97,7 @@ class DocumentationSyncTest {
             ".agents/patterns.md",
             "src/main/resources/META-INF/plugin.xml",
         )
-        val obsolete = listOf("Ctrl+Alt+C", "Cmd+Alt+C", "Ctrl+Alt+H", "Shift+G")
+        val obsolete = listOf("Ctrl+Alt+C", "Cmd+Alt+C", "Ctrl+Alt+H", "Shift+G", "Shift+X")
         docs.forEach { path ->
             val content = repositoryRoot.resolve(path).readText()
             obsolete.forEach { shortcut ->
