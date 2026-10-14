@@ -95,42 +95,45 @@ class PluginDescriptorLocalizationTest {
     }
 
     @Test
-    fun `descriptor and shared command table declare the same g prefix defaults`() {
-        val actions = descriptor.getElementsByTagName("action")
-        val registered = (0 until actions.length)
-            .map { actions.item(it) as org.w3c.dom.Element }
-            .associateBy { it.getAttribute("id") }
-        assertEquals(CopySelectionShortcuts.commands.keys, registered.keys)
-        assertEquals(9, CopySelectionShortcuts.commands.values.toSet().size)
+    fun `only the main copy action declares a single stroke default shortcut`() {
+        val shortcutsByAction = registeredActions().mapValues { (_, action) ->
+            val shortcuts = action.getElementsByTagName("keyboard-shortcut")
+            (0 until shortcuts.length).map { shortcuts.item(it) as org.w3c.dom.Element }
+        }
+        assertEquals(setOf(COPY_ACTION_ID), shortcutsByAction.filterValues { it.isNotEmpty() }.keys)
 
-        CopySelectionShortcuts.commands.forEach { (actionId, secondKey) ->
-            val shortcuts = registered.getValue(actionId).getElementsByTagName("keyboard-shortcut")
-            val declared = (0 until shortcuts.length)
-                .map { shortcuts.item(it) as org.w3c.dom.Element }
-                .associateBy { it.getAttribute("keymap") }
-            assertEquals(CopySelectionShortcuts.macKeymapIds + "\$default", declared.keys, actionId)
-
-            val default = declared.getValue("\$default")
-            assertEquals("control alt shift G", default.getAttribute("first-keystroke"), actionId)
-            assertEquals(secondKey, default.getAttribute("second-keystroke"), actionId)
-            assertEquals("", default.getAttribute("replace-all"), actionId)
-
-            CopySelectionShortcuts.macKeymapIds.forEach { keymapId ->
-                val mac = declared.getValue(keymapId)
-                assertEquals("meta alt shift G", mac.getAttribute("first-keystroke"), "$keymapId / $actionId")
-                assertEquals(secondKey, mac.getAttribute("second-keystroke"), "$keymapId / $actionId")
-                assertEquals("true", mac.getAttribute("replace-all"), "$keymapId / $actionId")
-            }
+        val declared = shortcutsByAction.getValue(COPY_ACTION_ID).associateBy { it.getAttribute("keymap") }
+        assertEquals(MAC_KEYMAP_IDS + "\$default", declared.keys)
+        val default = declared.getValue("\$default")
+        assertEquals("control alt shift X", default.getAttribute("first-keystroke"))
+        assertEquals("", default.getAttribute("replace-all"))
+        MAC_KEYMAP_IDS.forEach { keymapId ->
+            val mac = declared.getValue(keymapId)
+            assertEquals("meta alt shift X", mac.getAttribute("first-keystroke"), keymapId)
+            assertEquals("true", mac.getAttribute("replace-all"), keymapId)
         }
 
-        val shortcutXml = registered.values
-            .flatMap { action ->
-                val shortcuts = action.getElementsByTagName("keyboard-shortcut")
-                (0 until shortcuts.length).map { shortcuts.item(it) as org.w3c.dom.Element }
-            }
-        assertFalse(shortcutXml.any { it.getAttribute("second-keystroke").isEmpty() })
-        assertFalse(shortcutXml.any { it.getAttribute("first-keystroke") in setOf("control alt C", "meta alt C") })
-        assertFalse(shortcutXml.any { it.getAttribute("first-keystroke") == "control alt H" })
+        val allShortcuts = shortcutsByAction.values.flatten()
+        assertTrue(allShortcuts.all { it.getAttribute("second-keystroke").isEmpty() }, "two-stroke defaults are not allowed")
+        val conflicting = setOf("control alt C", "meta alt C", "control alt shift C", "meta alt shift C", "control alt H")
+        assertFalse(allShortcuts.any { it.getAttribute("first-keystroke") in conflicting })
+    }
+
+    @Test
+    fun `main copy action sits directly before the tools submenu in the editor popup`() {
+        val copy = registeredActions().getValue(COPY_ACTION_ID)
+        assertEquals("actions", (copy.parentNode as org.w3c.dom.Element).tagName)
+        val placement = copy.getElementsByTagName("add-to-group").item(0) as org.w3c.dom.Element
+        assertEquals("EditorPopupMenu", placement.getAttribute("group-id"))
+        assertEquals("before", placement.getAttribute("anchor"))
+        assertEquals("CopySelectionContextGroup", placement.getAttribute("relative-to-action"))
+    }
+
+    private fun registeredActions(): Map<String, org.w3c.dom.Element> {
+        val actions = descriptor.getElementsByTagName("action")
+        return (0 until actions.length)
+            .map { actions.item(it) as org.w3c.dom.Element }
+            .associateBy { it.getAttribute("id") }
     }
 
     private fun descriptorPresentationKeys(properties: Properties): Set<String> =
@@ -149,5 +152,19 @@ class PluginDescriptorLocalizationTest {
 
     private fun loadProperties(relativePath: String): Properties = Properties().apply {
         repositoryRoot.resolve(relativePath).inputStream().use(::load)
+    }
+
+    private companion object {
+        const val COPY_ACTION_ID = "CopySelectionContext.Copy"
+        val MAC_KEYMAP_IDS = setOf(
+            "Mac OS X",
+            "Mac OS X 10.5+",
+            "macOS System Shortcuts",
+            "Visual Studio OSX",
+            "ReSharper OSX",
+            "VSCode OSX",
+            "Visual Assist OSX",
+            "Sublime Text (Mac OS X)",
+        )
     }
 }
