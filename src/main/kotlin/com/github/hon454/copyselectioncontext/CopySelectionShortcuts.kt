@@ -64,6 +64,8 @@ internal object CopySelectionShortcuts {
         return macHost
     }
 
-    private const val DEFAULT_PREFIX = "control alt shift G"
-    private const val MAC_PREFIX = "meta alt shift G"
+    // Alt+Shift+K is unbound in every bundled keymap and bundled plugin declaration of
+    // IDEA Community 2024.3, IDEA 2026.2 and Rider 2026.2, on Windows/Linux and macOS alike.
+    private const val DEFAULT_PREFIX = "alt shift K"
+    private const val MAC_PREFIX = "alt shift K"
 }

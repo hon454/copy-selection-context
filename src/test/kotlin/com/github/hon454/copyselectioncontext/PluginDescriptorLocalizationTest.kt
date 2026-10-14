@@ -2,6 +2,7 @@ package com.github.hon454.copyselectioncontext
 
 import java.nio.file.Path
 import java.util.Properties
+import javax.swing.KeyStroke
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.io.path.inputStream
 import kotlin.test.Test
@@ -95,7 +96,7 @@ class PluginDescriptorLocalizationTest {
     }
 
     @Test
-    fun `descriptor and shared command table declare the same g prefix defaults`() {
+    fun `descriptor and shared command table declare the same k prefix defaults`() {
         val actions = descriptor.getElementsByTagName("action")
         val registered = (0 until actions.length)
             .map { actions.item(it) as org.w3c.dom.Element }
@@ -110,14 +111,21 @@ class PluginDescriptorLocalizationTest {
                 .associateBy { it.getAttribute("keymap") }
             assertEquals(CopySelectionShortcuts.macKeymapIds + "\$default", declared.keys, actionId)
 
+            val expectedPrefix = KeyStroke.getKeyStroke("alt shift K")
+            listOf(true, false).forEach { mac ->
+                val shared = CopySelectionShortcuts.defaultShortcuts(mac = mac).getValue(actionId)
+                assertEquals(expectedPrefix, shared.firstKeyStroke, "mac=$mac / $actionId")
+                assertEquals(KeyStroke.getKeyStroke(secondKey), shared.secondKeyStroke, "mac=$mac / $actionId")
+            }
+
             val default = declared.getValue("\$default")
-            assertEquals("control alt shift G", default.getAttribute("first-keystroke"), actionId)
+            assertEquals("alt shift K", default.getAttribute("first-keystroke"), actionId)
             assertEquals(secondKey, default.getAttribute("second-keystroke"), actionId)
             assertEquals("", default.getAttribute("replace-all"), actionId)
 
             CopySelectionShortcuts.macKeymapIds.forEach { keymapId ->
                 val mac = declared.getValue(keymapId)
-                assertEquals("meta alt shift G", mac.getAttribute("first-keystroke"), "$keymapId / $actionId")
+                assertEquals("alt shift K", mac.getAttribute("first-keystroke"), "$keymapId / $actionId")
                 assertEquals(secondKey, mac.getAttribute("second-keystroke"), "$keymapId / $actionId")
                 assertEquals("true", mac.getAttribute("replace-all"), "$keymapId / $actionId")
             }
@@ -129,8 +137,16 @@ class PluginDescriptorLocalizationTest {
                 (0 until shortcuts.length).map { shortcuts.item(it) as org.w3c.dom.Element }
             }
         assertFalse(shortcutXml.any { it.getAttribute("second-keystroke").isEmpty() })
-        assertFalse(shortcutXml.any { it.getAttribute("first-keystroke") in setOf("control alt C", "meta alt C") })
-        assertFalse(shortcutXml.any { it.getAttribute("first-keystroke") == "control alt H" })
+        val retiredFirstKeystrokes = setOf(
+            "control alt C",
+            "meta alt C",
+            "control alt H",
+            "control alt shift G",
+            "meta alt shift G",
+        )
+        assertFalse(shortcutXml.any { it.getAttribute("first-keystroke") in retiredFirstKeystrokes })
+        assertTrue(shortcutXml.all { it.getAttribute("first-keystroke") == "alt shift K" })
+        assertTrue(shortcutXml.none { it.getAttribute("first-keystroke").contains("ctrl") })
     }
 
     private fun descriptorPresentationKeys(properties: Properties): Set<String> =
