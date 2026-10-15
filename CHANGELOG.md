@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.3] - 2026-10-15
+
+### Changed
+
+- Correct the documentation for how Copy All Context Collection counts toward analytics and the review prompt, Go to Source, settings labels, copy history size limits, and local Git use for permalinks (#164)
+
 ## [1.9.2] - 2026-10-15
 
 ### Changed
@@ -261,7 +267,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Toast notifications
 - IntelliJ Platform 2024.3+ compatibility
 
-[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.9.2...HEAD
+[Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.9.3...HEAD
+[1.9.3]: https://github.com/hon454/copy-selection-context/compare/v1.9.2...v1.9.3
 [1.9.2]: https://github.com/hon454/copy-selection-context/compare/v1.9.1...v1.9.2
 [1.9.1]: https://github.com/hon454/copy-selection-context/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/hon454/copy-selection-context/compare/v1.8.1...v1.9.0
