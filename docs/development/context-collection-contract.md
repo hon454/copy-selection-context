@@ -48,4 +48,4 @@ Limits are fixed: 100 items, 256 KiB UTF-8 raw code per item, 2 MiB total raw co
 
 `ContextCollectionSourceFixtureTest` adds deterministic visits/map/snapshot/scheduling counts (no production telemetry or timing thresholds), controlled background delivery, real document changes, project lifetimes, ancestor VFS changes and structural retention checks. Its optional internal observer/queue seam exposes no mutable registry.
 
-Use the non-sensitive [sample guide](../samples/context-collection/README.md) for #74. Actual UI screenshot capture is deferred to #74; local plugin ZIPs are validation artifacts, not canonical releases.
+Use the non-sensitive [sample guide](../samples/context-collection/README.md) when producing Context Collection tool-window screenshots; local plugin ZIPs are validation artifacts, not canonical releases.

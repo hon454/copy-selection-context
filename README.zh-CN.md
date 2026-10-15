@@ -50,7 +50,7 @@
 
 由 `.github/workflows/release.yml` 附加的插件 ZIP 是规范发布产物。配置签名凭据时，规范产物是已验证签名的 `-signed.zip`，同一文件会原样发布到 JetBrains Marketplace。未配置签名凭据时，工作流会明确将规范 ZIP 标记为未签名，并跳过 Marketplace 发布。IntelliJ Platform Gradle Plugin 会把构建 JVM 和操作系统写入 `META-INF/MANIFEST.MF`，因此本地构建即使功能相同，在不同环境中也不一定逐字节一致。为此，每个 GitHub Release 都包含针对实际发布 ZIP 的 `SHA256SUMS` 和 GitHub artifact attestation。
 
-GitHub 的 `v1.5.0` 发布记录了该插件版本已发布。GitHub 发布可用并不表示 JetBrains Marketplace 已批准或公开上架；这两个状态彼此独立。
+每个 GitHub `vX.Y.Z` 发布记录了该插件版本已发布。GitHub 发布可用并不表示 JetBrains Marketplace 已批准或公开上架；这两个状态彼此独立。
 
 下载这两个资产，并在 Linux 上验证校验和：
 
@@ -141,10 +141,10 @@ HEAD 中不存在的路径，包括新文件或重命名后的目标路径，无
 
 - 成功的标准路径/代码复制和 Git 永久链接复制都会将条目添加到项目专属历史的开头。执行 **Show Copy History** 可打开已存储的条目，选择条目会再次复制其完整内容。
 - 复制通知默认启用，也可以关闭。标准路径/代码复制和 Git 永久链接复制后会显示通知。
-- 只有在已启用通知且受支持的 UI 环境中执行的标准复制才会增加评价计数器；通知关闭、测试、headless 和不受支持的环境都不会改变计数器或提示状态。在一个 IDE 会话中的第 10 次有效复制可为当前插件版本显示一次非模态的诚实评价请求。**Review on Marketplace** 会打开官方 [Marketplace 评价页面](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews)，**Later** 会跳过当前版本后续请求，**Don't ask again** 会永久禁止提示。通知关闭时，只提供设置中的被动链接。
+- 只有在已启用通知且受支持的 UI 环境中执行的标准复制和 **复制整个上下文集合** 才会增加评价计数器；通知关闭、测试、headless 和不受支持的环境都不会改变计数器或提示状态。在一个 IDE 会话中的第 10 次有效复制可为当前插件版本显示一次非模态的诚实评价请求。**Review on Marketplace** 会打开官方 [Marketplace 评价页面](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews)，**Later** 会跳过当前版本后续请求，**Don't ask again** 会永久禁止提示。通过提示或设置链接打开过一次评价页面后，也不会再显示提示。通知关闭时，只提供设置中的被动链接。
 - 精确的会话次数不会持久化。仅在本地非漫游的 `copySelectionReview.xml` 中保存 `lastPromptedVersion`、永久禁止选择及是否打开过 Marketplace 页面；不会涉及复制内容、文件数据、分析、评价结果、遥测或自动网络请求。
 - 成功的标准复制或 Git 永久链接复制会替换活动编辑器中的边栏标记，并在状态栏小组件中显示包含前缀在内最多 40 个字符的单行、Unicode-safe、markup-escaped 预览。单击小组件可再次复制插件最近一次成功复制的完整内容。永久链接不会增加本地分析或评价提示计数。
-- 可选的本地使用分析会按输出格式和检测到的文件语言统计成功的标准复制操作。可在设置中查看所有计数器的不可变快照，并在确认后重置。此功能默认关闭，数据只存储在本地 IDE 应用设置中，绝不会传输。
+- 可选的本地使用分析会按输出格式和检测到的文件语言统计成功的标准复制和 **复制整个上下文集合**（包含多种语言的集合计为“多种语言”）。可在设置中查看所有计数器的不可变快照，并在确认后重置。此功能默认关闭，数据只存储在本地 IDE 应用设置中，绝不会传输。
 
 ### 设置
 
@@ -154,8 +154,8 @@ HEAD 中不存在的路径，包括新文件或重命名后的目标路径，无
 - **Output format** — Claude Code（默认）、Path:Line 或 Custom Template
 - **Custom format template** — 选择预设，或使用带无障碍标签与变量验证的六行多行编辑器，以及可聚焦的六行实时预览
 - **Include code content** — 包含所选代码；未选择时包含当前行（默认关闭）
-- **Trim code whitespace** — 删除所含代码首尾的空白（默认关闭）
-- **Show copy notifications** — 在支持的复制操作后显示气泡通知（默认开启）
+- **Trim whitespace from code** — 删除所含代码首尾的空白（默认关闭）
+- **Show copy notification** — 在支持的复制操作后显示气泡通知（默认开启）
 - **Review on Marketplace** — 手动打开官方评价页面，不会强制显示提示
 - **Configure shortcuts in Keymap…** — 打开仅显示本插件操作的 Keymap，以分配自己的快捷键
 - **Copy history size** — 每个项目保留 0–100 条记录（默认：10）；设为 `0` 会禁用并清空历史
@@ -181,13 +181,13 @@ HEAD 中不存在的路径，包括新文件或重命名后的目标路径，无
 
 添加后，从子菜单或 Find Action 执行 **打开上下文集合**，即使没有编辑器也能打开右侧工具窗口。添加时保持编辑器焦点，不自动打开窗口。打开操作没有默认快捷键，可以在 Keymap 中分配；它与现有的单次复制快捷键分开。
 
-按固定捕获编号、时间、路径和范围检查列表。方向键选择，上移/下移保持所选条目身份。Delete 仅在列表获得焦点时移除条目。清空全部默认取消；确认期间集合更改后须重新确认。两个只读视图均支持焦点、选择和普通文本复制。
+按固定捕获编号、时间、路径和范围检查列表。方向键选择，上移/下移保持所选条目身份。Delete 仅在列表获得焦点时移除条目。清空全部默认取消；确认期间集合更改后须重新确认。两个只读视图均支持焦点、选择和普通文本复制。**转到源文件**（或 Enter、双击行）会在捕获的起始行打开当前文件；其代码可能已更改。
 
 **包含代码** 独立于单次复制设置。**输出格式设置…** 打开现有格式设置。原文和最终输出的 UTF-8 字节数分别显示。计算时清除旧输出；空白条目输出和超过 4 MiB 的输出会阻止复制全部。共用确认框打开前也会显示警告原因。
 
 源文件更改或删除后仍保留捕获时的代码。状态说明观察到的更改，并不保证内容相同。复制和隐藏窗口均保留集合；关闭项目/插件时丢弃。集合不加入持久复制历史；OS 和外部剪贴板历史是独立的。
 
-捕获准备好后，从子菜单或 Find Action 执行 **复制整个上下文集合**。无需活动编辑器，也没有默认快捷键。当前格式、模板和空白修剪设置应用于已捕获的路径和代码。内置格式为同一位置的快照添加固定捕获编号和 UTC 时间，自定义模板保留原有替换语义。任何项目输出为空白都会阻止复制。输出超过 256 KiB 时需确认，超过 4 MiB 时禁止复制；快照、引用和大小警告在同一对话框确认。复制后保留集合，不添加历史或 gutter 标记，并遵循通知设置、可选统计和独立评价条件。跨项目以最新插件复制请求为准，包括历史和状态栏重新复制；原生 Copy 及外部剪贴板历史不在此顺序控制范围内。参见 [#75](https://github.com/hon454/copy-selection-context/issues/75) 的[输出契约](docs/development/context-collection-output-contract.md)和[示例选择内容](docs/samples/context-collection/README.md)。
+捕获准备好后，从子菜单或 Find Action 执行 **复制整个上下文集合**。无需活动编辑器，也没有默认快捷键。当前格式、模板和空白修剪设置应用于已捕获的路径和代码。内置格式为同一位置的快照添加固定捕获编号和 UTC 时间，自定义模板保留原有替换语义。任何项目输出为空白都会阻止复制。输出超过 256 KiB 时需确认，超过 4 MiB 时禁止复制；快照、引用和大小警告在同一对话框确认。复制后保留集合，不添加历史或 gutter 标记，遵循通知设置，并像标准复制一样计入可选统计和评价提示。跨项目以最新插件复制请求为准，包括历史和状态栏重新复制；原生 Copy 及外部剪贴板历史不在此顺序控制范围内。参见 [#75](https://github.com/hon454/copy-selection-context/issues/75) 的[输出契约](docs/development/context-collection-output-contract.md)和[示例选择内容](docs/samples/context-collection/README.md)。
 
 ![编辑器旁显示多个文件和字节数的上下文集合](docs/images/context-collection-overview.png)
 

@@ -27,16 +27,40 @@ Dependabot updates dependency versions, so this table names the file that pins e
 
 ## Build Commands
 
-**Windows (this project's dev environment):**
 ```bash
-cmd //c "gradlew.bat buildPlugin"    # Build plugin ZIP (build/distributions/)
-cmd //c "gradlew.bat runIde"         # Run IDE with plugin installed
-cmd //c "gradlew.bat verifyPlugin"   # Verify plugin structure
-cmd //c "gradlew.bat detekt koverXmlReport koverHtmlReport" # Static analysis + coverage
-cmd //c "gradlew.bat publishPlugin"  # Publish to Marketplace (requires PUBLISH_TOKEN)
+./gradlew buildPlugin    # Build plugin ZIP (build/distributions/)
+./gradlew runIde         # Run IDE with plugin installed
+./gradlew test           # Unit tests
+./gradlew platformTest   # IntelliJ fixture tests
+./gradlew allTests detekt verifyPlugin  # Full local check: tests, static analysis, Plugin Verifier
+./gradlew detekt koverXmlReport koverHtmlReport  # Static analysis + coverage
 ```
 
-> **Note**: `./gradlew` does not work in this environment. The shell is bash-on-Windows, so Gradle must be invoked via `cmd //c "gradlew.bat ..."` to run the Windows batch wrapper correctly.
+A JDK 21 must be installed where Gradle toolchain detection finds it; no toolchain auto-provisioning is configured. On Windows, run `.\gradlew.bat ...` from PowerShell (as CI does) or `cmd //c "gradlew.bat ..."` from Git Bash.
+
+## Testing
+
+Keep automated tests pragmatic: add or change a test only where it guards a real regression risk (plugin.xml descriptor, output/contract rules, documentation sync). Verify UI and platform behavior with manual QA instead of new test suites.
+
+Manual QA: run `./gradlew runIde` to launch the IDE with the plugin.
+
+1. Select code → `Ctrl+Alt+Shift+Z` (`Cmd+Alt+Shift+Z` on macOS) → verify absolute path copied
+2. Settings: enable "Include code content" → shortcut → verify markdown code block
+3. Settings: switch to Relative path → shortcut → verify relative path
+4. No selection → shortcut → verify current line number
+5. Right-click → "Copy Selection Context" copies directly; "Copy Selection Context Tools ▸" lists the other eight actions
+6. Verify toast notification on copy
+7. Settings → Tools → Copy Selection Context → verify radio buttons + checkbox; "Configure shortcuts in Keymap…" opens Keymap filtered to the plugin actions
+8. Settings → Keymap → no conflict warning on `Ctrl/Cmd+Alt+Shift+Z`
+9. Before changing the default shortcut, run `python3 -I scripts/check-shortcut-conflicts.py <ide-dir>...` against IntelliJ IDEA Community, IntelliJ IDEA (Ultimate) and Rider distributions; bundled plugins such as Deployment declare shortcuts the Community build lacks
+
+## Must NOT Do
+
+**Scope**: No AI service integration (clipboard only), no persistence of collected selections (Context Collection stays session-only, in memory), no complex Settings UI, no file tree integration.
+
+**API**: No Internal/Deprecated APIs, no `untilBuild` setting, no Kotlin stdlib bundling, no PNG icons (SVG only).
+
+**Behavior**: No error dialogs for standard or permalink copies (toast only; modal dialogs are limited to confirmations and Context Collection copy validation), no blocking operations, no file writes.
 
 ## CI/CD
 
@@ -44,13 +68,13 @@ cmd //c "gradlew.bat publishPlugin"  # Publish to Marketplace (requires PUBLISH_
 |----------|---------|---------|
 | `build.yml` | Push/PR to `main` | Build verification + artifact upload |
 | `release-validation.yml` | Called by release, manual dispatch, or `codex/verify-*` push | Three-OS tests plus one Linux IDE compatibility pass; never publishes |
-| `release.yml` | Push `v*` tag | Build → GitHub Release (ZIP attached) → Marketplace publish (conditional) |
+| `release.yml` | Push `v*` tag | Release validation gate → build → optional signing → `SHA256SUMS` + attestation → GitHub Release → Marketplace publish (conditional) |
 
 ### Release Process
 
 1. Update the `[Unreleased]` entries in `CHANGELOG.md`
-2. Bump `version` in `build.gradle.kts`, then run `cmd //c "gradlew.bat patchChangelog"`
-3. Commit the version and changelog, tag (`v<major>.<minor>.<patch>`), and push
+2. Bump `version` in `build.gradle.kts`, then hand-edit `CHANGELOG.md`: add `## [x.y.z] - YYYY-MM-DD` directly below `## [Unreleased]`, point the `[Unreleased]` compare link at `vx.y.z...HEAD`, and add `[x.y.z]: .../compare/v<previous>...vx.y.z`. Do not run `patchChangelog`; it reformats the whole file
+3. Commit directly to `main` as `chore(release): prepare vx.y.z`, push, then push the tag `vx.y.z`
 4. `release.yml` uses `scripts/generate-release-notes.sh` to initialize Gradle separately, then captures only the matching `CHANGELOG.md` section from `getChangelog`
 5. The reusable release validation must pass unit/platform tests on Linux, macOS, and Windows plus Detekt, project/structure checks, and the explicit IC/latest IDEA/latest Rider Plugin Verifier targets once on Linux
 6. The GitHub Actions-built release ZIP is canonical: the gated Linux release job signs and signature-verifies it when both signing credentials are configured, otherwise leaves it explicitly unsigned; the workflow then verifies `SHA256SUMS` and GitHub provenance for that exact ZIP before upload
@@ -96,7 +120,7 @@ Single flat package: `com.github.hon454.copyselectioncontext/`
 | `CopySelectionSettings.kt` | Settings persistence (`@Service` + `@State`) |
 | `CopySelectionConfigurable.kt` | Settings UI with multiline template editor, preview, validation, passive review link, and analytics view/reset controls |
 
-**Flow**: User trigger -> Action captures/formats a result or begins async permalink resolution -> project-scoped `CopyResultPublisher` applies explicit standard/permalink policy -> clipboard -> optional standard-only analytics -> gutter marker -> project history -> optional notification -> status bar -> optional standard-only review eligibility
+**Flow**: User trigger -> Action captures/formats a result or begins async permalink resolution -> project-scoped `CopyResultPublisher` applies its explicit standard/permalink/collection policy -> clipboard -> optional analytics (standard and collection) -> gutter marker (standard and permalink) -> project history (standard and permalink) -> optional notification -> status bar -> optional review eligibility (standard and collection)
 
 Permalinks require system Git only for this action. HEAD-absent targets are blocked, current document equality skips confirmation, and differing text requires one Cancel-default confirmation using the captured SHA/current ranges. Git checks run in the background; final EDT validation rejects changed document/file identity, expired lifetime or superseded application requests. See `docs/development/git-permalink-contract.md` for local-only process safety, cancellation and the external-HEAD synchronization boundary.
 
@@ -107,7 +131,7 @@ All five managed copy entry points report current clipboard write failure throug
 ## Conventions
 
 - **Code Style**: Kotlin idiomatic, expression bodies, `?.`/`?:` null handling, avoid `!!`
-- **Naming**: Actions=`Copy*Action.kt`, UI=`CopySelection*Widget/Notifier.kt`, Settings=`CopySelection*Settings/Configurable.kt`
+- **Naming**: Actions=`*Action.kt`, UI=`CopySelection*Widget/Notifier.kt`, Settings=`CopySelection*Settings/Configurable.kt`
 - **Package**: Flat `com.github.hon454.copyselectioncontext` (no subdirectories)
 - **Plugin ID**: `com.github.hon454.copy-selection-context` (kebab-case)
 - **Notification Group ID**: `"CopySelectionContext"` (PascalCase, no spaces)

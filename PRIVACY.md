@@ -12,8 +12,11 @@ maintainer or automatically submit them to any AI service.
 When you use the plugin, it processes the selected code, file paths, line ranges,
 file names, and language information in your IDE environment to format context
 or capture it in a collection. Git permalink generation reads local repository
-metadata, including the remote URL and commit identifier, to construct a link;
-it does not upload code or contact the Git hosting provider to generate that link.
+metadata, including the remote URL and commit identifier, to construct a link.
+It also runs the locally installed Git executable to read the committed version
+of the file and compare it with the editor contents, with network transports
+disabled for those commands. It does not upload code or contact the Git hosting
+provider to generate that link.
 
 Copy actions place the formatted result on the system clipboard. The IDE, your
 operating system, clipboard managers, and clipboard synchronization services may
@@ -28,9 +31,10 @@ in project-specific copy history. History may contain source code and identifyin
 information present in file paths or copied text. It is stored in the IDE's local,
 non-roaming workspace data, rather than shareable project settings.
 
-The default is 10 entries per project, configurable from 0 to 100. Each entry is
-limited to 256 KiB of UTF-8 content, and total history per project is limited to
-2 MiB. The oldest entries are removed when limits are exceeded. History can
+The default is 10 entries per project, configurable from 0 to 100. Copies larger
+than 256 KiB of UTF-8 content are not recorded, and total history per project is
+limited to 2 MiB. When the entry count or total size limit is exceeded, the oldest
+entries are removed. History can
 persist across IDE sessions. Use **Clear all history** in the history popup to
 delete it, or set **Copy history size** to **0** to disable and clear it.
 
