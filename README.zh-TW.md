@@ -50,7 +50,7 @@
 
 由 `.github/workflows/release.yml` 附加的外掛 ZIP 是標準發行成品。設定簽署憑證時，標準成品是已驗證簽章的 `-signed.zip`，同一檔案會原樣發布到 JetBrains Marketplace。未設定簽署憑證時，工作流程會明確將標準 ZIP 標示為未簽署，並略過 Marketplace 發布。IntelliJ Platform Gradle Plugin 會把建置 JVM 和作業系統寫入 `META-INF/MANIFEST.MF`，因此本機建置即使功能相同，在不同環境中也不一定逐位元組一致。為此，每個 GitHub Release 都包含針對實際發布 ZIP 的 `SHA256SUMS` 和 GitHub artifact attestation。
 
-GitHub 的 `v1.5.0` 發行記錄了該外掛程式版本已發行。GitHub 發行可用並不表示 JetBrains Marketplace 已核准或公開上架；這兩個狀態彼此獨立。
+每個 GitHub `vX.Y.Z` 發行記錄了該外掛程式版本已發行。GitHub 發行可用並不表示 JetBrains Marketplace 已核准或公開上架；這兩個狀態彼此獨立。
 
 下載這兩個資產，並在 Linux 上驗證 checksum：
 
@@ -118,7 +118,7 @@ gh attestation verify copy-selection-context-1.2.0-signed.zip \
 
 **自訂範本 (`template`)**：
 - 可從 Path and Range、Claude Reference 或 With Code Block 預設開始，也可以自行輸入範本
-- 可用變數：`{path}`、`{line}`、`{range}`、`{code}`、`{lang}` 與 `{filename}`
+- 標準複製操作會填入的變數：`{path}`、`{line}`、`{range}`、`{code}`、`{lang}` 與 `{filename}`
 - 設定畫面會預覽結果並提示未知變數
 
 **包含程式碼內容**（Claude Code 與 Path:Line 會附加程式碼區塊；自訂範本透過 `{code}` 放置內容）：
@@ -141,10 +141,10 @@ HEAD 中不存在的路徑，包括新檔案或重新命名後的目標路徑，
 
 - 成功的標準路徑/程式碼複製與 Git 永久連結複製都會將項目加入專案專屬歷史記錄。執行 **Show Copy History** 可開啟已儲存項目，選取後會再次複製完整內容。
 - 複製通知預設啟用，也可以關閉。標準路徑/程式碼複製與 Git 永久連結成功後會顯示通知。
-- 只有在已啟用通知且受支援的 UI 環境中執行的標準複製才會增加評論計數器；通知關閉、測試、headless 與不受支援的環境都不會變更計數器或提示狀態。在一個 IDE 工作階段中的第 10 次有效複製可為目前外掛版本顯示一次非模態的誠實評論請求。**Review on Marketplace** 會開啟官方 [Marketplace 評論頁面](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews)，**Later** 會略過目前版本後續請求，**Don't ask again** 會永久停用提示。通知關閉時，只提供設定中的被動連結。
+- 只有在已啟用通知且受支援的 UI 環境中執行的標準複製與 **複製整個上下文集合** 才會增加評論計數器；通知關閉、測試、headless 與不受支援的環境都不會變更計數器或提示狀態。在一個 IDE 工作階段中的第 10 次有效複製可為目前外掛版本顯示一次非模態的誠實評論請求。**Review on Marketplace** 會開啟官方 [Marketplace 評論頁面](https://plugins.jetbrains.com/plugin/30262-copy-selection-context/reviews)，**Later** 會略過目前版本後續請求，**Don't ask again** 會永久停用提示。透過提示或設定連結開啟過一次評論頁面後，也不會再顯示提示。通知關閉時，只提供設定中的被動連結。
 - 精確的工作階段次數不會持久化。僅在本機非漫遊的 `copySelectionReview.xml` 中儲存 `lastPromptedVersion`、永久停用選擇及是否開啟過 Marketplace 頁面；不涉及複製內容、檔案資料、分析、評論結果、遙測或自動網路請求。
 - 成功的標準複製或 Git 永久連結複製會替換作用中編輯器的邊欄標記，並在狀態列小工具顯示含前綴最多 40 個字元的單行、Unicode-safe、markup-escaped 預覽。按一下小工具可再次複製外掛最近一次成功複製的完整內容。永久連結不會增加本機分析或評論提示計數。
-- 可選的本機使用分析會依輸出格式與偵測到的檔案語言統計成功的標準複製操作。可在設定中查看所有計數器的不可變快照，並於確認後重設。此功能預設關閉，資料只儲存在本機 IDE 應用程式設定中，絕不會傳輸。
+- 可選的本機使用分析會依輸出格式與偵測到的檔案語言統計成功的標準複製與 **複製整個上下文集合**（包含多種語言的集合計為「多種語言」）。可在設定中查看所有計數器的不可變快照，並於確認後重設。此功能預設關閉，資料只儲存在本機 IDE 應用程式設定中，絕不會傳輸。
 
 ### 設定
 
@@ -154,8 +154,8 @@ HEAD 中不存在的路徑，包括新檔案或重新命名後的目標路徑，
 - **Output format** — Claude Code（預設）、Path:Line 或 Custom Template
 - **Custom format template** — 選擇預設，或使用具無障礙標籤與變數驗證的六行多行編輯器，以及可聚焦的六行即時預覽
 - **Include code content** — 包含所選程式碼；未選取時包含目前行（預設關閉）
-- **Trim code whitespace** — 移除所含程式碼首尾的空白（預設關閉）
-- **Show copy notifications** — 在支援的複製操作後顯示氣泡通知（預設開啟）
+- **Trim whitespace from code** — 移除所含程式碼首尾的空白（預設關閉）
+- **Show copy notification** — 在支援的複製操作後顯示氣泡通知（預設開啟）
 - **Review on Marketplace** — 手動開啟官方評論頁面，不會強制顯示提示
 - **Configure shortcuts in Keymap…** — 開啟僅顯示本外掛操作的 Keymap，以指派自己的快速鍵
 - **Copy history size** — 每個專案保留 0–100 筆記錄（預設：10）；設為 `0` 會停用並清空歷史記錄
@@ -181,13 +181,13 @@ HEAD 中不存在的路徑，包括新檔案或重新命名後的目標路徑，
 
 新增後，從子選單或 Find Action 執行 **開啟上下文集合**，即使沒有編輯器也能開啟右側工具視窗。新增時保持編輯器焦點，不自動開啟視窗。開啟操作沒有預設快捷鍵，可在 Keymap 指定；與現有單次複製快捷鍵分開。
 
-以固定擷取編號、時間、路徑和範圍檢查清單。方向鍵選取，上移/下移保持所選項目身分。Delete 僅在清單取得焦點時移除項目。清空全部預設取消；確認期間集合變更後須重新確認。兩個唯讀檢視器均支援焦點、選取和一般文字複製。
+以固定擷取編號、時間、路徑和範圍檢查清單。方向鍵選取，上移/下移保持所選項目身分。Delete 僅在清單取得焦點時移除項目。清空全部預設取消；確認期間集合變更後須重新確認。兩個唯讀檢視器均支援焦點、選取和一般文字複製。**前往來源檔案**（或 Enter、按兩下列）會在擷取的起始行開啟目前檔案；其程式碼可能已變更。
 
 **包含程式碼** 獨立於單次複製設定。**輸出格式設定…** 開啟既有格式設定。原文和最終輸出的 UTF-8 位元組分別顯示。計算時清除舊輸出；空白項目輸出與超過 4 MiB 的輸出會阻止複製全部。共用確認視窗開啟前也會顯示警告原因。
 
 來源檔案變更或刪除後仍保留擷取時的程式碼。狀態說明觀察到的變更，並不保證內容相同。複製和隱藏視窗均保留集合；關閉專案/外掛時捨棄。集合不加入持續性複製歷史；OS 和外部剪貼簿歷史是獨立的。
 
-擷取準備完成後，從子選單或 Find Action 執行 **複製整個上下文集合**。無需作用中編輯器，也沒有預設快捷鍵。目前格式、範本和空白修剪設定套用於已擷取的路徑與程式碼。內建格式為同一位置的快照加入固定擷取編號與 UTC 時間，自訂範本保留原有替換語意。任何項目輸出為空白都會阻止複製。輸出超過 256 KiB 時需確認，超過 4 MiB 時禁止複製；快照、參照與大小警告在同一對話框確認。複製後保留集合，不新增歷史或 gutter 標記，並遵循通知設定、選用統計與獨立評論條件。跨專案以最新外掛程式複製要求為準，包括歷史與狀態列重新複製；原生 Copy 及外部剪貼簿歷史不在此排序範圍內。請參閱 [#75](https://github.com/hon454/copy-selection-context/issues/75) 的[輸出契約](docs/development/context-collection-output-contract.md)與[範例選取內容](docs/samples/context-collection/README.md)。
+擷取準備完成後，從子選單或 Find Action 執行 **複製整個上下文集合**。無需作用中編輯器，也沒有預設快捷鍵。目前格式、範本和空白修剪設定套用於已擷取的路徑與程式碼。內建格式為同一位置的快照加入固定擷取編號與 UTC 時間，自訂範本保留原有替換語意。任何項目輸出為空白都會阻止複製。輸出超過 256 KiB 時需確認，超過 4 MiB 時禁止複製；快照、參照與大小警告在同一對話框確認。複製後保留集合，不新增歷史或 gutter 標記，遵循通知設定，並像標準複製一樣計入選用統計與評論提示。跨專案以最新外掛程式複製要求為準，包括歷史與狀態列重新複製；原生 Copy 及外部剪貼簿歷史不在此排序範圍內。請參閱 [#75](https://github.com/hon454/copy-selection-context/issues/75) 的[輸出契約](docs/development/context-collection-output-contract.md)與[範例選取內容](docs/samples/context-collection/README.md)。
 
 ![編輯器旁顯示多個檔案和位元組數的上下文集合](docs/images/context-collection-overview.png)
 

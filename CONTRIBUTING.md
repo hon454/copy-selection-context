@@ -4,14 +4,15 @@
 
 ### Prerequisites
 
-- JDK 21+
+- JDK 21, where Gradle toolchain detection can find it (`jvmToolchain(21)`; no auto-provisioning is configured). Gradle itself may run on a newer JDK.
 - IntelliJ IDEA (Community or Ultimate)
 - System Git for the local repository integration tests (`git` on Unix/macOS, `git.exe` on Windows). These tests create temporary commits, linked worktrees and local object alternates; they never contact a remote. The test commands must support `--no-lazy-fetch` and `check-attr --source`. Plugin users need Git only for the permalink action.
 
 Windows contributors who run `test` or `allTests` also need a
 Bash executable and the basic Unix command-line tools used by the release
 script tests. Those tests invoke the repository's `scripts/*.sh` files through
-`ProcessBuilder("bash", ...)`; the scripts use tools such as `mktemp`, `dirname`,
+`TestShell.bashExecutable()` (the `BASH_EXE` environment variable when set,
+otherwise `bash` on `PATH`); the scripts use tools such as `mktemp`, `dirname`,
 `find`, `sort`, `basename`, `mv`, `rm`, and a SHA-256 utility (`sha256sum` or
 `shasum`). This is a development
 and test requirement only. Plugin users do not need Bash or these tools to
@@ -152,19 +153,18 @@ real desktop clipboard interaction ran in CI.
 
 ## Project Structure
 
+All Kotlin sources live in the flat `src/main/kotlin/com/github/hon454/copyselectioncontext/` package; `src/main/java/` holds only the Java adapters for public platform interfaces (`CustomStatusBarWidgetAdapter`, `ToolWindowFactoryAdapter`). The **Source Files** table in [`.agents/architecture.md`](.agents/architecture.md) describes every source file and is kept complete by `DocumentationSyncTest`. Start with:
+
 ```
 src/main/kotlin/com/github/hon454/copyselectioncontext/
 ├── CopySelectionContextAction.kt    # Main unified action (Ctrl+Alt+Shift+Z)
-├── CopySelectionBaseAction.kt       # Abstract base (clipboard logic)
-├── CopyRelativePathAction.kt        # Relative path (context menu)
-├── CopyAbsolutePathAction.kt        # Absolute path (context menu)
-├── CopyWithCodeContentAction.kt     # Path + code block (context menu)
+├── CopySelectionBaseAction.kt       # Shared capture/format pipeline for standard copy actions
+├── CopyResultPublisher.kt           # Clipboard, history, notification, status and analytics side effects
 ├── CopyGitPermalinkAction.kt        # GitHub/GitLab permalink
-├── ShowCopyHistoryAction.kt         # Copy history popup
-├── CopySelectionNotifier.kt         # Toast notifications
-├── CopySelectionStatusBarWidget.kt  # Status bar widget
+├── AddToContextCollectionAction.kt  # Context Collection capture
+├── ContextCollectionPanel.kt        # Context Collection tool window UI
 ├── CopySelectionSettings.kt         # Settings persistence (@Service + @State)
-└── CopySelectionConfigurable.kt     # Settings UI (Tools menu)
+└── CopySelectionConfigurable.kt     # Settings UI (Settings → Tools)
 ```
 
 ## Release Process
@@ -180,14 +180,12 @@ Releases are automated by [`.github/workflows/release.yml`](.github/workflows/re
    version = "1.2.0"
    ```
 
-3. **Patch the changelog** with the Gradle Changelog Plugin. The task moves the `[Unreleased]` entries into a versioned `1.2.0` section and creates a new `[Unreleased]` section:
-   ```bash
-   # Unix / macOS
-   ./gradlew patchChangelog
-
-   # Windows
-   gradlew.bat patchChangelog
+3. **Add the version section to the changelog by hand.** Insert `## [1.2.0] - YYYY-MM-DD` directly below `## [Unreleased]` so the accumulated entries become the release section, then update the comparison links at the bottom of the file:
+   ```markdown
+   [Unreleased]: https://github.com/hon454/copy-selection-context/compare/v1.2.0...HEAD
+   [1.2.0]: https://github.com/hon454/copy-selection-context/compare/v1.1.1...v1.2.0
    ```
+   Do not run `./gradlew patchChangelog`; it reformats the whole file.
 
 4. **Preview the release notes** with the same changelog task options used by the release workflow:
    ```bash
@@ -199,17 +197,17 @@ Releases are automated by [`.github/workflows/release.yml`](.github/workflows/re
      --no-summary
    ```
 
-5. **Commit the version and changelog updates** using the repository's commit convention:
+5. **Commit the version and changelog updates directly to `main`** after running `./gradlew test`:
    ```bash
    git add build.gradle.kts CHANGELOG.md
-   git commit -m "chore(release): prepare 1.2.0" \
-     -m "Move the accumulated changelog entries into the 1.2.0 release and align the Gradle project version with the release tag."
+   git commit -m "chore(release): prepare v1.2.0"
+   git push origin main
    ```
 
 6. **Create and push the tag** after the release commit is on `main`:
    ```bash
    git tag v1.2.0
-   git push origin main v1.2.0
+   git push origin v1.2.0
    ```
 
 7. The **Release workflow** runs automatically and:
@@ -233,7 +231,7 @@ Releases are automated by [`.github/workflows/release.yml`](.github/workflows/re
 
 [`CHANGELOG.md`](CHANGELOG.md) is the single source of truth for release notes. The workflow invokes `scripts/generate-release-notes.sh`, which initializes the Gradle wrapper before separately capturing `getChangelog` output for the project version without the section header, comparison links, or summary. Only that captured output is written to `release-notes.md`; if it is empty, the script uses `Release v<version>` as a fallback.
 
-Keep `[Unreleased]` current as changes land, then run `patchChangelog` after setting the release version so the workflow can find the matching version section. Commit messages remain important for review and repository history, but they are not used to generate release notes.
+Keep `[Unreleased]` current as changes land, then add the matching `## [x.y.z] - YYYY-MM-DD` heading by hand after setting the release version so the workflow can find the version section. Commit messages remain important for review and repository history, but they are not used to generate release notes.
 
 ### Release Artifact Provenance
 

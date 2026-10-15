@@ -6,7 +6,7 @@
 |---|-------|--------|
 | 1 | **untilBuild** | Must NOT be set. Forward compatibility requirement. Setting it breaks plugin on future IDE versions. |
 | 2 | **Kotlin stdlib** | `kotlin.stdlib.default.dependency=false` in gradle.properties. IDE provides its own; bundling causes classloader conflicts. Kotlin `apiVersion` stays at the minimum IDE's bundled stdlib (2.0); IntelliJ Platform Gradle Plugin 2.19+ no longer copies the project stdlib into test sandboxes, so newer-API bytecode fails at runtime in platform tests (e.g. coroutine `Debug metadata version mismatch` hangs); production never bundled the stdlib. Kotlin 2.4 deprecates API 2.0, so raise the minimum IDE before a Kotlin release drops it. |
-| 3 | **SVG only** | Icons must be SVG (40x40px, <3KB). PNG not supported in modern IntelliJ Platform. |
+| 3 | **SVG only** | Icons must be SVG: plugin logo `pluginIcon*.svg` 40x40px and <3KB, action icons 16x16px. PNG not supported in modern IntelliJ Platform. |
 | 4 | **Notification group** | Must register in plugin.xml before use: `<notificationGroup id="CopySelectionContext" displayType="BALLOON"/>`. ID is PascalCase, no spaces. |
 | 5 | **Plugin naming** | Name cannot contain "Plugin" or "IntelliJ" (JetBrains Marketplace requirement). |
 
@@ -30,6 +30,6 @@
 |---|-------|--------|
 | 13 | **Gradle memory** | IntelliJ Platform plugin is memory-intensive. May need `org.gradle.jvmargs=-Xmx2048m`. |
 | 14 | **Verify first** | Always `./gradlew verifyPlugin` before publishing. Catches compatibility issues. |
-| 15 | **Marketplace token** | `PUBLISH_TOKEN` env var or `~/.gradle/gradle.properties`. |
-| 16 | **Windows builds** | Use PowerShell wrapper: `powershell.exe -Command ".\gradlew.bat buildPlugin"` or run via Java directly. |
-| 17 | **Java 21** | `JAVA_HOME` must point to JDK 21 installation. Build fails with other versions. |
+| 15 | **Marketplace token** | `PUBLISH_TOKEN` environment variable only; `build.gradle.kts` reads it with `providers.environmentVariable`. |
+| 16 | **Windows builds** | From PowerShell run `.\gradlew.bat ...` (as CI does); from Git Bash run `cmd //c "gradlew.bat ..."`. |
+| 17 | **Java 21** | `jvmToolchain(21)` needs a JDK 21 that Gradle toolchain detection can find; no auto-provisioning is configured. Gradle itself may run on a newer JDK. |

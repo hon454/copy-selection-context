@@ -25,7 +25,7 @@ class ReleaseDocumentationTest {
         )
 
         assertContains(contributing, "CHANGELOG.md")
-        assertContains(contributing, "./gradlew patchChangelog")
+        assertContains(contributing, "Do not run `./gradlew patchChangelog`")
         assertContains(contributing, "./gradlew getChangelog")
         assertContains(releaseNotesGenerator, "\"${'$'}gradle_wrapper\" getChangelog")
         getChangelogOptions.forEach { option ->
