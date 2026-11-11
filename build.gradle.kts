@@ -61,7 +61,7 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:6.1.3")
     testImplementation("org.snakeyaml:snakeyaml-engine:3.2")
-    testImplementation("io.mockk:mockk:1.14.11") {
+    testImplementation("io.mockk:mockk:1.14.12") {
         exclude(group = "org.jetbrains.kotlinx")
     }
 
